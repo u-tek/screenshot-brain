@@ -20,6 +20,11 @@ public struct TriageCard: Hashable, Sendable, Identifiable {
     public var item: ScreenshotItem
     public var groupSize: Int
 
+    public init(item: ScreenshotItem, groupSize: Int) {
+        self.item = item
+        self.groupSize = groupSize
+    }
+
     public var id: String { item.id }
 }
 
@@ -174,8 +179,49 @@ extension AppDatabase {
 extension AppDatabase {
     /// Unreviewed intentions for the swipe deck, newest first, near-duplicates folded into one card.
     public func triageDeck(limit: Int = 30) throws -> [TriageCard] {
+        Self.foldGroups(try triageCandidates(), limit: limit)
+    }
+
+    /// For the Sunday digest: intentions saved, and things done, in the last seven days.
+    public func weekStats(now: Date) throws -> (saved: Int, done: Int) {
+        let weekAgo = now.addingTimeInterval(-7 * 86_400)
+        return try reader.read { db in
+            let saved = try ScreenshotItem
+                .filter(Col.isNSFWFlagged == false)
+                .filter(Col.category != ItemCategory.reference.rawValue)
+                .filter(Col.createdAt >= weekAgo)
+                .fetchCount(db)
+            let done = try ScreenshotItem
+                .filter(Col.state == ItemState.done.rawValue)
+                .filter(Col.stateChangedAt >= weekAgo)
+                .fetchCount(db)
+            return (saved, done)
+        }
+    }
+
+    /// A later recap: screenshots saved since the last one, then a few older ones still waiting.
+    public func recapDeck(newSince: Date, olderLimit: Int = 5, limit: Int = 30) throws -> [TriageCard] {
+        let waiting = try triageCandidates()
+        let fresh = Self.foldGroups(waiting.filter { $0.createdAt >= newSince }, limit: limit)
+        let older = Self.foldGroups(waiting.filter { $0.createdAt < newSince }, limit: olderLimit)
+        return fresh + older
+    }
+
+    /// How many cards the next recap would show.
+    public func recapCount(newSince: Date, olderLimit: Int = 5) throws -> Int {
+        try recapDeck(newSince: newSince, olderLimit: olderLimit).count
+    }
+
+    public func markRecapped(at date: Date = Date()) throws {
+        var state = try scanState()
+        state.lastRecapAt = date
+        state.updatedAt = date
+        try save(state)
+    }
+
+    private func triageCandidates() throws -> [ScreenshotItem] {
         try reader.read { db in
-            let items = try ScreenshotItem
+            try ScreenshotItem
                 .filter(Col.processedAt != nil)
                 .filter(Col.isNSFWFlagged == false)
                 .filter(Col.hasSensitiveText == false)
@@ -183,24 +229,26 @@ extension AppDatabase {
                 .filter(Col.category != ItemCategory.reference.rawValue)
                 .order(Col.createdAt.desc)
                 .fetchAll(db)
-            return Self.foldGroups(items, limit: limit)
         }
     }
 
     /// What the widget may show: safe items only, unreviewed before kept, soonest-expiring first,
     /// then oldest untouched; anything already shown today is skipped.
-    public func widgetCandidates(now: Date, calendar: Calendar = .current, limit: Int = 12) throws -> [ScreenshotItem] {
+    /// `includeSurfaced` counts what's already been shown today too (how much there is in all).
+    public func widgetCandidates(now: Date, calendar: Calendar = .current, limit: Int = 12, includeSurfaced: Bool = false) throws -> [ScreenshotItem] {
         let startOfDay = calendar.startOfDay(for: now)
         let items = try reader.read { db in
-            try ScreenshotItem
+            var request = ScreenshotItem
                 .filter(Col.isSafeToDisplay == true)
                 .filter(Col.isNSFWFlagged == false)
                 .filter(Col.hasSensitiveText == false)
                 .filter(Col.thumbnailPath != nil)
                 .filter([ItemState.unreviewed.rawValue, ItemState.stillWant.rawValue].contains(Col.state))
                 .filter(Col.expiresAt == nil || Col.expiresAt > now)
-                .filter(Col.lastSurfacedAt == nil || Col.lastSurfacedAt < startOfDay)
-                .fetchAll(db)
+            if !includeSurfaced {
+                request = request.filter(Col.lastSurfacedAt == nil || Col.lastSurfacedAt < startOfDay)
+            }
+            return try request.fetchAll(db)
         }
         return Array(items.sorted(by: Self.widgetOrder).prefix(limit))
     }

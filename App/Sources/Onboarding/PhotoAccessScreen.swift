@@ -31,7 +31,7 @@ struct PhotoAccessPrompt: View {
             label: "Photo access",
             headline: "Let's see what **you've been saving.**",
             subtext: "Screenshot Brain reads your screenshots on this iPhone. **They never leave it.**",
-            light: .passage(palette.reversed).shifted(down: 0.02),
+            light: .sweep(palette).mirrored(),
             palette: palette,
             footnote: "Full access gets you the whole Reveal",
             actionTitle: "Allow access",

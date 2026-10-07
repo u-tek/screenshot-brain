@@ -51,7 +51,14 @@ targets:
           - UIInterfaceOrientationPortrait
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
+        # screenshotbrain://item/<id>, ://recap, ://paywall: links from the widget.
+        CFBundleURLTypes:
+          - CFBundleURLName: $(PRODUCT_BUNDLE_IDENTIFIER)
+            CFBundleURLSchemes:
+              - screenshotbrain
         NSPhotoLibraryUsageDescription: Screenshot Brain reads your screenshots on your iPhone. They never leave your device.
+        # iOS 16 only: from iOS 17 the event editor needs no calendar access.
+        NSCalendarsUsageDescription: So you can add the things you saved to your calendar.
         PHPhotoLibraryPreventAutomaticLimitedAccessAlert: true
         UIBackgroundModes:
           - processing
@@ -64,6 +71,8 @@ targets:
         SBTelemetryDeckAppID: $(SB_TELEMETRYDECK_APP_ID)
         SBRevenueCatAPIKey: $(SB_REVENUECAT_API_KEY)
         SBAccountServerHost: $(SB_ACCOUNT_SERVER_HOST)
+        SBSupportEmail: $(SB_SUPPORT_EMAIL)
+        SBPrivacyPolicyURL: $(SB_PRIVACY_POLICY_URL)
     entitlements:
       path: App/ScreenshotBrain.entitlements
       properties:
@@ -96,7 +105,18 @@ targets:
         product: Media
       - package: SBKit
         product: Reveal
+      - package: SBKit
+        product: Triage
+      - package: SBKit
+        product: Actions
+      - package: SBKit
+        product: WidgetCore
+      - package: SBKit
+        product: Notifications
+      - package: SBKit
+        product: Paywall
       - target: ShareExtension
+      - target: ScreenshotBrainWidgets
 
   # "Share to Screenshot Brain" from Photos: the route for people who don't give photo access.
   # It only copies images into the App Group's inbox; the app reads them.
@@ -135,6 +155,44 @@ targets:
         product: Core
       - package: SBKit
         product: DesignSystem
+
+  # Home and Lock Screen widgets. They read the shared database and the small thumbnails and
+  # lights the app pre-renders into the App Group.
+  ScreenshotBrainWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Widgets
+    info:
+      path: Widgets/Info.plist
+      properties:
+        CFBundleDisplayName: Screenshot Brain
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        SBAppGroupIdentifier: $(SB_APP_GROUP)
+        SBTelemetryDeckAppID: $(SB_TELEMETRYDECK_APP_ID)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: Widgets/Widgets.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - $(SB_APP_GROUP)
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(SB_BUNDLE_ID).widgets
+        PRODUCT_NAME: ScreenshotBrainWidgets
+        APPLICATION_EXTENSION_API_ONLY: YES
+        SWIFT_VERSION: "5.0"
+    dependencies:
+      - package: SBKit
+        product: Core
+      - package: SBKit
+        product: Store
+      - package: SBKit
+        product: DesignSystem
+      - package: SBKit
+        product: WidgetCore
 
   # Exports PNGs of screens for design review (see UITests/SnapshotExportTests.swift).
   ScreenshotBrainUITests:

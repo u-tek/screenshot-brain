@@ -1,0 +1,12 @@
+{
+  "name": "screenshot-brain-account",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "test": "node --experimental-strip-types --test test/*.test.ts"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

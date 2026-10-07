@@ -1,11 +1,15 @@
 import AuthenticationServices
+import Combine
 import Core
+import Notifications
 import DesignSystem
 import Foundation
 import Reveal
 import ScanEngine
 import Store
 import SwiftUI
+import Triage
+import WidgetKit
 
 /// The app's state: who's signed in, how far through onboarding they are (persisted and synced,
 /// so it's never repeated), photo access, the scan, and the Reveal.
@@ -14,6 +18,7 @@ final class AppModel: ObservableObject {
     let services: AppServices?
     let analytics: Analytics
     let configuration: AppConfiguration
+    let purchases: PurchaseService
     private let sync: CloudSync?
 
     @Published private(set) var answers: OnboardingAnswers
@@ -25,11 +30,14 @@ final class AppModel: ObservableObject {
     @Published private(set) var screenshotsFound = 0
     @Published private(set) var isScanning = false
     @Published private(set) var story: RevealStory?
+    /// Where a widget tap asked to go, for Home to pick up.
+    @Published var pendingLink: AppLink?
     /// The light of the app: the user's own colours once screenshots have been read.
     @Published private(set) var palette: LightPalette = .sampleTopScreenshots
     /// Where onboarding resumes after photo access is granted again on a new phone.
     private var resumeStep: OnboardingStep?
     private var syncTask: Task<Void, Never>?
+    private var purchaseChanges: AnyCancellable?
 
     init(services: AppServices?, analytics: Analytics, configuration: AppConfiguration) {
         self.services = services
@@ -38,7 +46,9 @@ final class AppModel: ObservableObject {
         self.sync = services.flatMap { services in
             configuration.cloudKitContainerIdentifier.map { CloudSync(database: services.database, containerIdentifier: $0) }
         }
-        self.account = AccountStore.load()
+        let account = AccountStore.load()
+        self.account = account
+        self.purchases = PurchaseService(apiKey: configuration.revenueCatAPIKey, appUserID: account?.userID)
         self.photoAccess = ScreenshotLibrary.currentAccess()
         self.answers = (try? services?.database.onboardingAnswers()) ?? OnboardingAnswers()
         // Signed out (or the account was revoked): everything after sign-in waits for it.
@@ -46,6 +56,10 @@ final class AppModel: ObservableObject {
             answers.step = .signIn
         }
         refreshPalette()
+        // Premium changes redraw whatever depends on it.
+        purchaseChanges = purchases.objectWillChange.sink { [weak self] _ in
+            self?.objectWillChange.send()
+        }
     }
 
     static func live() -> AppModel {
@@ -82,6 +96,8 @@ final class AppModel: ObservableObject {
     /// Back in the app: photo access may have changed in Settings, and screenshots may have been
     /// shared in.
     func becameActive() {
+        AppOpens.record()
+        noticeWidget()
         let previous = photoAccess
         photoAccess = ScreenshotLibrary.currentAccess()
         guard account != nil, step >= .photoAccess else { return }
@@ -89,6 +105,42 @@ final class AppModel: ObservableObject {
             advanceAfterPhotoAccess()
         }
         startScan()
+    }
+
+    private static let widgetAddedKey = "analytics.widgetAdded"
+
+    /// Reports the first time a widget shows up on the home or Lock Screen, with how many days
+    /// after onboarding it was (the launch metric is "widget added on day 0").
+    private func noticeWidget() {
+        guard AppGroup.defaults()?.bool(forKey: Self.widgetAddedKey) != true else { return }
+        WidgetCenter.shared.getCurrentConfigurations { result in
+            guard case .success(let widgets) = result, !widgets.isEmpty else { return }
+            Task { @MainActor in
+                self.recordWidgetAdded()
+            }
+        }
+    }
+
+    private func recordWidgetAdded() {
+        guard AppGroup.defaults()?.bool(forKey: Self.widgetAddedKey) != true else { return }
+        AppGroup.defaults()?.set(true, forKey: Self.widgetAddedKey)
+        let since = answers.completedAt ?? Date()
+        let days = Calendar.current.dateComponents([.day], from: since, to: Date()).day ?? 0
+        analytics.track(.widgetAdded, counts: ["day": max(days, 0)])
+    }
+
+    /// Leaving the app: work out tonight's notification from what's known now.
+    func wentToBackground() {
+        guard let services, step >= .home else { return }
+        let answers = self.answers
+        Task { await NightlyRecap.replan(services: services, answers: answers) }
+    }
+
+    /// The notifications pre-prompt: iOS's prompt, then on.
+    func requestNotifications() async {
+        let granted = await NotificationScheduler.requestPermission()
+        analytics.track(granted ? .notificationsAllowed : .notificationsDeclined)
+        advance(to: .widgetGuide)
     }
 
     var hasPhotoAccess: Bool {
@@ -144,7 +196,10 @@ final class AppModel: ObservableObject {
         analytics.track(.signedIn)
 
         let code = credential.authorizationCode.flatMap { String(data: $0, encoding: .utf8) }
+        let userID = credential.user
         Task {
+            // Purchases follow the account to a new phone.
+            await purchases.logIn(appUserID: userID)
             if let code, let token = await AccountServer.exchange(authorizationCode: code, configuration: configuration) {
                 account.refreshToken = token
                 AccountStore.save(account)
@@ -305,6 +360,96 @@ final class AppModel: ObservableObject {
         }
     }
 
+    // MARK: Links
+
+    /// A link from the widget. Onboarding finishes first; links wait until Home.
+    func open(_ url: URL) {
+        guard let link = AppLink(url: url) else { return }
+        if link == .paywall || step >= .home {
+            pendingLink = link
+        }
+    }
+
+    // MARK: Premium
+
+    var isPremium: Bool {
+        purchases.isPremium
+    }
+
+    func purchased() {
+        analytics.track(Entitlement.trialEndsAt() != nil ? .trialStarted : .purchaseCompleted)
+    }
+
+    /// A Reveal over any period. The monthly one is short unless premium; all-time is premium.
+    func buildReveal(_ period: RevealPeriod) async -> RevealStory? {
+        guard let database = services?.database else { return nil }
+        let isShort: Bool
+        if case .month = period { isShort = !isPremium } else { isShort = false }
+        let isLimited = photoAccess != .full
+        let story = try? await Task.detached(priority: .userInitiated) {
+            try RevealBuilder.build(database: database, period: period, answers: nil, isLimited: isLimited, isShort: isShort)
+        }.value
+        if let story, case .month = period {
+            try? database.save(story.snapshot(kind: .monthly))
+        }
+        return story
+    }
+
+    // MARK: Triage and the score
+
+    /// The first triage shows the 30 most recent; later recaps show what's new since the last
+    /// one, plus a few older ones at a time.
+    func recapCards() -> [TriageCard] {
+        guard let database = services?.database else { return [] }
+        let lastRecap = (try? database.scanState())?.lastRecapAt
+        guard let lastRecap else {
+            return (try? database.triageDeck(limit: 30)) ?? []
+        }
+        return (try? database.recapDeck(newSince: lastRecap)) ?? []
+    }
+
+    func finishRecap(_ tally: TriageTally) {
+        try? services?.database.markRecapped()
+        analytics.track(.triageCompleted, counts: ["kept": tally.kept, "done": tally.done, "dropped": tally.dropped])
+        scheduleSync()
+        if let services {
+            Task { await WidgetRefresher.refresh(services: services) }
+        }
+    }
+
+    var score: Score {
+        (try? services?.database.score()) ?? Score(done: 0, total: 0)
+    }
+
+    /// Something changed an item (a decision in item detail): sync and refresh the widget.
+    func itemsChanged() {
+        scheduleSync()
+        if let services {
+            Task { await WidgetRefresher.refresh(services: services) }
+        }
+    }
+
+    /// Deletes dropped screenshots from the photo library in one batch, behind iOS's own
+    /// confirmation. Screenshots shared in without photo access are only in the app, so their
+    /// copies are simply removed. Returns how many went.
+    func deleteDropped() async throws -> Int {
+        guard let database = services?.database else { return 0 }
+        let dropped = try database.dropped()
+        let shared = dropped.map(\.assetLocalID).filter { $0.hasPrefix(AppGroup.sharedIdentifierPrefix) }
+        let library = dropped.map(\.assetLocalID).filter { !$0.hasPrefix(AppGroup.sharedIdentifierPrefix) }
+        if !library.isEmpty {
+            try await ScreenshotLibrary().delete(localIdentifiers: library)
+        }
+        if let directory = try? AppGroup.directory(.shared) {
+            for identifier in shared {
+                let name = identifier.dropFirst(AppGroup.sharedIdentifierPrefix.count) + ".jpg"
+                try? FileManager.default.removeItem(at: directory.appendingPathComponent(String(name)))
+            }
+        }
+        try database.deleteItems(assetLocalIDs: library + shared)
+        return dropped.count
+    }
+
     // MARK: Sync
 
     private func scheduleSync() {
@@ -322,6 +467,27 @@ final class AppModel: ObservableObject {
         await sync.sync()
         if let synced = try? services?.database.onboardingAnswers(), synced.step > answers.step {
             answers = synced
+        }
+    }
+}
+
+/// screenshotbrain://item/<id>, ://recap, ://paywall, ://home
+enum AppLink: Hashable {
+    case item(String)
+    case recap
+    case paywall
+    case home
+
+    init?(url: URL) {
+        guard url.scheme == "screenshotbrain" else { return nil }
+        switch url.host {
+        case "item":
+            guard let id = url.pathComponents.dropFirst().first else { return nil }
+            self = .item(id)
+        case "recap": self = .recap
+        case "paywall": self = .paywall
+        case "home": self = .home
+        default: return nil
         }
     }
 }

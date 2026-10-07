@@ -313,11 +313,13 @@ public struct ScanState: Codable, Hashable, Sendable {
     public var id: Int
     public var lastScanAt: Date?
     public var updatedAt: Date
+    public var lastRecapAt: Date?
 
-    public init(lastScanAt: Date? = nil, updatedAt: Date = Date()) {
+    public init(lastScanAt: Date? = nil, updatedAt: Date = Date(), lastRecapAt: Date? = nil) {
         self.id = Self.singletonID
         self.lastScanAt = lastScanAt
         self.updatedAt = updatedAt
+        self.lastRecapAt = lastRecapAt
     }
 }
 

@@ -36,6 +36,11 @@ public struct RevealStory: Sendable {
     public var palette: LightPalette
     /// Limited photo access: the Reveal is about the handful of screenshots the user shared.
     public var isLimited: Bool
+    /// "In the last two months", "In September", "All time".
+    public var periodLabel: String = "In the last two months"
+    /// The free monthly Reveal: the count, the categories and the share card. Premium gets the
+    /// full set.
+    public var isShort = false
 
     /// The biggest category the user can act on.
     public var topCategory: ItemCategory? {
@@ -62,9 +67,27 @@ public enum RevealBuilder {
         now: Date = Date(),
         calendar: Calendar = .current
     ) throws -> RevealStory {
-        let start = isLimited ? .distantPast : now.addingTimeInterval(-lookback)
-        let summaries = try database.summaries(since: isLimited ? nil : start)
-        var story = build(summaries: summaries, answers: answers, isLimited: isLimited, start: start, end: now, calendar: calendar)
+        try build(database: database, period: isLimited ? .allTime : .firstScan, answers: answers, isLimited: isLimited, now: now, calendar: calendar)
+    }
+
+    /// A Reveal over any period: the first one, a month, or every screenshot ever read.
+    public static func build(
+        database: AppDatabase,
+        period: RevealPeriod,
+        answers: OnboardingAnswers?,
+        isLimited: Bool,
+        isShort: Bool = false,
+        now: Date = Date(),
+        calendar: Calendar = .current
+    ) throws -> RevealStory {
+        let range = period.range(now: now, calendar: calendar)
+        let summaries = try database.summaries(since: range.start == .distantPast ? nil : range.start)
+            .filter { $0.createdAt < range.end }
+        // The guesses were about the first two months; later Reveals stand on their own.
+        let guesses = period == .firstScan ? answers : nil
+        var story = build(summaries: summaries, answers: guesses, isLimited: isLimited, start: range.start, end: range.end, calendar: calendar)
+        story.periodLabel = period.label(calendar: calendar, now: now)
+        story.isShort = isShort
         if let top = story.topCategory {
             story.topExamples = try database.revealExamples(category: top, limit: 3)
         }
@@ -150,10 +173,84 @@ public enum RevealBuilder {
     }
 }
 
+/// What a Reveal covers.
+public enum RevealPeriod: Hashable, Sendable {
+    /// The first Reveal: as far back as the first scan looked.
+    case firstScan
+    /// A calendar month, starting on its first day.
+    case month(Date)
+    /// Every screenshot ever read. Premium.
+    case allTime
+
+    /// The month that just ended.
+    public static func lastMonth(now: Date = Date(), calendar: Calendar = .current) -> RevealPeriod {
+        let thisMonth = calendar.dateInterval(of: .month, for: now)?.start ?? now
+        return .month(calendar.date(byAdding: .month, value: -1, to: thisMonth) ?? thisMonth)
+    }
+
+    func range(now: Date, calendar: Calendar) -> (start: Date, end: Date) {
+        switch self {
+        case .firstScan: (now.addingTimeInterval(-RevealBuilder.lookback), now)
+        case .month(let start): (start, calendar.date(byAdding: .month, value: 1, to: start) ?? now)
+        case .allTime: (.distantPast, now)
+        }
+    }
+
+    public func label(calendar: Calendar = .current, now: Date = Date()) -> String {
+        switch self {
+        case .firstScan: return "In the last two months"
+        case .allTime: return "All time"
+        case .month(let start):
+            let formatter = DateFormatter()
+            formatter.calendar = calendar
+            formatter.timeZone = calendar.timeZone
+            formatter.dateFormat = calendar.isDate(start, equalTo: now, toGranularity: .year) ? "LLLL" : "LLLL yyyy"
+            return "In " + formatter.string(from: start)
+        }
+    }
+
+    /// "September" for the home screen tile.
+    public func name(calendar: Calendar = .current, now: Date = Date()) -> String {
+        label(calendar: calendar, now: now).replacingOccurrences(of: "In ", with: "")
+    }
+}
+
+extension RevealStory {
+    /// The numbers, for keeping in history.
+    public func snapshot(kind: RevealSnapshot.Kind) -> RevealSnapshot {
+        RevealSnapshot(
+            kind: kind,
+            periodStart: periodStart,
+            periodEnd: periodEnd,
+            stats: RevealStats(
+                totalScreenshots: total,
+                peakHour: peakHour,
+                busiestDay: busiestDay,
+                busiestDayCount: busiestDayCount,
+                categoryCounts: Dictionary(uniqueKeysWithValues: categories.map { ($0.category.rawValue, $0.count) }),
+                datedCount: datedCount,
+                oldestUndoneItemID: oldestUndone?.id
+            )
+        )
+    }
+}
+
 // MARK: - Copy
 
 /// How each category is said out loud.
 public enum CategoryWords {
+    /// A tab or tile title: "Places".
+    public static func title(_ category: ItemCategory) -> String {
+        switch category {
+        case .place: "Places"
+        case .event: "Events"
+        case .product: "Products"
+        case .recipe: "Recipes"
+        case .reference: "Reference"
+        case .other: "Other"
+        }
+    }
+
     public static func plural(_ category: ItemCategory) -> String {
         switch category {
         case .place: "places"
@@ -215,7 +312,24 @@ extension RevealStory {
         ],
         unsureCount: 46,
         guessedTopCategory: .product,
-        topExamples: [],
+        topExamples: [
+            (0.96, 0.52, 0.24, "Bar Sazerac"),
+            (0.98, 0.70, 0.45, "Ramen Ikkyu"),
+            (0.85, 0.35, 0.30, "Lune Croissanterie"),
+        ].map { red, green, blue, title in
+            ScreenshotItem(
+                assetLocalID: "sample-\(title)",
+                createdAt: Date(timeIntervalSinceReferenceDate: 784_000_000),
+                category: .place,
+                confidence: 0.94,
+                isSafeToDisplay: true,
+                palette: [
+                    PaletteColor(red: red, green: green, blue: blue, weight: 0.6),
+                    PaletteColor(red: red * 0.45, green: green * 0.3, blue: blue * 0.6, weight: 0.4),
+                ],
+                title: title
+            )
+        },
         oldestUndone: ScreenshotItem(
             assetLocalID: "sample",
             createdAt: Date(timeIntervalSinceReferenceDate: 780_400_000),

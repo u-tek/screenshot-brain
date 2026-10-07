@@ -19,4 +19,10 @@ SB_REVENUECAT_API_KEY =
 // screenshot-brain-account.yourname.workers.dev. Host only: "//" starts a comment here.
 SB_ACCOUNT_SERVER_HOST =
 
+// The privacy policy page. Write "https:/$()/" because a plain "//" starts a comment here.
+SB_PRIVACY_POLICY_URL =
+
+// The address behind "Say hello" in Settings. Empty: the contact row is hidden.
+SB_SUPPORT_EMAIL =
+
 #include? "Local.xcconfig"

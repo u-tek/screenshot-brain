@@ -27,7 +27,7 @@ public struct ShareCardView: View {
                     }
                     .foregroundStyle(SBColor.ink)
                     Spacer()
-                    Text(story.isLimited ? "SCREENSHOTS I PICKED" : "SCREENSHOTS · LAST 2 MONTHS")
+                    Text(story.isLimited ? "SCREENSHOTS I PICKED" : "SCREENSHOTS · \(story.periodLabel.uppercased())")
                         .font(.system(size: 10 * unit, weight: .regular, design: .monospaced))
                         .foregroundStyle(SBColor.inkSecondary)
                     Text(story.total.formatted())

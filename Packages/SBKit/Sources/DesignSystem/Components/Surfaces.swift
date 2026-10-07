@@ -122,6 +122,18 @@ public struct FolderTabCard<Content: View>: View {
 }
 
 extension LightComposition {
+    /// The same light, flipped left to right.
+    public func mirrored() -> LightComposition {
+        LightComposition(forms: forms.map { form in
+            var form = form
+            form.points = form.points.map { LightPoint(1 - $0.x, $0.y) }
+            form.axisStart.x = 1 - form.axisStart.x
+            form.axisEnd.x = 1 - form.axisEnd.x
+            form.angle = .pi - form.angle
+            return form
+        })
+    }
+
     /// The same light, moved down by a fraction of the surface's height.
     public func shifted(down amount: Double) -> LightComposition {
         LightComposition(forms: forms.map { form in

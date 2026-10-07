@@ -123,6 +123,14 @@ extension LightPalette {
         }
     }
 
+    /// An item's light: its own colours when it's safe to show, otherwise its category's.
+    public static func item(category: ItemCategory, colors: [PaletteColor], isSafeToDisplay: Bool) -> LightPalette {
+        if isSafeToDisplay, let own = LightPalette(extracted: colors) {
+            return own
+        }
+        return .category(category)
+    }
+
     /// Brief's two-colour category ramp, with a deeper version of the first colour added for body.
     private static func ramp(_ strong: UInt32, _ pale: UInt32, deepLightness: Double) -> LightPalette {
         let strongLab = OKLab(RGB(hex: strong))

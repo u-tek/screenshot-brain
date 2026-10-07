@@ -32,6 +32,11 @@ public enum AppGroup {
         return fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
     }
 
+    /// Defaults shared by the app and its extensions (standard defaults without the App Group).
+    public static func defaults(configuration: AppConfiguration = .main) -> UserDefaults? {
+        configuration.appGroupIdentifier.flatMap(UserDefaults.init(suiteName:)) ?? .standard
+    }
+
     /// Returns a directory inside the shared container, creating it if needed.
     ///
     /// Every directory is excluded from device backups: screenshots and their extracted text never

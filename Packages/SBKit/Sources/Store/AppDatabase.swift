@@ -185,6 +185,14 @@ extension AppDatabase {
             }
         }
 
+        migrator.registerMigration("v4") { db in
+            // When the last recap (triage) finished: later recaps show what's new since, plus a
+            // few older ones.
+            try db.alter(table: ScanState.databaseTableName) { t in
+                t.add(column: "lastRecapAt", .datetime)
+            }
+        }
+
         return migrator
     }
 

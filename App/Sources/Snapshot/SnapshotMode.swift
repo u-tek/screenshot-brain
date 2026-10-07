@@ -1,6 +1,9 @@
 import DesignSystem
+import Paywall
 import Reveal
+import Store
 import SwiftUI
+import Triage
 
 /// Opens one screen in a fixed state for the UI snapshot exporter (`UITests/SnapshotExportTests`).
 ///
@@ -57,7 +60,36 @@ enum SnapshotGallery {
         case "finishing":
             return AnyView(FinishingUpScreen(palette: palette, read: 182, total: 240))
         case "sharecard":
-            return AnyView(ShareCardView(story: .sample).ignoresSafeArea())
+            return AnyView(ZStack {
+                Color(white: 0.86).ignoresSafeArea()
+                ShareCardView(story: .sample)
+                    .aspectRatio(9 / 16, contentMode: .fit)
+                    .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                    .padding(24)
+            })
+        case "triage":
+            return AnyView(TriageDeck(model: TriageModel(cards: TriageModel.sampleCards(), database: nil), label: "Your first recap", onFinish: {}))
+        case "score":
+            return AnyView(ScoreMoment(palette: palette, score: Score(done: 2, total: 19), guessedOutOfTen: 3))
+        case "home":
+            return AnyView(NavigationStack {
+                ZStack(alignment: .bottom) {
+                    HomeScreen(home: .sample(), palette: palette)
+                    GlassTabBar(selection: .constant(.saved), recapCount: 7).padding(.bottom, 4)
+                }
+            })
+        case "item":
+            return AnyView(NavigationStack { ItemDetailScreen(itemID: SampleData.gig.id, preview: SampleData.gig) })
+        case "caughtup":
+            return AnyView(RecapTab())
+        case "settings":
+            return AnyView(SettingsScreen())
+        case "notifications":
+            return AnyView(NotificationsPrompt(palette: palette))
+        case "widgetguide":
+            return AnyView(WidgetGuide(palette: palette))
+        case "paywall":
+            return AnyView(PaywallView(purchases: PurchaseService(apiKey: nil, appUserID: nil), palette: palette, privacyPolicy: nil, onClose: {}, onPurchased: {}))
         case "lab":
             return AnyView(DesignLabView())
         default:

@@ -17,8 +17,10 @@ public enum RevealCard: String, CaseIterable, Sendable {
     case share
 
     static func cards(for story: RevealStory) -> [RevealCard] {
-        allCases.filter { card in
-            switch card {
+        let short: Set<RevealCard> = [.total, .categories, .share]
+        return allCases.filter { card in
+            if story.isShort, !short.contains(card) { return false }
+            return switch card {
             case .total, .share: true
             case .peakTime: story.peakMinute != nil && story.total >= 5
             case .busiestDay: story.busiestDay != nil && story.busiestDayCount >= 3
@@ -112,19 +114,15 @@ public struct RevealView: View {
     private func composition(for card: RevealCard) -> LightComposition {
         switch card {
         case .total, .dated: .sweep(story.palette)
-        case .peakTime, .busiestDay: .passage(story.palette)
-        case .categories, .topCategory: .bloom(story.palette).shifted(down: 0.05)
-        case .oldest: .sweep(story.oldestUndone.map(Self.palette(for:)) ?? story.palette)
+        case .peakTime, .busiestDay: .sweep(story.palette).mirrored()
+        case .categories, .topCategory: .sweep(story.palette.reversed).shifted(down: -0.04)
+        case .oldest: .sweep(story.oldestUndone.map(Self.palette(for:)) ?? story.palette).mirrored()
         case .share: .sweep(story.palette)
         }
     }
 
     static func palette(for item: ScreenshotItem) -> LightPalette {
-        // Only safe items may lend their own colours; anything else uses its category's light.
-        if item.isSafeToDisplay, let own = LightPalette(extracted: item.palette) {
-            return own
-        }
-        return .category(item.category)
+        .item(category: item.category, colors: item.palette, isSafeToDisplay: item.isSafeToDisplay)
     }
 
     @ViewBuilder
@@ -170,10 +168,12 @@ private struct CardLayout<Top: View, Bottom: View>: View {
     }
 
     var body: some View {
+        // Content sits low on the card, as on the welcome screen; the light has the top.
         VStack(alignment: .leading, spacing: 0) {
-            Spacer(minLength: 24)
+            Spacer(minLength: 120)
             top
             Spacer(minLength: 24)
+                .frame(maxHeight: 56)
             bottom
         }
         .padding(.horizontal, 24)
@@ -188,7 +188,7 @@ private struct TotalCard: View {
     var body: some View {
         CardLayout {
             VStack(alignment: .leading, spacing: 12) {
-                SmallLabel(story.isLimited ? "From the screenshots you picked" : "In the last two months")
+                SmallLabel(story.isLimited ? "From the screenshots you picked" : story.periodLabel)
                 BigNumber(value: story.total, unit: story.total == 1 ? "screenshot" : "screenshots")
             }
         } bottom: {
@@ -212,8 +212,9 @@ private struct TotalCard: View {
         switch ratio {
         case 0.85...1.15: return "You guessed \(guess). **Scary close.**"
         case 1.5...: return "You guessed \(guess). **Not even close.**"
+        case 1.15..<1.5: return "You guessed \(guess). **It's more.**"
         case ..<0.67: return "You guessed \(guess). **Bit generous.**"
-        default: return "You guessed **\(guess).**"
+        default: return "You guessed \(guess). **It's fewer.**"
         }
     }
 }
@@ -303,7 +304,7 @@ private struct StackedFolders: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             ForEach(Array(categories.enumerated().reversed()), id: \.element.category) { index, entry in
-                FolderTabCard(tab: entry.category == .reference ? "Reference" : CategoryWords.plural(entry.category).capitalized, palette: .category(entry.category)) {
+                FolderTabCard(tab: CategoryWords.title(entry.category), palette: .category(entry.category)) {
                     HStack(alignment: .firstTextBaseline) {
                         Text(entry.count.formatted())
                             .font(SBFont.number(44))
@@ -375,7 +376,7 @@ private struct OldestCard: View {
             }
         } bottom: {
             if let item = story.oldestUndone {
-                FolderTabCard(tab: CategoryWords.plural(item.category).capitalized, palette: RevealView.palette(for: item)) {
+                FolderTabCard(tab: CategoryWords.title(item.category), palette: RevealView.palette(for: item)) {
                     VStack(alignment: .leading, spacing: 6) {
                         MistHeadline("**\(item.title ?? "Something you saved")**", size: 22, alignment: .leading)
                         DataRows([("Saved", item.createdAt.formatted(date: .abbreviated, time: .omitted))])

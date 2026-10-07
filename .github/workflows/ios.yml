@@ -20,6 +20,20 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # The Sign in with Apple token endpoint in /server. Cheap, so it runs on Linux.
+  server:
+    name: Account server
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Test
+        working-directory: server
+        run: node --experimental-strip-types --test test/*.test.ts
+
   build-and-test:
     name: Build and test
     runs-on: macos-26

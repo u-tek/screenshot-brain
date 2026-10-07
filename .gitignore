@@ -21,3 +21,9 @@ Packages/SBKit/.swiftpm/
 
 ShareExtension/Info.plist
 ShareExtension/ShareExtension.entitlements
+Widgets/Info.plist
+Widgets/Widgets.entitlements
+
+# Server
+server/node_modules/
+server/.wrangler/

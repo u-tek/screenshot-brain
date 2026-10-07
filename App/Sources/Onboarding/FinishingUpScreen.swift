@@ -16,7 +16,8 @@ struct FinishingUpScreen: View {
         GeometryReader { proxy in
             let lens = min(proxy.size.width * 0.56, 240)
             ZStack {
-                LightField(.passage(palette).shifted(down: 0.06), drifts: true)
+                // The sweep crosses the lens, so the glass bends it and its rim stands out.
+                LightField(.sweep(palette).shifted(down: 0.12), drifts: true)
                     .ignoresSafeArea()
 
                 VStack(spacing: 0) {

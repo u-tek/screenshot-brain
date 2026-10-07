@@ -44,11 +44,10 @@ struct SignInScreen: View {
             GeometryReader { proxy in
                 let size = proxy.size
                 ZStack {
-                    // The lens sits over the sweep's lower edge, so half of it bends the light
-                    // and half shows the mist through clear glass.
+                    // The lens sits in the sweep with its lower rim just past the light's edge.
                     LightField(.sweep(palette), drifts: true)
                     GlassLens(diameter: size.width * 0.52)
-                        .position(x: size.width * 0.68, y: size.height * 0.34)
+                        .position(x: size.width * 0.66, y: size.height * 0.27)
                 }
                 .frame(width: size.width, height: size.height)
             }

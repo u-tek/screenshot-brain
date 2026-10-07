@@ -1,0 +1,9 @@
+name = "screenshot-brain-account"
+main = "src/index.ts"
+compatibility_date = "2025-09-01"
+
+# Set these with `wrangler secret put <NAME>` (see README.md). Never commit them.
+#   APPLE_TEAM_ID      your team ID
+#   APPLE_KEY_ID       the Sign in with Apple key's ID
+#   APPLE_CLIENT_ID    the app's bundle ID
+#   APPLE_PRIVATE_KEY  the contents of AuthKey_XXXXXXXXXX.p8

@@ -16,6 +16,8 @@ public enum AnalyticsEvent: String, CaseIterable, Sendable {
     case revealShared = "reveal.shared"
     case triageStarted = "triage.started"
     case triageCompleted = "triage.completed"
+    case notificationsAllowed = "notifications.allowed"
+    case notificationsDeclined = "notifications.declined"
 
     // Widget
     case widgetAdded = "widget.added"

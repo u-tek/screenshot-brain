@@ -21,7 +21,12 @@ struct RootView: View {
         .onChange(of: scenePhase) { phase in
             if phase == .active {
                 model.becameActive()
+            } else if phase == .background {
+                model.wentToBackground()
             }
+        }
+        .onOpenURL { url in
+            model.open(url)
         }
     }
 

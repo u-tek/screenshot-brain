@@ -90,4 +90,20 @@ import Testing
         #expect(RevealCard.cards(for: story) == [.total, .share])
         #expect(RevealCard.cards(for: .sample).count == RevealCard.allCases.count)
     }
+
+    @Test func theFreeMonthlyRevealIsShort() {
+        var story = RevealStory.sample
+        story.isShort = true
+        #expect(RevealCard.cards(for: story) == [.total, .categories, .share])
+    }
+
+    @Test func lastMonthCoversTheWholeMonth() {
+        let now = date(day: 14, hour: 9, minute: 0)
+        let period = RevealPeriod.lastMonth(now: now, calendar: calendar)
+        let range = period.range(now: now, calendar: calendar)
+        #expect(calendar.component(.month, from: range.start) == 8)
+        #expect(calendar.component(.day, from: range.start) == 1)
+        #expect(range.end == calendar.date(from: DateComponents(year: 2026, month: 9, day: 1))!)
+        #expect(period.label(calendar: calendar, now: now) == "In August")
+    }
 }

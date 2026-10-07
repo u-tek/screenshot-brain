@@ -105,7 +105,10 @@ public final class ScanPipeline: Sendable {
         let since = state.lastScanAt.map { $0.addingTimeInterval(-3_600) } ?? now.addingTimeInterval(-Self.lookback)
         let found = library.discover(since: since)
         let inserted = try database.recordDiscovered(found, now: now)
-        try database.save(ScanState(lastScanAt: now, updatedAt: now))
+        var updated = state
+        updated.lastScanAt = now
+        updated.updatedAt = now
+        try database.save(updated)
         return inserted
     }
 

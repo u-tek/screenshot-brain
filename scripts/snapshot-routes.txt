@@ -19,6 +19,15 @@ reveal.oldest
 reveal.dated
 reveal.share
 sharecard
+triage
+score
+home
+item
+caughtup
+settings
+notifications
+widgetguide
+paywall
 lab.tokens
 lab.light
 lab.components

@@ -19,12 +19,15 @@ let package = Package(
         .library(name: "Actions", targets: ["Actions"]),
         .library(name: "Notifications", targets: ["Notifications"]),
         .library(name: "Paywall", targets: ["Paywall"]),
+        .library(name: "WidgetCore", targets: ["WidgetCore"]),
     ],
     dependencies: [
         .package(url: "https://github.com/groue/GRDB.swift.git", from: "7.0.0"),
         .package(url: "https://github.com/TelemetryDeck/SwiftSDK.git", from: "2.0.0"),
         // Nudity filter: a 17 kB Core ML model, BSD-3-Clause. See LICENSES.md.
         .package(url: "https://github.com/lovoo/NSFWDetector.git", from: "1.2.0"),
+        // Subscriptions and the lifetime purchase. MIT. See LICENSES.md.
+        .package(url: "https://github.com/RevenueCat/purchases-ios-spm.git", from: "5.0.0"),
     ],
     targets: [
         .target(
@@ -40,14 +43,25 @@ let package = Package(
         .target(name: "DesignSystem", dependencies: ["Core"]),
         .target(name: "Media", dependencies: ["Core"]),
         .target(name: "Reveal", dependencies: ["Core", "Store", "Safety", "DesignSystem", "Media"]),
-        .target(name: "Triage", dependencies: ["Core", "Store", "DesignSystem"]),
+        .target(name: "Triage", dependencies: ["Core", "Store", "DesignSystem", "Media", "Actions"]),
         .target(name: "Actions", dependencies: ["Core", "Store"]),
         .target(name: "Notifications", dependencies: ["Core", "Store"]),
-        .target(name: "Paywall", dependencies: ["Core", "DesignSystem"]),
+        .target(
+            name: "Paywall",
+            dependencies: ["Core", "DesignSystem", .product(name: "RevenueCat", package: "purchases-ios-spm")],
+            // RevenueCat's callbacks predate strict concurrency checking.
+            swiftSettings: [.swiftLanguageMode(.v5)]
+        ),
+        .target(name: "WidgetCore", dependencies: ["Core", "Store"]),
 
         .testTarget(name: "CoreTests", dependencies: ["Core"]),
         .testTarget(name: "SafetyTests", dependencies: ["Safety"]),
         .testTarget(name: "RevealTests", dependencies: ["Reveal", "Store"]),
+        .testTarget(name: "ActionsTests", dependencies: ["Actions", "Store"]),
+        .testTarget(name: "TriageTests", dependencies: ["Triage", "Store"]),
+        .testTarget(name: "WidgetCoreTests", dependencies: ["WidgetCore", "Store"]),
+        .testTarget(name: "NotificationsTests", dependencies: ["Notifications"]),
+        .testTarget(name: "PaywallTests", dependencies: ["Paywall"]),
         .testTarget(name: "ScanEngineTests", dependencies: ["ScanEngine", "Store", "Safety"]),
         .testTarget(
             name: "StoreTests",

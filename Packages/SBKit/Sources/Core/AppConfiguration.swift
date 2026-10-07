@@ -12,19 +12,27 @@ public struct AppConfiguration: Sendable, Equatable {
     /// host, because "//" starts a comment there.
     public var accountServerHost: String?
     public var revenueCatAPIKey: String?
+    /// Where "Say hello" in Settings goes.
+    public var supportEmail: String?
+    /// The privacy policy, linked from the paywall and Settings.
+    public var privacyPolicyURL: URL?
 
     public init(
         appGroupIdentifier: String?,
         cloudKitContainerIdentifier: String?,
         telemetryDeckAppID: String?,
         accountServerHost: String? = nil,
-        revenueCatAPIKey: String? = nil
+        revenueCatAPIKey: String? = nil,
+        supportEmail: String? = nil,
+        privacyPolicyURL: URL? = nil
     ) {
         self.appGroupIdentifier = appGroupIdentifier
         self.cloudKitContainerIdentifier = cloudKitContainerIdentifier
         self.telemetryDeckAppID = telemetryDeckAppID
         self.accountServerHost = accountServerHost
         self.revenueCatAPIKey = revenueCatAPIKey
+        self.supportEmail = supportEmail
+        self.privacyPolicyURL = privacyPolicyURL
     }
 
     public var accountServerURL: URL? {
@@ -42,7 +50,9 @@ public struct AppConfiguration: Sendable, Equatable {
             cloudKitContainerIdentifier: value(InfoKey.cloudKitContainer),
             telemetryDeckAppID: value(InfoKey.telemetryDeckAppID),
             accountServerHost: value(InfoKey.accountServerHost),
-            revenueCatAPIKey: value(InfoKey.revenueCatAPIKey)
+            revenueCatAPIKey: value(InfoKey.revenueCatAPIKey),
+            supportEmail: value(InfoKey.supportEmail),
+            privacyPolicyURL: value(InfoKey.privacyPolicyURL).flatMap(URL.init(string:))
         )
     }
 
@@ -55,5 +65,7 @@ public struct AppConfiguration: Sendable, Equatable {
         static let telemetryDeckAppID = "SBTelemetryDeckAppID"
         static let accountServerHost = "SBAccountServerHost"
         static let revenueCatAPIKey = "SBRevenueCatAPIKey"
+        static let supportEmail = "SBSupportEmail"
+        static let privacyPolicyURL = "SBPrivacyPolicyURL"
     }
 }

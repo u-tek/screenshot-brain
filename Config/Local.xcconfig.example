@@ -6,3 +6,9 @@ SB_TELEMETRYDECK_APP_ID = 00000000-0000-0000-0000-000000000000
 
 // SB_APP_GROUP and SB_ICLOUD_CONTAINER derive from SB_BUNDLE_ID.
 // Override them only if the identifiers registered in the developer portal differ.
+
+// Services (see README): RevenueCat public key, the /server token endpoint host, support email.
+SB_REVENUECAT_API_KEY = appl_xxxxxxxxxxxxxxxxxxxxxxxxxxx
+SB_ACCOUNT_SERVER_HOST = screenshot-brain-account.yourname.workers.dev
+SB_SUPPORT_EMAIL = hello@yourdomain.com
+SB_PRIVACY_POLICY_URL = https:/$()/yourdomain.com/privacy
