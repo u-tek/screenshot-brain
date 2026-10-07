@@ -84,6 +84,8 @@ targets:
         product: Core
       - package: SBKit
         product: Store
+      - package: SBKit
+        product: DesignSystem
 
   # Exports PNGs of screens for design review (see UITests/SnapshotExportTests.swift).
   ScreenshotBrainUITests:

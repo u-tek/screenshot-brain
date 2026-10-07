@@ -1,24 +1,30 @@
+import DesignSystem
 import SwiftUI
 
-/// Placeholder until the art direction is approved and the first-open flow is built (M4).
+/// The first-open flow so far: the pitch, then the first guessing question.
+/// The full flow (sign-in, photo access, scan, Reveal) arrives in M4.
 struct RootView: View {
-    @EnvironmentObject private var environment: AppEnvironment
+    @State private var step: Step = .welcome
+
+    enum Step {
+        case welcome
+        case question
+    }
 
     var body: some View {
-        VStack(spacing: 8) {
-            Text("Screenshot Brain")
-                .font(.title2.weight(.semibold))
-            switch environment.database {
-            case .ready:
-                Text("Store ready")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            case .failed(let message):
-                Text(message)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+        ZStack {
+            switch step {
+            case .welcome:
+                WelcomeScreen {
+                    withAnimation(.spring(response: 0.5, dampingFraction: 0.9)) { step = .question }
+                }
+                .transition(.opacity)
+            case .question:
+                GuessQuestionScreen(onSkip: {
+                    withAnimation(.spring(response: 0.5, dampingFraction: 0.9)) { step = .welcome }
+                })
+                .transition(.opacity)
             }
         }
-        .padding()
     }
 }

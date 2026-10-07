@@ -1,0 +1,168 @@
+import SwiftUI
+
+/// The hero object: a clear glass disc. It holds no colour of its own; it sits over the light
+/// and bends it, so the colour you see through it is the user's own.
+public struct GlassLens: View {
+    private let diameter: CGFloat
+
+    public init(diameter: CGFloat) {
+        self.diameter = diameter
+    }
+
+    public var body: some View {
+        ZStack {
+            Color.clear
+                .sbGlass(in: Circle(), style: .clear)
+            // A hairline of light catching the upper rim.
+            Circle()
+                .strokeBorder(
+                    LinearGradient(colors: [.white.opacity(0.7), .white.opacity(0.0)], startPoint: .top, endPoint: .center),
+                    lineWidth: 0.75
+                )
+        }
+        .frame(width: diameter, height: diameter)
+        .accessibilityHidden(true)
+    }
+}
+
+/// A thin circle around the lens, with one orange dot where the active label meets it.
+public struct LensOrbit: View {
+    private let diameter: CGFloat
+    /// Where the dot sits, in radians from the positive x axis (screen space).
+    private let dotAngle: Double
+
+    public init(diameter: CGFloat, dotAngle: Double = 0) {
+        self.diameter = diameter
+        self.dotAngle = dotAngle
+    }
+
+    public var body: some View {
+        ZStack {
+            Circle()
+                .stroke(SBColor.hairline, lineWidth: 0.75)
+            Circle()
+                .fill(SBColor.accent)
+                .frame(width: 9, height: 9)
+                .offset(x: cos(dotAngle) * diameter / 2, y: sin(dotAngle) * diameter / 2)
+        }
+        .frame(width: diameter, height: diameter)
+        .accessibilityHidden(true)
+    }
+}
+
+/// The app's mark: the four corners of a screenshot's frame.
+public struct AppMark: View {
+    private let size: CGFloat
+
+    public init(size: CGFloat = 16) {
+        self.size = size
+    }
+
+    public var body: some View {
+        HStack(spacing: 8) {
+            FrameCorners()
+                .stroke(SBColor.ink, style: StrokeStyle(lineWidth: 1.6, lineCap: .round, lineJoin: .round))
+                .frame(width: size, height: size)
+            Text("Screenshot Brain")
+                .font(.system(size: size, weight: .semibold))
+                .tracking(-0.2)
+                .foregroundStyle(SBColor.ink)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("Screenshot Brain"))
+    }
+}
+
+/// Four corner brackets, like a viewfinder.
+public struct FrameCorners: Shape {
+    public init() {}
+
+    public func path(in rect: CGRect) -> Path {
+        let arm = min(rect.width, rect.height) * 0.32
+        var path = Path()
+        // top left
+        path.move(to: CGPoint(x: rect.minX, y: rect.minY + arm))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.minX + arm, y: rect.minY))
+        // top right
+        path.move(to: CGPoint(x: rect.maxX - arm, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY + arm))
+        // bottom right
+        path.move(to: CGPoint(x: rect.maxX, y: rect.maxY - arm))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.maxX - arm, y: rect.maxY))
+        // bottom left
+        path.move(to: CGPoint(x: rect.minX + arm, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY - arm))
+        return path
+    }
+}
+
+/// A hairline ruler with ticks and one orange mark at the centre. Drag to change the value.
+public struct TickRuler: View {
+    @Binding private var value: Int
+    private let range: ClosedRange<Int>
+    private let step: Int
+    @State private var dragStart: Int?
+
+    public init(value: Binding<Int>, in range: ClosedRange<Int>, step: Int) {
+        self._value = value
+        self.range = range
+        self.step = step
+    }
+
+    public var body: some View {
+        GeometryReader { proxy in
+            let spacing: CGFloat = 8
+            let count = Int(proxy.size.width / spacing) + 2
+            let offset = CGFloat(value / step % 5) * spacing
+            ZStack {
+                HStack(spacing: spacing - 1) {
+                    ForEach(0..<count, id: \.self) { index in
+                        let major = (index + value / step) % 5 == 0
+                        Capsule()
+                            .fill(SBColor.inkSecondary.opacity(major ? 0.55 : 0.25))
+                            .frame(width: 1, height: major ? 18 : 10)
+                    }
+                }
+                .frame(width: proxy.size.width, alignment: .leading)
+                .offset(x: -offset)
+                .mask(
+                    LinearGradient(
+                        stops: [.init(color: .clear, location: 0), .init(color: .black, location: 0.25),
+                                .init(color: .black, location: 0.75), .init(color: .clear, location: 1)],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                Capsule()
+                    .fill(SBColor.accent)
+                    .frame(width: 2, height: 28)
+            }
+            .frame(width: proxy.size.width, height: proxy.size.height)
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 2)
+                    .onChanged { gesture in
+                        let start = dragStart ?? value
+                        if dragStart == nil { dragStart = value }
+                        let steps = Int((-gesture.translation.width / spacing).rounded())
+                        value = min(max(start + steps * step, range.lowerBound), range.upperBound)
+                    }
+                    .onEnded { _ in dragStart = nil }
+            )
+        }
+        .frame(height: 32)
+        .accessibilityElement()
+        .accessibilityValue(Text("\(value)"))
+        .accessibilityAdjustableAction { direction in
+            switch direction {
+            case .increment: value = min(value + step, range.upperBound)
+            case .decrement: value = max(value - step, range.lowerBound)
+            @unknown default: break
+            }
+        }
+    }
+}

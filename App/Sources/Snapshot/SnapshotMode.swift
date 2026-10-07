@@ -34,6 +34,8 @@ enum SnapshotGallery {
     static func view(for route: String) -> AnyView? {
         switch route {
         case "root": AnyView(RootView())
+        case "welcome": AnyView(WelcomeScreen())
+        case "question1": AnyView(GuessQuestionScreen())
         default: nil
         }
     }
