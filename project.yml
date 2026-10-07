@@ -1,0 +1,96 @@
+# XcodeGen spec. The .xcodeproj is generated from this file and is not committed.
+# Run `make project` after cloning and after editing this file.
+
+name: ScreenshotBrain
+
+options:
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+  developmentLanguage: en
+
+configFiles:
+  Debug: Config/Debug.xcconfig
+  Release: Config/Release.xcconfig
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    TARGETED_DEVICE_FAMILY: "1"
+    DEVELOPMENT_TEAM: $(SB_TEAM_ID)
+    CODE_SIGN_STYLE: Automatic
+    SUPPORTS_MACCATALYST: NO
+    SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
+    SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD: NO
+    LOCALIZATION_PREFERS_STRING_CATALOGS: YES
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+
+packages:
+  SBKit:
+    path: Packages/SBKit
+
+targets:
+  ScreenshotBrain:
+    type: application
+    platform: iOS
+    sources:
+      - path: App/Sources
+      - path: App/Resources
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: Screenshot Brain
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        ITSAppUsesNonExemptEncryption: false
+        LSRequiresIPhoneOS: true
+        UILaunchScreen:
+          UIColorName: LaunchMist
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        NSPhotoLibraryUsageDescription: Screenshot Brain reads your screenshots on your iPhone. They never leave your device.
+        PHPhotoLibraryPreventAutomaticLimitedAccessAlert: true
+        UIBackgroundModes:
+          - processing
+          - fetch
+        BGTaskSchedulerPermittedIdentifiers:
+          - $(PRODUCT_BUNDLE_IDENTIFIER).scan
+          - $(PRODUCT_BUNDLE_IDENTIFIER).recap
+        SBAppGroupIdentifier: $(SB_APP_GROUP)
+        SBCloudKitContainerIdentifier: $(SB_ICLOUD_CONTAINER)
+        SBTelemetryDeckAppID: $(SB_TELEMETRYDECK_APP_ID)
+    entitlements:
+      path: App/ScreenshotBrain.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - $(SB_APP_GROUP)
+        com.apple.developer.icloud-container-identifiers:
+          - $(SB_ICLOUD_CONTAINER)
+        com.apple.developer.icloud-services:
+          - CloudKit
+        com.apple.developer.applesignin:
+          - Default
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(SB_BUNDLE_ID)
+        PRODUCT_NAME: ScreenshotBrain
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+    dependencies:
+      - package: SBKit
+        product: Core
+      - package: SBKit
+        product: Store
+
+schemes:
+  ScreenshotBrain:
+    build:
+      targets:
+        ScreenshotBrain: all
+    run:
+      config: Debug
+    archive:
+      config: Release

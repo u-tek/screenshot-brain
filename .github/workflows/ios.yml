@@ -1,0 +1,86 @@
+name: iOS
+
+on:
+  push:
+    branches: ["**"]
+    paths-ignore:
+      - "**/*.md"
+      - "design/**"
+  pull_request:
+  workflow_dispatch:
+
+# macOS minutes are expensive: a newer push cancels the run it supersedes.
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build and test
+    runs-on: macos-26
+    timeout-minutes: 45
+    env:
+      SPM_DIR: ${{ github.workspace }}/.spm
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select the newest stable Xcode
+        run: |
+          xcode=$(ls -d /Applications/Xcode_*.app | python3 -c '
+          import re, sys
+          apps = [line.strip() for line in sys.stdin if not re.search(r"beta|_rc|release.candidate", line, re.I)]
+          key = lambda path: [int(part) for part in re.findall(r"\d+", path.rsplit("/", 1)[-1])]
+          print(max(apps, key=key))
+          ')
+          echo "Using $xcode"
+          sudo xcode-select -s "$xcode/Contents/Developer"
+          xcodebuild -version
+          xcrun simctl list runtimes
+
+      - name: Install tools
+        run: |
+          brew install xcodegen
+          command -v xcbeautify || brew install xcbeautify
+
+      - name: Cache Swift packages
+        uses: actions/cache@v4
+        with:
+          path: .spm
+          key: spm-${{ runner.os }}-${{ hashFiles('Packages/SBKit/Package.swift') }}
+          restore-keys: spm-${{ runner.os }}-
+
+      - name: Pick a simulator
+        run: |
+          destination=$(scripts/sim-destination.sh)
+          echo "Using $destination"
+          echo "DESTINATION=$destination" >> "$GITHUB_ENV"
+
+      - name: Module tests
+        working-directory: Packages/SBKit
+        run: |
+          set -o pipefail
+          xcodebuild test -scheme SBKit-Package -destination "$DESTINATION" \
+            -clonedSourcePackagesDirPath "$SPM_DIR" \
+            -skipMacroValidation -skipPackagePluginValidation \
+            -resultBundlePath "$GITHUB_WORKSPACE/build/ModuleTests.xcresult" \
+            | xcbeautify --renderer github-actions
+
+      - name: Generate the Xcode project
+        run: xcodegen generate
+
+      - name: Build the app
+        run: |
+          set -o pipefail
+          xcodebuild build -project ScreenshotBrain.xcodeproj -scheme ScreenshotBrain \
+            -destination "$DESTINATION" -clonedSourcePackagesDirPath "$SPM_DIR" \
+            -skipMacroValidation -skipPackagePluginValidation \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcbeautify --renderer github-actions
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: build/*.xcresult
+          if-no-files-found: ignore

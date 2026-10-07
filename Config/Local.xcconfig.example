@@ -1,0 +1,8 @@
+// Copy to Config/Local.xcconfig (gitignored) and fill in.
+
+SB_TEAM_ID = ABCDE12345
+SB_BUNDLE_ID = com.yourcompany.screenshotbrain
+SB_TELEMETRYDECK_APP_ID = 00000000-0000-0000-0000-000000000000
+
+// SB_APP_GROUP and SB_ICLOUD_CONTAINER derive from SB_BUNDLE_ID.
+// Override them only if the identifiers registered in the developer portal differ.

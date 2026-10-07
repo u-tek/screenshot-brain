@@ -1,0 +1,15 @@
+// Identity and service keys shared by every target.
+//
+// These defaults build and run in the simulator. For a device build or an
+// App Store build, copy Config/Local.xcconfig.example to Config/Local.xcconfig
+// (gitignored) and fill in the real values there.
+
+SB_TEAM_ID =
+SB_BUNDLE_ID = com.example.screenshotbrain
+SB_APP_GROUP = group.$(SB_BUNDLE_ID)
+SB_ICLOUD_CONTAINER = iCloud.$(SB_BUNDLE_ID)
+
+// Leave empty to run with analytics switched off.
+SB_TELEMETRYDECK_APP_ID =
+
+#include? "Local.xcconfig"
