@@ -43,7 +43,7 @@ public struct LensOrbit: View {
             Circle()
                 .fill(SBColor.accent)
                 .frame(width: 9, height: 9)
-                .offset(x: cos(dotAngle) * diameter / 2, y: sin(dotAngle) * diameter / 2)
+                .offset(x: CGFloat(cos(dotAngle)) * diameter / 2, y: CGFloat(sin(dotAngle)) * diameter / 2)
         }
         .frame(width: diameter, height: diameter)
         .accessibilityHidden(true)

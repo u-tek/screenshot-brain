@@ -85,7 +85,7 @@ public struct GrainOverlay: View {
 
 enum Grain {
     /// 128×128 grey noise, generated once with a fixed seed so every render matches.
-    nonisolated(unsafe) static let texture: CGImage = make()
+    static let texture: CGImage = make()
 
     private static func make() -> CGImage {
         let side = 128

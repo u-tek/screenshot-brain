@@ -42,7 +42,7 @@ struct GlassModifier<S: InsettableShape>: ViewModifier {
     private var fallback: some View {
         let dark = colorScheme == .dark
         return ZStack {
-            shape.fill(style == .clear ? AnyShapeStyle(.ultraThinMaterial.opacity(0.6)) : AnyShapeStyle(.ultraThinMaterial))
+            shape.fill(style == .clear ? AnyShapeStyle(Material.ultraThinMaterial.opacity(0.6)) : AnyShapeStyle(Material.ultraThinMaterial))
             shape.fill(dark ? Color.black.opacity(style == .clear ? 0.2 : 0.45) : Color.white.opacity(style == .clear ? 0.12 : 0.55))
             if let tint {
                 shape.fill(tint.opacity(0.2))

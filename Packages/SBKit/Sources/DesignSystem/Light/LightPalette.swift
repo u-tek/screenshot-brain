@@ -45,9 +45,9 @@ public struct LightPalette: Hashable, Sendable {
     /// Dense samples of the gradient. Core Graphics interpolates between them in sRGB, so
     /// sampling densely keeps the whole ramp perceptual.
     func samples(_ count: Int = 24) -> [(location: Double, color: RGB)] {
-        (0..<count).map { index in
+        (0..<count).map { index -> (location: Double, color: RGB) in
             let t = Double(index) / Double(count - 1)
-            return (t, color(at: t))
+            return (location: t, color: color(at: t))
         }
     }
 
@@ -77,14 +77,23 @@ extension LightPalette {
     /// Greys carry no light, so they're ignored. Returns nil when nothing colourful is left, and the
     /// caller falls back to the category's light.
     public init?(extracted colors: [PaletteColor]) {
-        let colourful = colors
-            .map { (lab: OKLab(RGB(red: $0.red, green: $0.green, blue: $0.blue)), weight: $0.weight) }
-            .filter { $0.lab.chroma > 0.045 && $0.weight > 0.03 }
-            .sorted { $0.weight * $0.lab.chroma > $1.weight * $1.lab.chroma }
-            .prefix(3)
-        guard !colourful.isEmpty else { return nil }
+        struct Candidate {
+            let lab: OKLab
+            let weight: Double
+            var score: Double { weight * lab.chroma }
+        }
+        var candidates: [Candidate] = []
+        for color in colors {
+            let lab = OKLab(RGB(red: color.red, green: color.green, blue: color.blue))
+            if lab.chroma > 0.045 && color.weight > 0.03 {
+                candidates.append(Candidate(lab: lab, weight: color.weight))
+            }
+        }
+        guard !candidates.isEmpty else { return nil }
+        candidates.sort { $0.score > $1.score }
 
-        var labs = colourful.map { $0.lab }.sorted { $0.l < $1.l }
+        var labs: [OKLab] = candidates.prefix(3).map { $0.lab }
+        labs.sort { $0.l < $1.l }
         // A deep end gives the light its body...
         if labs[0].l > 0.42 {
             labs.insert(labs[0].with(lightness: 0.34, chroma: max(labs[0].chroma, 0.12)), at: 0)
@@ -94,7 +103,8 @@ extension LightPalette {
         if last.l < 0.78 {
             labs.append(last.with(lightness: 0.84, chroma: last.chroma * 0.7))
         }
-        self.init(colors: labs.map(\.rgb))
+        let rgbs: [RGB] = labs.map { $0.rgb }
+        self.init(colors: rgbs)
     }
 }
 
