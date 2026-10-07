@@ -1,9 +1,10 @@
 import AuthenticationServices
 import Combine
 import Core
-import Notifications
 import DesignSystem
 import Foundation
+import Notifications
+import Paywall
 import Reveal
 import ScanEngine
 import Store
