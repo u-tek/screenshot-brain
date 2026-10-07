@@ -15,7 +15,7 @@ struct WelcomeScreen: View {
             Spacer()
             SmallLabel("For the things you meant to do")
                 .padding(.bottom, 10)
-            MistHeadline("You saved it **for a reason.**", size: 34, alignment: .leading)
+            MistHeadline("You saved it\n**for a reason.**", size: 34, alignment: .leading)
                 .padding(.bottom, 28)
             ActionBar("Show me", systemImage: "arrow.up.right", palette: palette, action: onContinue)
                 .padding(.horizontal, -12)
@@ -31,10 +31,12 @@ struct WelcomeScreen: View {
                 let orbitRight = lensCenter.x + orbitDiameter / 2
 
                 ZStack(alignment: .topLeading) {
+                    // The light sits under the visible half of the lens and spills past its rim,
+                    // so the glass has colour to bend.
                     LightField(.pocket(
                         palette,
-                        center: LightPoint(lensCenter.x / size.width, lensCenter.y / size.height),
-                        radius: 0.30,
+                        center: LightPoint(lensCenter.x / size.width + 0.12, lensCenter.y / size.height),
+                        radius: 0.40,
                         aspect: size.height / size.width
                     ))
                     LensOrbit(diameter: orbitDiameter, dotAngle: 0)

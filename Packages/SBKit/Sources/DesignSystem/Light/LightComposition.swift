@@ -29,6 +29,9 @@ public struct LightForm: Hashable, Sendable {
     /// Direction of motion in radians, screen space (y down).
     public var angle: Double
     public var opacity: Double
+    /// Opacity multiplier at night. Pale haze would turn to grey fog on the dark ground, so it
+    /// fades almost away; the body of the light keeps glowing.
+    public var nightOpacity: Double
 
     public init(
         points: [LightPoint],
@@ -38,7 +41,8 @@ public struct LightForm: Hashable, Sendable {
         blur: Double,
         stretch: Double = 1,
         angle: Double = 0,
-        opacity: Double = 1
+        opacity: Double = 1,
+        nightOpacity: Double = 1
     ) {
         self.points = points
         self.axisStart = axisStart
@@ -48,6 +52,7 @@ public struct LightForm: Hashable, Sendable {
         self.stretch = stretch
         self.angle = angle
         self.opacity = opacity
+        self.nightOpacity = nightOpacity
     }
 
     /// The shape, as a smooth closed path through the control points.
@@ -116,8 +121,8 @@ extension LightComposition {
                  from: (0, 0.7), to: (1, 1), opacity: 0.6, blur: 0.16),
             LightForm(
                 points: blob(center: center, radius: radius, aspect: aspect),
-                axisStart: LightPoint(center.x - radius * 0.7, center.y - radius * 0.7 / aspect),
-                axisEnd: LightPoint(center.x + radius * 0.9, center.y + radius * 0.9 / aspect),
+                axisStart: LightPoint(center.x - radius * 0.8, center.y - radius * 0.8 / aspect),
+                axisEnd: LightPoint(center.x + radius * 1.3, center.y + radius * 1.3 / aspect),
                 palette: palette,
                 blur: 0.05,
                 stretch: 1.5,
@@ -164,7 +169,8 @@ extension LightComposition {
             blur: blur,
             stretch: 1.3,
             angle: -0.4,
-            opacity: opacity
+            opacity: opacity,
+            nightOpacity: 0.12
         )
     }
 

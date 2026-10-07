@@ -8,7 +8,9 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 derived_data="${DERIVED_DATA:-build/DerivedData}"
-routes=$(grep -vE '^[[:space:]]*(#|$)' scripts/snapshot-routes.txt | paste -sd, -)
+all_routes=$(grep -vE '^[[:space:]]*(#|$)' scripts/snapshot-routes.txt)
+screen_routes=$(echo "$all_routes" | grep -v '^lab\.' | paste -sd, -)
+all_routes=$(echo "$all_routes" | paste -sd, -)
 devices=("iPhone 16 Pro" "iPhone SE (3rd generation)")
 
 for device in "${devices[@]}"; do
@@ -21,7 +23,11 @@ for device in "${devices[@]}"; do
   xcrun simctl boot "$udid" 2>/dev/null || true
   xcrun simctl bootstatus "$udid" -b
   xcrun simctl status_bar "$udid" override --time "9:41" --dataNetwork wifi --wifiMode active --wifiBars 3 \
-    --cellularMode active --cellularBars 4 --batteryState charged --batteryLevel 100
+    --cellularMode active --cellularBars 4 --batteryState discharging --batteryLevel 100
+
+  # Design-lab pages are only exported once, on the large phone.
+  routes="$screen_routes"
+  if [[ "$slug" == "iphone-16-pro" ]]; then routes="$all_routes"; fi
 
   TEST_RUNNER_SB_SNAPSHOT_ROUTES="$routes" TEST_RUNNER_SB_SNAPSHOT_DIR="$out" \
     xcodebuild test-without-building -project ScreenshotBrain.xcodeproj -scheme ScreenshotBrain \

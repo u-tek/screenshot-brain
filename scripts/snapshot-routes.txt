@@ -1,3 +1,8 @@
 # Routes exported by scripts/export-snapshots.sh, one per line (see SnapshotGallery in the app).
+# lab.* routes are design-lab pages (iPhone 16 Pro only, into design/lab).
 welcome
 question1
+lab.tokens
+lab.light
+lab.components
+lab.surfaces

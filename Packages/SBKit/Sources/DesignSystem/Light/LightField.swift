@@ -23,7 +23,7 @@ public struct LightField: View {
                     LinearGradient(colors: [SBColor.mistTop, SBColor.mistBottom], startPoint: .top, endPoint: .bottom)
                 }
                 ForEach(Array(composition.forms.enumerated()), id: \.offset) { _, form in
-                    LightFormView(form: form, size: proxy.size)
+                    LightFormView(form: form, size: proxy.size, night: colorScheme == .dark)
                         // At night the same light glows: it adds onto the dark ground.
                         .blendMode(colorScheme == .dark ? .screen : .normal)
                 }
@@ -50,12 +50,13 @@ public struct LightField: View {
 struct LightFormView: View {
     let form: LightForm
     let size: CGSize
+    var night = false
 
     var body: some View {
         form.path(in: size)
             .fill(form.gradient)
             .frame(width: size.width, height: size.height)
-            .opacity(form.opacity)
+            .opacity(form.opacity * (night ? form.nightOpacity : 1))
             .rotationEffect(.radians(-form.angle))
             .scaleEffect(x: 1 / form.stretch, y: 1)
             .blur(radius: form.blur * size.width)

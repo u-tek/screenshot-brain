@@ -1,3 +1,4 @@
+import DesignSystem
 import SwiftUI
 
 /// Opens one screen in a fixed state for the UI snapshot exporter (`UITests/SnapshotExportTests`).
@@ -33,10 +34,22 @@ struct SnapshotMode: Sendable {
 enum SnapshotGallery {
     static func view(for route: String) -> AnyView? {
         switch route {
-        case "root": AnyView(RootView())
-        case "welcome": AnyView(WelcomeScreen())
-        case "question1": AnyView(GuessQuestionScreen())
-        default: nil
+        case "root":
+            return AnyView(RootView())
+        case "welcome":
+            return AnyView(WelcomeScreen())
+        case "question1":
+            return AnyView(GuessQuestionScreen())
+        case "lab":
+            return AnyView(DesignLabView())
+        default:
+            guard route.hasPrefix("lab."), let page = DesignLabPage(rawValue: String(route.dropFirst(4))) else {
+                return nil
+            }
+            return AnyView(page.view.background(
+                LinearGradient(colors: [SBColor.mistTop, SBColor.mistBottom], startPoint: .top, endPoint: .bottom)
+                    .ignoresSafeArea()
+            ))
         }
     }
 }
