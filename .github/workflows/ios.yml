@@ -108,8 +108,9 @@ jobs:
           (github.event_name == 'push' && contains(github.event.head_commit.message, '[snapshots]'))
         run: scripts/export-snapshots.sh
 
+      # Commits whatever exported, even when some screens failed (the job still fails).
       - name: Commit design snapshots
-        if: steps.snapshots.outcome == 'success'
+        if: ${{ !cancelled() && (steps.snapshots.outcome == 'success' || steps.snapshots.outcome == 'failure') }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

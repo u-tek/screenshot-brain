@@ -6,6 +6,8 @@
 # (iPhone 16 Pro only). Every other route is an app screen and goes to design/screens/<device>/.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+failed=0
+shopt -s nullglob
 
 derived_data="${DERIVED_DATA:-build/DerivedData}"
 all_routes=$(grep -vE '^[[:space:]]*(#|$)' scripts/snapshot-routes.txt)
@@ -29,11 +31,19 @@ for device in "${devices[@]}"; do
   routes="$screen_routes"
   if [[ "$slug" == "iphone-16-pro" ]]; then routes="$all_routes"; fi
 
-  TEST_RUNNER_SB_SNAPSHOT_ROUTES="$routes" TEST_RUNNER_SB_SNAPSHOT_DIR="$out" \
+  # Keep going if a screen crashes: the others still export, and the run fails at the end.
+  if ! TEST_RUNNER_SB_SNAPSHOT_ROUTES="$routes" TEST_RUNNER_SB_SNAPSHOT_DIR="$out" \
     xcodebuild test-without-building -project ScreenshotBrain.xcodeproj -scheme ScreenshotBrain \
       -destination "platform=iOS Simulator,id=$udid" -derivedDataPath "$derived_data" \
       -only-testing:ScreenshotBrainUITests/SnapshotExportTests \
-      | xcbeautify
+      | xcbeautify; then
+    failed=1
+  fi
+  echo "Exported on $device:"
+  ls "$out"
+  if [[ -f "$out/failures.txt" ]]; then
+    echo "::error::Screens that didn't render on $device: $(paste -sd, "$out/failures.txt")"
+  fi
 
   mkdir -p design/lab "design/screens/$slug"
   for file in "$out"/*.png; do
@@ -47,3 +57,5 @@ for device in "${devices[@]}"; do
     fi
   done
 done
+
+exit "$failed"

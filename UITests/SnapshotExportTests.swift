@@ -18,14 +18,19 @@ final class SnapshotExportTests: XCTestCase {
             try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
         }
 
+        var failures: [String] = []
         for route in routes {
             for appearance in appearances {
                 let app = XCUIApplication()
                 app.launchArguments = ["-SBSnapshot", route, "-SBAppearance", appearance]
                 app.launch()
-                XCTAssertTrue(app.wait(for: .runningForeground, timeout: 30), "\(route) didn't launch")
                 // Let the first frames of the light fields render.
                 Thread.sleep(forTimeInterval: 2)
+                guard app.state == .runningForeground else {
+                    // Crashed: note it and carry on with the other screens.
+                    failures.append("\(route)-\(appearance)")
+                    continue
+                }
 
                 let name = "\(route)-\(appearance)"
                 let screenshot = XCUIScreen.main.screenshot()
@@ -39,6 +44,10 @@ final class SnapshotExportTests: XCTestCase {
                 app.terminate()
             }
         }
+        if let outputDirectory, !failures.isEmpty {
+            try failures.joined(separator: "\n").write(to: outputDirectory.appendingPathComponent("failures.txt"), atomically: true, encoding: .utf8)
+        }
+        XCTAssertTrue(failures.isEmpty, "These screens didn't render: \(failures.joined(separator: ", "))")
     }
 
     private func list(_ value: String?, default fallback: [String]) -> [String] {

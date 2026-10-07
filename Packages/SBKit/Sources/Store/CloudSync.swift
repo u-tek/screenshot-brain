@@ -15,13 +15,17 @@ public actor CloudSync {
     }
 
     private let database: AppDatabase
-    private let container: CKContainer
+    private let containerIdentifier: String
     private let zoneID = CKRecordZone.ID(zoneName: CloudSync.zoneName, ownerName: CKCurrentUserDefaultName)
 
     public init(database: AppDatabase, containerIdentifier: String) {
         self.database = database
-        self.container = CKContainer(identifier: containerIdentifier)
+        self.containerIdentifier = containerIdentifier
     }
+
+    /// Made on first use, never at launch: creating a container traps when the build has no
+    /// iCloud entitlement (an unsigned simulator build), and only signed-in users ever sync.
+    private lazy var container = CKContainer(identifier: containerIdentifier)
 
     private var cloud: CKDatabase {
         container.privateCloudDatabase
