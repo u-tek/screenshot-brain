@@ -9,8 +9,14 @@ struct ScreenshotBrainApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView()
-                .environmentObject(environment)
+            Group {
+                if let snapshot = SnapshotMode.current {
+                    SnapshotHost(mode: snapshot)
+                } else {
+                    RootView()
+                }
+            }
+            .environmentObject(environment)
         }
     }
 }

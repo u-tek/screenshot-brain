@@ -1,0 +1,2 @@
+# Routes exported by scripts/export-snapshots.sh, one per line (see SnapshotGallery in the app).
+root

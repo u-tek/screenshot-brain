@@ -19,11 +19,10 @@ import Testing
             ScoreSnapshot.databaseTableName,
             RevealSnapshot.databaseTableName,
         ]
-        try database.reader.read { db in
-            for table in tables {
-                #expect(try db.tableExists(table), "missing table \(table)")
-            }
+        let existing = try database.reader.read { db in
+            try tables.filter { try db.tableExists($0) }
         }
+        #expect(existing == tables)
     }
 
     @Test func itemRoundTripKeepsEntitiesAndPalette() throws {

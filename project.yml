@@ -85,12 +85,31 @@ targets:
       - package: SBKit
         product: Store
 
+  # Exports PNGs of screens for design review (see UITests/SnapshotExportTests.swift).
+  ScreenshotBrainUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: UITests
+    settings:
+      base:
+        SWIFT_VERSION: "5.0"
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: $(SB_BUNDLE_ID).uitests
+    dependencies:
+      - target: ScreenshotBrain
+
 schemes:
   ScreenshotBrain:
     build:
       targets:
         ScreenshotBrain: all
+        ScreenshotBrainUITests: [test]
     run:
       config: Debug
+    test:
+      config: Debug
+      targets:
+        - ScreenshotBrainUITests
     archive:
       config: Release

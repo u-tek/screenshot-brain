@@ -8,6 +8,11 @@ on:
       - "design/**"
   pull_request:
   workflow_dispatch:
+    inputs:
+      snapshots:
+        description: Export design snapshots and commit them to the branch
+        type: boolean
+        default: true
 
 # macOS minutes are expensive: a newer push cancels the run it supersedes.
 concurrency:
@@ -19,10 +24,12 @@ jobs:
     name: Build and test
     runs-on: macos-26
     timeout-minutes: 45
+    permissions:
+      contents: write
     env:
       SPM_DIR: ${{ github.workspace }}/.spm
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Select the newest stable Xcode
         run: |
@@ -68,14 +75,38 @@ jobs:
       - name: Generate the Xcode project
         run: xcodegen generate
 
-      - name: Build the app
+      - name: Build the app and its UI tests
         run: |
           set -o pipefail
-          xcodebuild build -project ScreenshotBrain.xcodeproj -scheme ScreenshotBrain \
-            -destination "$DESTINATION" -clonedSourcePackagesDirPath "$SPM_DIR" \
+          xcodebuild build-for-testing -project ScreenshotBrain.xcodeproj -scheme ScreenshotBrain \
+            -destination "$DESTINATION" -derivedDataPath build/DerivedData \
+            -clonedSourcePackagesDirPath "$SPM_DIR" \
             -skipMacroValidation -skipPackagePluginValidation \
             CODE_SIGNING_ALLOWED=NO \
             | xcbeautify --renderer github-actions
+
+      # Opt-in, because it adds several minutes: run the workflow by hand, or put [snapshots]
+      # in the commit message.
+      - name: Export design snapshots
+        id: snapshots
+        if: >-
+          (github.event_name == 'workflow_dispatch' && inputs.snapshots) ||
+          (github.event_name == 'push' && contains(github.event.head_commit.message, '[snapshots]'))
+        run: scripts/export-snapshots.sh
+
+      - name: Commit design snapshots
+        if: steps.snapshots.outcome == 'success'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add design/lab design/screens
+          if git diff --cached --quiet; then
+            echo "Snapshots unchanged"
+            exit 0
+          fi
+          git commit -m "Update design snapshots [skip ci]"
+          git pull --rebase origin "$GITHUB_REF_NAME"
+          git push origin HEAD:"$GITHUB_REF_NAME"
 
       - name: Upload test results
         if: failure()
