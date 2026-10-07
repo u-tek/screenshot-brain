@@ -136,6 +136,41 @@ extension AppDatabase {
             }
         }
 
+        migrator.registerMigration("v2") { db in
+            try db.alter(table: ScreenshotItem.databaseTableName) { t in
+                t.add(column: "title", .text)
+                t.add(column: "dueDate", .datetime)
+                t.add(column: "reviewAt", .datetime)
+                t.add(column: "processedAt", .datetime)
+                t.add(column: "needsBackfill", .boolean).notNull().defaults(to: false)
+                t.add(column: "hasDate", .boolean).notNull().defaults(to: false)
+            }
+            try db.create(index: "screenshotItem_on_dueDate", on: ScreenshotItem.databaseTableName, columns: ["dueDate"])
+            try db.create(index: "screenshotItem_on_processedAt", on: ScreenshotItem.databaseTableName, columns: ["processedAt"])
+
+            // Reference search across the text read from screenshots. Kept in sync by triggers.
+            try db.create(virtualTable: Self.searchTableName, using: FTS5()) { t in
+                t.synchronize(withTable: ScreenshotItem.databaseTableName)
+                t.tokenizer = .unicode61()
+                t.column("title")
+                t.column("extractedText")
+            }
+
+            try db.create(table: AccuracyRecord.databaseTableName) { t in
+                t.primaryKey("category", .text)
+                t.column("correct", .integer).notNull().defaults(to: 0)
+                t.column("wrong", .integer).notNull().defaults(to: 0)
+            }
+
+            try db.create(table: ScanState.databaseTableName) { t in
+                t.primaryKey("id", .integer)
+                t.column("lastScanAt", .datetime)
+                t.column("updatedAt", .datetime).notNull()
+            }
+        }
+
         return migrator
     }
+
+    static let searchTableName = "screenshotItemSearch"
 }

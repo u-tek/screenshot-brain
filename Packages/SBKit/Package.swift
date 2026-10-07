@@ -22,6 +22,8 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/groue/GRDB.swift.git", from: "7.0.0"),
         .package(url: "https://github.com/TelemetryDeck/SwiftSDK.git", from: "2.0.0"),
+        // Nudity filter: a 17 kB Core ML model, BSD-3-Clause. See LICENSES.md.
+        .package(url: "https://github.com/lovoo/NSFWDetector.git", from: "1.2.0"),
     ],
     targets: [
         .target(
@@ -32,7 +34,7 @@ let package = Package(
             name: "Store",
             dependencies: ["Core", .product(name: "GRDB", package: "GRDB.swift")]
         ),
-        .target(name: "Safety", dependencies: ["Core"]),
+        .target(name: "Safety", dependencies: ["Core", .product(name: "NSFWDetector", package: "NSFWDetector")]),
         .target(name: "ScanEngine", dependencies: ["Core", "Store", "Safety"]),
         .target(name: "DesignSystem", dependencies: ["Core"]),
         .target(name: "Reveal", dependencies: ["Core", "Store", "DesignSystem"]),
@@ -42,6 +44,8 @@ let package = Package(
         .target(name: "Paywall", dependencies: ["Core", "DesignSystem"]),
 
         .testTarget(name: "CoreTests", dependencies: ["Core"]),
+        .testTarget(name: "SafetyTests", dependencies: ["Safety"]),
+        .testTarget(name: "ScanEngineTests", dependencies: ["ScanEngine", "Store", "Safety"]),
         .testTarget(
             name: "StoreTests",
             dependencies: ["Store", .product(name: "GRDB", package: "GRDB.swift")]

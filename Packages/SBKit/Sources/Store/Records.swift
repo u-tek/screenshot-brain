@@ -32,6 +32,18 @@ public struct ScreenshotItem: Codable, Hashable, Identifiable, Sendable {
     /// Last time the widget showed this item, so nothing shows twice in a day.
     public var lastSurfacedAt: Date?
     public var updatedAt: Date
+    /// A short title read from the screenshot (its most prominent line). On-device only.
+    public var title: String?
+    /// The date that matters: the event's date, or a sale's end.
+    public var dueDate: Date?
+    /// When to ask "still want this?" (places and recipes).
+    public var reviewAt: Date?
+    /// When the scan engine finished reading this screenshot. Nil until then.
+    public var processedAt: Date?
+    /// The asset was cloud-only during the scan; read it later.
+    public var needsBackfill: Bool
+    /// Any date or time was found in the screenshot.
+    public var hasDate: Bool
 
     public init(
         id: String = UUID().uuidString,
@@ -52,7 +64,13 @@ public struct ScreenshotItem: Codable, Hashable, Identifiable, Sendable {
         extractedText: String? = nil,
         stateChangedAt: Date? = nil,
         lastSurfacedAt: Date? = nil,
-        updatedAt: Date = Date()
+        updatedAt: Date = Date(),
+        title: String? = nil,
+        dueDate: Date? = nil,
+        reviewAt: Date? = nil,
+        processedAt: Date? = nil,
+        needsBackfill: Bool = false,
+        hasDate: Bool = false
     ) {
         self.id = id
         self.assetLocalID = assetLocalID
@@ -73,6 +91,17 @@ public struct ScreenshotItem: Codable, Hashable, Identifiable, Sendable {
         self.stateChangedAt = stateChangedAt
         self.lastSurfacedAt = lastSurfacedAt
         self.updatedAt = updatedAt
+        self.title = title
+        self.dueDate = dueDate
+        self.reviewAt = reviewAt
+        self.processedAt = processedAt
+        self.needsBackfill = needsBackfill
+        self.hasDate = hasDate
+    }
+
+    /// Whether the item may appear anywhere in the app at all. Nudity-flagged items never do.
+    public var isVisibleInApp: Bool {
+        !isNSFWFlagged
     }
 }
 
@@ -83,6 +112,7 @@ extension ScreenshotItem: FetchableRecord, PersistableRecord {
         case id, assetLocalID, cloudID, createdAt, category, confidence, entities, groupID, state
         case expiresAt, isSafeToDisplay, isNSFWFlagged, hasSensitiveText, thumbnailPath, palette
         case extractedText, stateChangedAt, lastSurfacedAt, updatedAt
+        case title, dueDate, reviewAt, processedAt, needsBackfill, hasDate
     }
 }
 
@@ -252,4 +282,45 @@ public struct RevealStats: Codable, Hashable, Sendable {
     public func count(for category: ItemCategory) -> Int {
         categoryCounts[category.rawValue] ?? 0
     }
+}
+
+/// How well the classifier did, per category, from the debug "was this right?" mode.
+public struct AccuracyRecord: Codable, Hashable, Sendable {
+    public var category: ItemCategory
+    public var correct: Int
+    public var wrong: Int
+
+    public init(category: ItemCategory, correct: Int = 0, wrong: Int = 0) {
+        self.category = category
+        self.correct = correct
+        self.wrong = wrong
+    }
+
+    public var accuracy: Double? {
+        let total = correct + wrong
+        return total == 0 ? nil : Double(correct) / Double(total)
+    }
+}
+
+extension AccuracyRecord: FetchableRecord, PersistableRecord {
+    public static let databaseTableName = "accuracyRecord"
+}
+
+/// Where the last scan got to, so scans are incremental and resumable. A single row.
+public struct ScanState: Codable, Hashable, Sendable {
+    public static let singletonID = 1
+
+    public var id: Int
+    public var lastScanAt: Date?
+    public var updatedAt: Date
+
+    public init(lastScanAt: Date? = nil, updatedAt: Date = Date()) {
+        self.id = Self.singletonID
+        self.lastScanAt = lastScanAt
+        self.updatedAt = updatedAt
+    }
+}
+
+extension ScanState: FetchableRecord, PersistableRecord {
+    public static let databaseTableName = "scanState"
 }
