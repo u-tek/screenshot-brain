@@ -22,6 +22,22 @@ It builds and runs in the simulator as is. For a device build, copy `Config/Loca
 
 CI (`.github/workflows/ios.yml`) runs both on every push, on a macOS runner.
 
+## Design
+
+The look is "Mist and light": see `design/REFERENCES.md`. Light is made like it is in a design tool: a closed shape, filled with one gradient (stops interpolated in OKLab), blurred with a Gaussian stretched along the direction of motion, composited in linear colour, plus faint grain. Glass is Liquid Glass on iOS 26 and frosted material before.
+
+Screens are exported from the real app by CI. Put `[snapshots]` in a commit message (or run the workflow by hand) and CI commits PNGs to `design/screens/<device>/` and the design lab pages to `design/lab/`. Routes live in `scripts/snapshot-routes.txt`.
+
+| Path | What's there |
+|---|---|
+| `design/references/` | The reference images; `00-north-star.jpg` is the target |
+| `design/lab/` | Design lab pages and the two north-star rebuilds, light and dark |
+| `design/compare/` | Each rebuild beside the north star |
+| `design/screens/` | Every screen on iPhone 16 Pro and iPhone SE |
+| `design/system.png` | The design system sheet (`python3 design/tools/system_sheet.py`) |
+
+CI also uploads the simulator build as the `ScreenshotBrain-simulator` artifact: unzip it and run `xcrun simctl install booted ScreenshotBrain.app`.
+
 ## Layout
 
 | Path | What's there |
