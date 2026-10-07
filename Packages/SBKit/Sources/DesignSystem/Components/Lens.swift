@@ -121,12 +121,14 @@ public struct TickRuler: View {
     @Binding private var value: Int
     private let range: ClosedRange<Int>
     private let step: Int
+    private let spokenValue: (Int) -> String
     @State private var dragStart: Int?
 
-    public init(value: Binding<Int>, in range: ClosedRange<Int>, step: Int) {
+    public init(value: Binding<Int>, in range: ClosedRange<Int>, step: Int, spokenValue: @escaping (Int) -> String = { "\($0)" }) {
         self._value = value
         self.range = range
         self.step = step
+        self.spokenValue = spokenValue
     }
 
     public var body: some View {
@@ -165,14 +167,18 @@ public struct TickRuler: View {
                         let start = dragStart ?? value
                         if dragStart == nil { dragStart = value }
                         let steps = Int((-gesture.translation.width / spacing).rounded())
-                        value = min(max(start + steps * step, range.lowerBound), range.upperBound)
+                        let next = min(max(start + steps * step, range.lowerBound), range.upperBound)
+                        if next != value {
+                            value = next
+                            if (next / step).isMultiple(of: 5) { Haptics.tick() }
+                        }
                     }
                     .onEnded { _ in dragStart = nil }
             )
         }
         .frame(height: 32)
         .accessibilityElement()
-        .accessibilityValue(Text("\(value)"))
+        .accessibilityValue(Text(spokenValue(value)))
         .accessibilityAdjustableAction { direction in
             switch direction {
             case .increment: value = min(value + step, range.upperBound)

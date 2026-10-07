@@ -1,4 +1,5 @@
 import DesignSystem
+import Reveal
 import SwiftUI
 
 /// Opens one screen in a fixed state for the UI snapshot exporter (`UITests/SnapshotExportTests`).
@@ -33,16 +34,36 @@ struct SnapshotMode: Sendable {
 @MainActor
 enum SnapshotGallery {
     static func view(for route: String) -> AnyView? {
+        let palette = LightPalette.sampleTopScreenshots
         switch route {
-        case "root":
-            return AnyView(RootView())
         case "welcome":
             return AnyView(WelcomeScreen())
+        case "signin":
+            return AnyView(SignInScreen())
+        case "photoaccess":
+            return AnyView(PhotoAccessPrompt())
+        case "sharein":
+            return AnyView(ShareRouteScreen())
         case "question1":
-            return AnyView(GuessQuestionScreen())
+            return AnyView(CountQuestion(palette: palette, footnote: QuestionsFlow.footnote(question: 1, read: 0, isScanning: true), initial: 150, onNext: { _ in }))
+        case "question2":
+            return AnyView(TopCategoryQuestion(palette: palette, footnote: QuestionsFlow.footnote(question: 2, read: 86, isScanning: true), initial: .place, onNext: { _ in }))
+        case "question3":
+            return AnyView(DoneQuestion(palette: palette, footnote: QuestionsFlow.footnote(question: 3, read: 143, isScanning: true), initial: nil, onNext: { _ in }))
+        case "question4":
+            return AnyView(WindDownQuestion(palette: palette, footnote: QuestionsFlow.footnote(question: 4, read: 197, isScanning: true), initial: 22 * 60 + 30, onNext: { _ in }))
+        case "question5":
+            return AnyView(PeakQuestion(palette: palette, footnote: QuestionsFlow.footnote(question: 5, read: 214, isScanning: false), initial: .lateNight, onNext: { _ in }, onSkip: {}))
+        case "finishing":
+            return AnyView(FinishingUpScreen(palette: palette, read: 182, total: 240))
+        case "sharecard":
+            return AnyView(ShareCardView(story: .sample).ignoresSafeArea())
         case "lab":
             return AnyView(DesignLabView())
         default:
+            if route.hasPrefix("reveal."), let card = RevealCard(rawValue: String(route.dropFirst(7))) {
+                return AnyView(RevealView(story: .sample, startAt: card, onFinish: {}))
+            }
             guard route.hasPrefix("lab."), let page = DesignLabPage(rawValue: String(route.dropFirst(4))) else {
                 return nil
             }

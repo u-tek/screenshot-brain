@@ -1,30 +1,51 @@
+import Core
 import DesignSystem
 import SwiftUI
 
-/// The first-open flow so far: the pitch, then the first guessing question.
-/// The full flow (sign-in, photo access, scan, Reveal) arrives in M4.
+/// Shows whichever step the user is on. The step is persisted and synced, so onboarding resumes
+/// where it left off and is never repeated.
 struct RootView: View {
-    @State private var step: Step = .welcome
-
-    enum Step {
-        case welcome
-        case question
-    }
+    @EnvironmentObject private var model: AppModel
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         ZStack {
-            switch step {
-            case .welcome:
-                WelcomeScreen {
-                    withAnimation(.spring(response: 0.5, dampingFraction: 0.9)) { step = .question }
-                }
+            screen(for: model.step)
+                .id(model.step)
                 .transition(.opacity)
-            case .question:
-                GuessQuestionScreen(onSkip: {
-                    withAnimation(.spring(response: 0.5, dampingFraction: 0.9)) { step = .welcome }
-                })
-                .transition(.opacity)
+        }
+        .animation(SBMotion.settle, value: model.step)
+        .task {
+            await model.start()
+        }
+        .onChange(of: scenePhase) { phase in
+            if phase == .active {
+                model.becameActive()
             }
+        }
+    }
+
+    @ViewBuilder
+    private func screen(for step: OnboardingStep) -> some View {
+        switch step {
+        case .pitch:
+            WelcomeScreen(palette: model.palette) {
+                model.finishPitch()
+            }
+        case .signIn:
+            SignInScreen(palette: model.palette) { result in
+                model.handleSignIn(result)
+            }
+        case .photoAccess:
+            PhotoAccessScreen()
+        case .questions:
+            QuestionsFlow()
+        case .finishingUp:
+            FinishingUpScreen(palette: model.palette, read: model.screenshotsRead, total: model.screenshotsFound)
+        case .reveal:
+            RevealHost()
+        case .triage, .score, .paywall, .notifications, .widgetGuide, .home:
+            AfterRevealFlow()
         }
     }
 }

@@ -39,7 +39,7 @@ let package = Package(
         .target(name: "ScanEngine", dependencies: ["Core", "Store", "Safety"]),
         .target(name: "DesignSystem", dependencies: ["Core"]),
         .target(name: "Media", dependencies: ["Core"]),
-        .target(name: "Reveal", dependencies: ["Core", "Store", "DesignSystem"]),
+        .target(name: "Reveal", dependencies: ["Core", "Store", "Safety", "DesignSystem", "Media"]),
         .target(name: "Triage", dependencies: ["Core", "Store", "DesignSystem"]),
         .target(name: "Actions", dependencies: ["Core", "Store"]),
         .target(name: "Notifications", dependencies: ["Core", "Store"]),
@@ -47,6 +47,7 @@ let package = Package(
 
         .testTarget(name: "CoreTests", dependencies: ["Core"]),
         .testTarget(name: "SafetyTests", dependencies: ["Safety"]),
+        .testTarget(name: "RevealTests", dependencies: ["Reveal", "Store"]),
         .testTarget(name: "ScanEngineTests", dependencies: ["ScanEngine", "Store", "Safety"]),
         .testTarget(
             name: "StoreTests",

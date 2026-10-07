@@ -51,9 +51,12 @@ public enum DayPeriod: String, Codable, CaseIterable, Sendable {
 }
 
 /// The first-open flow, in order. Persisted so onboarding resumes and is never repeated.
+///
+/// The pitch comes before sign-in: asking for an account on the very first screen, before anyone
+/// knows what the app does, costs more people than it keeps.
 public enum OnboardingStep: String, Codable, CaseIterable, Sendable, Comparable {
-    case signIn
     case pitch
+    case signIn
     case photoAccess
     case questions
     case finishingUp

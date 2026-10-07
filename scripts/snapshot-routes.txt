@@ -1,7 +1,24 @@
 # Routes exported by scripts/export-snapshots.sh, one per line (see SnapshotGallery in the app).
 # lab.* routes are design-lab pages (iPhone 16 Pro only, into design/lab).
 welcome
+signin
+photoaccess
+sharein
 question1
+question2
+question3
+question4
+question5
+finishing
+reveal.total
+reveal.peakTime
+reveal.busiestDay
+reveal.categories
+reveal.topCategory
+reveal.oldest
+reveal.dated
+reveal.share
+sharecard
 lab.tokens
 lab.light
 lab.components

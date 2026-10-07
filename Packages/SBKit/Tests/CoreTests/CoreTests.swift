@@ -45,7 +45,7 @@ import Testing
     }
 
     @Test func onboardingStepsAreOrdered() {
-        #expect(OnboardingStep.signIn < .pitch)
+        #expect(OnboardingStep.pitch < .signIn)
         #expect(OnboardingStep.reveal < .triage)
         #expect(OnboardingStep.allCases.sorted() == OnboardingStep.allCases)
     }

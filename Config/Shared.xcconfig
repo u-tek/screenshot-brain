@@ -12,4 +12,11 @@ SB_ICLOUD_CONTAINER = iCloud.$(SB_BUNDLE_ID)
 // Leave empty to run with analytics switched off.
 SB_TELEMETRYDECK_APP_ID =
 
+// Public RevenueCat API key (appl_...). Empty: the paywall shows, purchases are unavailable.
+SB_REVENUECAT_API_KEY =
+
+// Host of the Sign in with Apple token endpoint deployed from /server, e.g.
+// screenshot-brain-account.yourname.workers.dev. Host only: "//" starts a comment here.
+SB_ACCOUNT_SERVER_HOST =
+
 #include? "Local.xcconfig"

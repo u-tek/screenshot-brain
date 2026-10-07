@@ -16,21 +16,40 @@ public struct ActionBar: View {
 
     public var body: some View {
         Button(action: action) {
-            HStack(spacing: 12) {
-                Text(title)
-                    .font(SBFont.body(16))
-                    .foregroundStyle(SBColor.ink)
-                Spacer(minLength: 12)
-                GlassOrb(palette: palette, systemImage: systemImage)
-            }
-            .padding(.leading, 26)
-            .padding(.trailing, 8)
-            .frame(height: 72)
-            .contentShape(Rectangle())
+            ActionBarLabel(title, systemImage: systemImage, palette: palette)
         }
         .buttonStyle(.plain)
-        .sbGlass(in: RoundedRectangle(cornerRadius: SBRadius.actionBar, style: .continuous))
         .accessibilityLabel(Text(title))
+    }
+}
+
+/// The action bar's look, for wrapping in other controls (a `ShareLink`, a purchase button).
+public struct ActionBarLabel: View {
+    private let title: String
+    private let systemImage: String
+    private let palette: LightPalette
+
+    public init(_ title: String, systemImage: String = "arrow.right", palette: LightPalette) {
+        self.title = title
+        self.systemImage = systemImage
+        self.palette = palette
+    }
+
+    public var body: some View {
+        HStack(spacing: 12) {
+            Text(title)
+                .font(SBFont.body(16))
+                .foregroundStyle(SBColor.ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            Spacer(minLength: 12)
+            GlassOrb(palette: palette, systemImage: systemImage)
+        }
+        .padding(.leading, 26)
+        .padding(.trailing, 8)
+        .frame(height: 72)
+        .contentShape(Rectangle())
+        .sbGlass(in: RoundedRectangle(cornerRadius: SBRadius.actionBar, style: .continuous))
     }
 }
 
@@ -117,5 +136,37 @@ public struct GlassIconButton: View {
         .buttonStyle(.plain)
         .sbGlass(in: Circle())
         .accessibilityLabel(Text(label))
+    }
+}
+
+/// A frosted chip that can be picked. The picked one carries the screen's single active state.
+public struct ChoiceChip: View {
+    private let title: String
+    private let isSelected: Bool
+    private let action: () -> Void
+
+    public init(_ title: String, isSelected: Bool, action: @escaping () -> Void) {
+        self.title = title
+        self.isSelected = isSelected
+        self.action = action
+    }
+
+    public var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                if isSelected {
+                    Circle().fill(SBColor.accent).frame(width: 7, height: 7)
+                }
+                Text(title)
+                    .font(SBFont.body(15, weight: isSelected ? .semibold : .regular))
+                    .foregroundStyle(SBColor.ink)
+            }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 12)
+            .sbGlass(in: Capsule())
+            .overlay(Capsule().strokeBorder(SBColor.accent.opacity(isSelected ? 0.6 : 0), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }

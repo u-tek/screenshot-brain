@@ -5,7 +5,7 @@ import SwiftUI
 @main
 struct ScreenshotBrainApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @StateObject private var environment = AppEnvironment.live()
+    @StateObject private var model = AppModel.live()
 
     var body: some Scene {
         WindowGroup {
@@ -16,7 +16,7 @@ struct ScreenshotBrainApp: App {
                     RootView()
                 }
             }
-            .environmentObject(environment)
+            .environmentObject(model)
         }
     }
 }

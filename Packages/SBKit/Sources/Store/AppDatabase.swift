@@ -169,6 +169,22 @@ extension AppDatabase {
             }
         }
 
+        migrator.registerMigration("v3") { db in
+            // CloudKit bookkeeping: the zone, the server change token and the last push.
+            try db.create(table: "syncState") { t in
+                t.primaryKey("id", .integer)
+                t.column("zoneCreated", .boolean).notNull().defaults(to: false)
+                t.column("changeToken", .blob)
+                t.column("lastPushAt", .datetime)
+            }
+            // Item states pulled from another device before this one has scanned those assets.
+            try db.create(table: "pendingRemoteState") { t in
+                t.primaryKey("cloudID", .text)
+                t.column("state", .text).notNull()
+                t.column("stateChangedAt", .datetime).notNull()
+            }
+        }
+
         return migrator
     }
 

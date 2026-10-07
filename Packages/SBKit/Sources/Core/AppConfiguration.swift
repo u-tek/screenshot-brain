@@ -8,11 +8,27 @@ public struct AppConfiguration: Sendable, Equatable {
     public var appGroupIdentifier: String?
     public var cloudKitContainerIdentifier: String?
     public var telemetryDeckAppID: String?
+    /// Host of the Sign in with Apple token endpoint (see /server). The xcconfig holds only the
+    /// host, because "//" starts a comment there.
+    public var accountServerHost: String?
+    public var revenueCatAPIKey: String?
 
-    public init(appGroupIdentifier: String?, cloudKitContainerIdentifier: String?, telemetryDeckAppID: String?) {
+    public init(
+        appGroupIdentifier: String?,
+        cloudKitContainerIdentifier: String?,
+        telemetryDeckAppID: String?,
+        accountServerHost: String? = nil,
+        revenueCatAPIKey: String? = nil
+    ) {
         self.appGroupIdentifier = appGroupIdentifier
         self.cloudKitContainerIdentifier = cloudKitContainerIdentifier
         self.telemetryDeckAppID = telemetryDeckAppID
+        self.accountServerHost = accountServerHost
+        self.revenueCatAPIKey = revenueCatAPIKey
+    }
+
+    public var accountServerURL: URL? {
+        accountServerHost.flatMap { URL(string: "https://\($0)") }
     }
 
     public init(infoDictionary: [String: Any]) {
@@ -24,7 +40,9 @@ public struct AppConfiguration: Sendable, Equatable {
         self.init(
             appGroupIdentifier: value(InfoKey.appGroup),
             cloudKitContainerIdentifier: value(InfoKey.cloudKitContainer),
-            telemetryDeckAppID: value(InfoKey.telemetryDeckAppID)
+            telemetryDeckAppID: value(InfoKey.telemetryDeckAppID),
+            accountServerHost: value(InfoKey.accountServerHost),
+            revenueCatAPIKey: value(InfoKey.revenueCatAPIKey)
         )
     }
 
@@ -35,5 +53,7 @@ public struct AppConfiguration: Sendable, Equatable {
         static let appGroup = "SBAppGroupIdentifier"
         static let cloudKitContainer = "SBCloudKitContainerIdentifier"
         static let telemetryDeckAppID = "SBTelemetryDeckAppID"
+        static let accountServerHost = "SBAccountServerHost"
+        static let revenueCatAPIKey = "SBRevenueCatAPIKey"
     }
 }

@@ -162,7 +162,7 @@ public struct OnboardingAnswers: Codable, Hashable, Sendable {
     public var updatedAt: Date
 
     public init(
-        step: OnboardingStep = .signIn,
+        step: OnboardingStep = .pitch,
         guessedScreenshotCount: Int? = nil,
         guessedTopCategory: ItemCategory? = nil,
         guessedDoneCount: Int? = nil,

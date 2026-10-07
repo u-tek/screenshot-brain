@@ -9,6 +9,7 @@ public enum AnalyticsEvent: String, CaseIterable, Sendable {
     case photoAccessFull = "photoAccess.full"
     case photoAccessLimited = "photoAccess.limited"
     case photoAccessDenied = "photoAccess.denied"
+    case screenshotsShared = "photoAccess.shared"
     case scanCompleted = "scan.completed"
     case revealStarted = "reveal.started"
     case revealCompleted = "reveal.completed"

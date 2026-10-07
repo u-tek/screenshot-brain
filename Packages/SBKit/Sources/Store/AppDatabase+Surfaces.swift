@@ -113,6 +113,12 @@ extension AppDatabase {
         }
     }
 
+    public func containsItem(assetLocalID: String) throws -> Bool {
+        try reader.read { db in
+            try ScreenshotItem.filter(Col.assetLocalID == assetLocalID).fetchCount(db) > 0
+        }
+    }
+
     public func items(ids: [String]) throws -> [ScreenshotItem] {
         try reader.read { db in
             try ScreenshotItem.filter(ids.contains(Col.id)).fetchAll(db)
@@ -261,6 +267,19 @@ extension AppDatabase {
                 .filter(Col.hasSensitiveText == false)
                 .filter(Col.category == category.rawValue)
                 .filter(Col.thumbnailPath != nil)
+                .order(Col.createdAt.desc)
+                .limit(limit)
+                .fetchAll(db)
+        }
+    }
+
+    /// Recent safe items, for building the light of shared surfaces (the Reveal, the share card)
+    /// from the user's own colours.
+    public func recentSafeItems(limit: Int = 12) throws -> [ScreenshotItem] {
+        try reader.read { db in
+            try ScreenshotItem
+                .filter(Col.isSafeToDisplay == true)
+                .filter(Col.isNSFWFlagged == false)
                 .order(Col.createdAt.desc)
                 .limit(limit)
                 .fetchAll(db)

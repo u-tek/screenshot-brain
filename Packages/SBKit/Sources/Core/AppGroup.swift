@@ -8,7 +8,15 @@ public enum AppGroup {
         case thumbnails = "Thumbnails"
         /// Pre-rendered light images for the widget, which can't run shaders.
         case widgetLight = "WidgetLight"
+        /// Images handed over by the share extension, waiting for the app to read them.
+        case inbox = "Inbox"
+        /// Screenshots shared in without photo access. The app's only copy, since there's no
+        /// library asset to load them from.
+        case shared = "Shared"
     }
+
+    /// Items made from shared images use this prefix in place of a photo library identifier.
+    public static let sharedIdentifierPrefix = "shared:"
 
     /// Root of the shared container.
     ///

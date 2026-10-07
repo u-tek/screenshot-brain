@@ -1,3 +1,4 @@
+import Core
 import CoreGraphics
 import Foundation
 import ImageIO
@@ -9,6 +10,9 @@ public enum AssetImageLoader {
     /// Decoded straight to `maxPixelSize`, with the asset's orientation applied. May fetch from
     /// iCloud when `allowsNetwork` is true (for the item detail screen, never during a scan).
     public static func image(localIdentifier: String, maxPixelSize: Int, allowsNetwork: Bool = false) async -> CGImage? {
+        if localIdentifier.hasPrefix(AppGroup.sharedIdentifierPrefix) {
+            return sharedImage(localIdentifier, maxPixelSize: maxPixelSize)
+        }
         guard let asset = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil).firstObject else {
             return nil
         }
@@ -31,6 +35,20 @@ public enum AssetImageLoader {
             kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
         ]
         return CGImageSourceCreateThumbnailAtIndex(source, 0, thumbnailOptions as CFDictionary)
+    }
+
+    /// A screenshot shared in without photo access, from the app's own copy.
+    private static func sharedImage(_ identifier: String, maxPixelSize: Int) -> CGImage? {
+        let name = identifier.dropFirst(AppGroup.sharedIdentifierPrefix.count) + ".jpg"
+        guard let directory = try? AppGroup.directory(.shared),
+              let source = CGImageSourceCreateWithURL(directory.appendingPathComponent(String(name)) as CFURL, nil)
+        else { return nil }
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceShouldCacheImmediately: true,
+            kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
+        ]
+        return CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
     }
 }
 
