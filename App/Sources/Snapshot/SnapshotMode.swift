@@ -67,6 +67,7 @@ struct SnapshotHost: View {
             }
         }
         .preferredColorScheme(mode.appearance.colorScheme)
+        .environment(\.lightIsStill, true)
         .onAppear {
             UIView.setAnimationsEnabled(false)
         }

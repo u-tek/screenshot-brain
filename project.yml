@@ -86,6 +86,12 @@ targets:
         product: Store
       - package: SBKit
         product: DesignSystem
+      - package: SBKit
+        product: Safety
+      - package: SBKit
+        product: ScanEngine
+      - package: SBKit
+        product: Media
 
   # Exports PNGs of screens for design review (see UITests/SnapshotExportTests.swift).
   ScreenshotBrainUITests:

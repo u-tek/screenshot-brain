@@ -1,26 +1,42 @@
 import SwiftUI
 
 /// The hero object: a clear glass disc. It holds no colour of its own; it sits over the light
-/// and bends it, so the colour you see through it is the user's own.
+/// and bends it, so the colour you see through it is the user's own. It turns very slightly
+/// with the phone (a few degrees), and holds still under Reduce Motion.
 public struct GlassLens: View {
     private let diameter: CGFloat
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.lightIsStill) private var lightIsStill
 
     public init(diameter: CGFloat) {
         self.diameter = diameter
     }
 
     public var body: some View {
-        ZStack {
-            Color.clear
-                .sbGlass(in: Circle(), style: .clear)
-            // A hairline of light catching the upper rim.
-            Circle()
-                .strokeBorder(
-                    LinearGradient(colors: [.white.opacity(0.7), .white.opacity(0.0)], startPoint: .top, endPoint: .center),
-                    lineWidth: 0.75
-                )
+        let tilts = !reduceMotion && !lightIsStill
+        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !tilts)) { _ in
+            let tilt = tilts ? DeviceTilt.shared.current : .zero
+            ZStack {
+                Color.clear
+                    .sbGlass(in: Circle(), style: .clear)
+                // A hairline of light catching the upper rim, moving with the tilt.
+                Circle()
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [.white.opacity(0.7), .white.opacity(0.0)],
+                            startPoint: UnitPoint(x: 0.5 + tilt.width * 0.6, y: 0),
+                            endPoint: .center
+                        ),
+                        lineWidth: 0.75
+                    )
+            }
+            .frame(width: diameter, height: diameter)
+            .rotation3DEffect(.degrees(tilt.width * 4), axis: (x: 0, y: 1, z: 0))
+            .rotation3DEffect(.degrees(-tilt.height * 4), axis: (x: 1, y: 0, z: 0))
         }
         .frame(width: diameter, height: diameter)
+        .onAppear { if tilts { DeviceTilt.shared.retain() } }
+        .onDisappear { if tilts { DeviceTilt.shared.release() } }
         .accessibilityHidden(true)
     }
 }

@@ -16,25 +16,43 @@ public enum SBColor {
     public static let hairline = Color(light: 0x16161A, dark: 0xFFFFFF).opacity(0.14)
 }
 
-/// Type tokens. System fonts only: SF Pro Display at large sizes, SF Pro Text below, SF Mono for data rows.
+/// Type tokens. System fonts only: SF Pro Display at large sizes, SF Pro Text below, SF Mono for
+/// data rows. Everything below headline size is a Dynamic Type text style whose default size
+/// matches the brief (13pt labels, 15pt body), so it scales with the user's text size.
 public enum SBFont {
     public static func headline(_ size: CGFloat, bold: Bool) -> Font {
         .system(size: size, weight: bold ? .semibold : .light)
     }
 
     public static func body(_ size: CGFloat = 15, weight: Font.Weight = .regular) -> Font {
-        .system(size: size, weight: weight)
+        .system(textStyle(for: size), design: .default, weight: weight)
     }
 
-    public static let label = Font.system(size: 13, weight: .regular)
+    public static let label = Font.system(.footnote, design: .default, weight: .regular)
 
-    /// Huge Reveal numbers.
+    /// Huge Reveal numbers. Fixed size: they're already as large as the screen allows.
     public static func number(_ size: CGFloat) -> Font {
         .system(size: size, weight: .ultraLight)
     }
 
     public static func mono(_ size: CGFloat = 12) -> Font {
-        .system(size: size, weight: .regular, design: .monospaced)
+        .system(textStyle(for: size), design: .monospaced, weight: .regular)
+    }
+
+    /// The Dynamic Type style whose default size is closest to `size`.
+    public static func textStyle(for size: CGFloat) -> Font.TextStyle {
+        switch size {
+        case ..<11.5: .caption2
+        case ..<12.5: .caption
+        case ..<14: .footnote
+        case ..<15.5: .subheadline
+        case ..<16.5: .callout
+        case ..<18.5: .body
+        case ..<21: .title3
+        case ..<25: .title2
+        case ..<31: .title
+        default: .largeTitle
+        }
     }
 }
 

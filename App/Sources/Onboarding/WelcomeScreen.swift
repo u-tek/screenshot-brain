@@ -32,7 +32,7 @@ struct WelcomeScreen: View {
 
                 ZStack(alignment: .topLeading) {
                     // The light passes behind the lens and out past its rim, so the glass bends it.
-                    LightField(.passage(palette))
+                    LightField(.passage(palette), drifts: true)
                     LensOrbit(diameter: orbitDiameter, dotAngle: 0)
                         .position(lensCenter)
                     GlassLens(diameter: lensDiameter)

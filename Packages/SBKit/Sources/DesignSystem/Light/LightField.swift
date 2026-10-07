@@ -8,37 +8,57 @@ public struct LightField: View {
     private let composition: LightComposition
     private let showsGround: Bool
     private let grain: Double
+    private let drifts: Bool
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.lightIsStill) private var lightIsStill
 
-    public init(_ composition: LightComposition, ground: Bool = true, grain: Double = 0.05) {
+    /// - Parameter drifts: Slowly moves the light on a 12-second loop. For full-screen fields;
+    ///   always still under Reduce Motion.
+    public init(_ composition: LightComposition, ground: Bool = true, grain: Double = 0.05, drifts: Bool = false) {
         self.composition = composition
         self.showsGround = ground
         self.grain = grain
+        self.drifts = drifts
+    }
+
+    private var isDrifting: Bool {
+        drifts && !reduceMotion && !lightIsStill
     }
 
     public var body: some View {
         GeometryReader { proxy in
-            ZStack {
-                if showsGround {
-                    LinearGradient(colors: [SBColor.mistTop, SBColor.mistBottom], startPoint: .top, endPoint: .bottom)
-                }
-                ForEach(Array(composition.forms.enumerated()), id: \.offset) { _, form in
-                    LightFormView(form: form, size: proxy.size, night: colorScheme == .dark)
-                        // At night the same light glows: it adds onto the dark ground.
-                        .blendMode(colorScheme == .dark ? .screen : .normal)
-                }
-            }
-            .frame(width: proxy.size.width, height: proxy.size.height)
-            .clipped()
-            .drawingGroup(colorMode: .linear)
-            .overlay {
-                if grain > 0 {
-                    GrainOverlay(amount: grain)
-                }
+            TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !isDrifting)) { context in
+                field(size: proxy.size, time: isDrifting ? context.date.timeIntervalSinceReferenceDate : 0)
             }
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
+    }
+
+    private func field(size: CGSize, time: Double) -> some View {
+        ZStack {
+            if showsGround {
+                LinearGradient(colors: [SBColor.mistTop, SBColor.mistBottom], startPoint: .top, endPoint: .bottom)
+            }
+            ForEach(Array(composition.forms.enumerated()), id: \.offset) { index, form in
+                let phase = time / SBMotion.driftPeriod * 2 * .pi + Double(index) * 1.7
+                LightFormView(form: form, size: size, night: colorScheme == .dark)
+                    // Drift: each form wanders a few points and turns a degree or two, on its own phase.
+                    .offset(x: CGFloat(cos(phase)) * size.width * 0.018, y: CGFloat(sin(phase * 0.8)) * size.width * 0.022)
+                    .rotationEffect(.degrees(sin(phase * 0.6) * 1.5))
+                    // At night the same light glows: it adds onto the dark ground.
+                    .blendMode(colorScheme == .dark ? .screen : .normal)
+            }
+        }
+        .frame(width: size.width, height: size.height)
+        .clipped()
+        .drawingGroup(colorMode: .linear)
+        .overlay {
+            if grain > 0 {
+                GrainOverlay(amount: grain)
+            }
+        }
     }
 }
 

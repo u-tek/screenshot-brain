@@ -13,7 +13,7 @@ struct GuessQuestionScreen: View {
 
     var body: some View {
         ZStack {
-            LightField(.sweep(palette))
+            LightField(.sweep(palette), drifts: true)
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {

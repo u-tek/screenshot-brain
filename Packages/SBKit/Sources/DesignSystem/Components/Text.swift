@@ -5,6 +5,8 @@ public struct MistHeadline: View {
     private let markup: String
     private let size: CGFloat
     private let alignment: TextAlignment
+    /// Headlines scale with Dynamic Type, relative to the largest title style.
+    @ScaledMetric(relativeTo: .largeTitle) private var scale: CGFloat = 1
 
     public init(_ markup: String, size: CGFloat = 32, alignment: TextAlignment = .center) {
         assert(markup.components(separatedBy: "**").count <= 3, "One bold phrase per headline, never more")
@@ -14,8 +16,8 @@ public struct MistHeadline: View {
     }
 
     public var body: some View {
-        Text(MistMarkup.attributed(markup, size: size, light: .light, bold: .semibold, lightColor: SBColor.inkLight))
-            .tracking(-0.01 * size)
+        Text(MistMarkup.attributed(markup, size: size * scale, light: .light, bold: .semibold, lightColor: SBColor.inkLight))
+            .tracking(-0.01 * size * scale)
             .multilineTextAlignment(alignment)
             .fixedSize(horizontal: false, vertical: true)
     }
@@ -34,7 +36,7 @@ public struct MistBody: View {
     }
 
     public var body: some View {
-        Text(MistMarkup.attributed(markup, size: size, light: .regular, bold: .semibold, lightColor: SBColor.inkSecondary))
+        Text(MistMarkup.attributed(markup, size: size, light: .regular, bold: .semibold, lightColor: SBColor.inkSecondary, scalesWithTextStyle: true))
             .multilineTextAlignment(alignment)
             .lineSpacing(2)
             .fixedSize(horizontal: false, vertical: true)
@@ -62,13 +64,17 @@ enum MistMarkup {
         size: CGFloat,
         light: Font.Weight,
         bold: Font.Weight,
-        lightColor: Color
+        lightColor: Color,
+        scalesWithTextStyle: Bool = false
     ) -> AttributedString {
         var result = AttributedString()
         for (index, part) in markup.components(separatedBy: "**").enumerated() where !part.isEmpty {
             let isBold = index % 2 == 1
             var run = AttributedString(part)
-            run.font = Font.system(size: size, weight: isBold ? bold : light)
+            let weight = isBold ? bold : light
+            run.font = scalesWithTextStyle
+                ? Font.system(SBFont.textStyle(for: size), design: .default, weight: weight)
+                : Font.system(size: size, weight: weight)
             run.foregroundColor = isBold ? SBColor.ink : lightColor
             result.append(run)
         }
