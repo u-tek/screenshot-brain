@@ -85,6 +85,20 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             | xcbeautify --renderer github-actions
 
+      # Drag the unzipped .app onto a booted simulator to run it (`xcrun simctl install booted ScreenshotBrain.app`).
+      - name: Upload the simulator app
+        if: github.event_name != 'pull_request'
+        run: |
+          cd build/DerivedData/Build/Products/Debug-iphonesimulator
+          ditto -c -k --keepParent ScreenshotBrain.app "$GITHUB_WORKSPACE/build/ScreenshotBrain-simulator.zip"
+
+      - uses: actions/upload-artifact@v4
+        if: github.event_name != 'pull_request'
+        with:
+          name: ScreenshotBrain-simulator
+          path: build/ScreenshotBrain-simulator.zip
+          retention-days: 14
+
       # Opt-in, because it adds several minutes: run the workflow by hand, or put [snapshots]
       # in the commit message.
       - name: Export design snapshots

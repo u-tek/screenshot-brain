@@ -27,6 +27,8 @@ struct WelcomeScreen: View {
                 let size = proxy.size
                 let lensDiameter = size.width * 0.88
                 let lensCenter = CGPoint(x: size.width * 0.02, y: size.height * 0.37)
+                let orbitDiameter = lensDiameter * 1.16
+                let orbitRight = lensCenter.x + orbitDiameter / 2
 
                 ZStack(alignment: .topLeading) {
                     LightField(.pocket(
@@ -35,12 +37,12 @@ struct WelcomeScreen: View {
                         radius: 0.30,
                         aspect: size.height / size.width
                     ))
-                    LensOrbit(diameter: lensDiameter * 1.16, dotAngle: 0)
+                    LensOrbit(diameter: orbitDiameter, dotAngle: 0)
                         .position(lensCenter)
                     GlassLens(diameter: lensDiameter)
                         .position(lensCenter)
                     OrbitLabels(active: "That ramen place", above: "That gig on Friday", below: "Those sneakers")
-                        .position(x: lensCenter.x + lensDiameter * 0.58 + 92, y: lensCenter.y)
+                        .position(x: orbitRight + 32 + OrbitLabels.width / 2, y: lensCenter.y)
                 }
                 .frame(width: size.width, height: size.height)
             }
@@ -51,6 +53,8 @@ struct WelcomeScreen: View {
 
 /// Three things the lens is reading, the middle one in focus, joined to the orbit by a hairline.
 private struct OrbitLabels: View {
+    static let width: CGFloat = 156
+
     let active: String
     let above: String
     let below: String
@@ -73,7 +77,7 @@ private struct OrbitLabels: View {
                 .font(SBFont.body(13))
                 .foregroundStyle(SBColor.inkSecondary.opacity(0.55))
         }
-        .frame(width: 184, alignment: .leading)
+        .frame(width: Self.width, alignment: .leading)
         .accessibilityElement(children: .combine)
     }
 }
