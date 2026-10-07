@@ -21,7 +21,7 @@ struct KeepItemIntent: AppIntent {
     }
 
     func perform() async throws -> some IntentResult {
-        WidgetDecision.apply(.stillWant, to: itemID, event: .widgetKeep)
+        await WidgetDecision.apply(.stillWant, to: itemID, event: .widgetKeep)
         return .result()
     }
 }
@@ -41,7 +41,7 @@ struct DoneItemIntent: AppIntent {
     }
 
     func perform() async throws -> some IntentResult {
-        WidgetDecision.apply(.done, to: itemID, event: .widgetDone)
+        await WidgetDecision.apply(.done, to: itemID, event: .widgetDone)
         return .result()
     }
 }
@@ -61,12 +61,13 @@ struct DropItemIntent: AppIntent {
     }
 
     func perform() async throws -> some IntentResult {
-        WidgetDecision.apply(.dropped, to: itemID, event: .widgetDrop)
+        await WidgetDecision.apply(.dropped, to: itemID, event: .widgetDrop)
         return .result()
     }
 }
 
 enum WidgetDecision {
+    @MainActor
     static func apply(_ state: ItemState, to itemID: String, event: AnalyticsEvent) {
         guard let database = WidgetStore.database else { return }
         _ = try? database.decide(state, forItem: itemID)

@@ -47,12 +47,12 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     /// Tapping tonight's notification goes where it points (the recap, an item, the paywall).
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
         guard let link = response.notification.request.content.userInfo["link"] as? String, let url = URL(string: link) else { return }
-        Analytics.telemetryDeck(appID: AppConfiguration.main.telemetryDeckAppID).track(.recapOpened)
         await open(url)
     }
 
     @MainActor
     private func open(_ url: URL) async {
+        Analytics.telemetryDeck(appID: AppConfiguration.main.telemetryDeckAppID).track(.recapOpened)
         await UIApplication.shared.open(url)
     }
 }
