@@ -46,10 +46,11 @@ enum SnapshotGallery {
             guard route.hasPrefix("lab."), let page = DesignLabPage(rawValue: String(route.dropFirst(4))) else {
                 return nil
             }
-            return AnyView(page.view.background(
+            return AnyView(ZStack(alignment: .top) {
                 LinearGradient(colors: [SBColor.mistTop, SBColor.mistBottom], startPoint: .top, endPoint: .bottom)
                     .ignoresSafeArea()
-            ))
+                page.view
+            })
         }
     }
 }

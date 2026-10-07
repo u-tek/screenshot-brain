@@ -73,7 +73,7 @@ private struct TokensPage: View {
     ]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 28) {
+        VStack(alignment: .leading, spacing: 22) {
             MistHeadline("Design Lab · **Tokens**", size: 30, alignment: .leading)
 
             LabSection("Ground, ink and accent") {
@@ -108,7 +108,7 @@ private struct TokensPage: View {
                 VStack(alignment: .leading, spacing: 14) {
                     MistHeadline("You saved it **for a reason.**", size: 34, alignment: .leading)
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text("214").font(SBFont.number(96)).foregroundStyle(SBColor.ink)
+                        Text("214").font(SBFont.number(84)).foregroundStyle(SBColor.ink)
                         Text("screenshots").font(SBFont.body(17, weight: .semibold)).foregroundStyle(SBColor.ink)
                     }
                     MistBody("Body copy at 15pt with **one bold phrase.**", alignment: .leading)
@@ -117,8 +117,8 @@ private struct TokensPage: View {
                 }
             }
         }
-        .padding(24)
-        .padding(.top, 40)
+        .padding(.horizontal, 24)
+        .padding(.top, 12)
     }
 }
 
@@ -128,13 +128,13 @@ private struct LightPage: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
             MistHeadline("Design Lab · **Light**", size: 30, alignment: .leading)
-            LabSection("Sweep (questions) · pocket (welcome)") {
+            LabSection("Sweep (questions) · passage (welcome)") {
                 HStack(spacing: 12) {
                     LightField(.sweep(.sampleTopScreenshots))
-                        .frame(height: 300)
+                        .frame(height: 230)
                         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-                    LightField(.pocket(.sampleTopScreenshots, center: LightPoint(0.1, 0.4), radius: 0.45, aspect: 2.1))
-                        .frame(height: 300)
+                    LightField(.passage(.sampleTopScreenshots))
+                        .frame(height: 230)
                         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
                 }
             }
@@ -142,7 +142,7 @@ private struct LightPage: View {
                 HStack(spacing: 12) {
                     ForEach([LightPalette.sampleSunsetBar, .sampleGigPoster, .sampleTopScreenshots], id: \.self) { palette in
                         LightField(.sweep(palette))
-                            .frame(height: 200)
+                            .frame(height: 150)
                             .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
                     }
                 }
@@ -150,14 +150,14 @@ private struct LightPage: View {
             LabSection("Glass lens over light") {
                 ZStack {
                     LightField(.pocket(.sampleTopScreenshots, center: LightPoint(0.5, 0.5), radius: 0.28, aspect: 0.5))
-                    GlassLens(diameter: 140)
+                    GlassLens(diameter: 124)
                 }
-                .frame(height: 180)
+                .frame(height: 160)
                 .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
             }
         }
-        .padding(24)
-        .padding(.top, 40)
+        .padding(.horizontal, 24)
+        .padding(.top, 12)
     }
 }
 
@@ -193,8 +193,8 @@ private struct ComponentsPage: View {
                     ScoreView(done: 6, total: 23)
                 }
             }
-            .padding(24)
-            .padding(.top, 40)
+            .padding(.horizontal, 24)
+            .padding(.top, 12)
         }
     }
 }
@@ -234,7 +234,7 @@ private struct SurfacesPage: View {
                 }
             }
         }
-        .padding(24)
-        .padding(.top, 40)
+        .padding(.horizontal, 24)
+        .padding(.top, 12)
     }
 }

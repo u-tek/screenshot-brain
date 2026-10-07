@@ -131,6 +131,25 @@ extension LightComposition {
         ])
     }
 
+    /// A sweep of light that passes behind a lens on the left edge and out past its lower rim,
+    /// so the glass visibly bends it. The welcome screen.
+    public static func passage(_ palette: LightPalette) -> LightComposition {
+        LightComposition(forms: [
+            haze(palette, points: [(-0.10, 0.74), (0.55, 0.70), (1.05, 0.82), (0.80, 1.02), (0.10, 1.02)],
+                 from: (0, 0.7), to: (1, 1), opacity: 0.6, blur: 0.16),
+            LightForm(
+                points: points([(-0.20, 0.17), (0.10, 0.21), (0.32, 0.33), (0.52, 0.50), (0.66, 0.63),
+                                (0.56, 0.68), (0.36, 0.60), (0.12, 0.53), (-0.20, 0.48)]),
+                axisStart: LightPoint(-0.05, 0.22),
+                axisEnd: LightPoint(0.66, 0.66),
+                palette: palette,
+                blur: 0.05,
+                stretch: 2.0,
+                angle: 0.75
+            ),
+        ])
+    }
+
     /// Light filling a small surface, such as the action bar's orb.
     public static func glow(_ palette: LightPalette) -> LightComposition {
         LightComposition(forms: [

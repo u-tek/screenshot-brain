@@ -31,14 +31,8 @@ struct WelcomeScreen: View {
                 let orbitRight = lensCenter.x + orbitDiameter / 2
 
                 ZStack(alignment: .topLeading) {
-                    // The light sits under the visible half of the lens and spills past its rim,
-                    // so the glass has colour to bend.
-                    LightField(.pocket(
-                        palette,
-                        center: LightPoint(lensCenter.x / size.width + 0.12, lensCenter.y / size.height),
-                        radius: 0.40,
-                        aspect: size.height / size.width
-                    ))
+                    // The light passes behind the lens and out past its rim, so the glass bends it.
+                    LightField(.passage(palette))
                     LensOrbit(diameter: orbitDiameter, dotAngle: 0)
                         .position(lensCenter)
                     GlassLens(diameter: lensDiameter)
