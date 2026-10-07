@@ -44,8 +44,10 @@ let package = Package(
         .target(name: "Media", dependencies: ["Core"]),
         .target(name: "Reveal", dependencies: ["Core", "Store", "Safety", "DesignSystem", "Media"]),
         .target(name: "Triage", dependencies: ["Core", "Store", "DesignSystem", "Media", "Actions"]),
-        .target(name: "Actions", dependencies: ["Core", "Store"]),
-        .target(name: "Notifications", dependencies: ["Core", "Store"]),
+        // EventKit, MapKit and UserNotifications hand back non-Sendable values from their async
+        // APIs; these two modules stay in Swift 5 mode until those frameworks are annotated.
+        .target(name: "Actions", dependencies: ["Core", "Store"], swiftSettings: [.swiftLanguageMode(.v5)]),
+        .target(name: "Notifications", dependencies: ["Core", "Store"], swiftSettings: [.swiftLanguageMode(.v5)]),
         .target(
             name: "Paywall",
             dependencies: ["Core", "DesignSystem", .product(name: "RevenueCat", package: "purchases-ios-spm")],

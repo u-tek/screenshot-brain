@@ -102,7 +102,9 @@ public struct FolderTabCard<Content: View>: View {
         let shape = FolderTabShape()
         VStack(alignment: .leading, spacing: 0) {
             Text(tab)
-                .font(.system(size: 12, weight: .medium))
+                .font(SBFont.body(12, weight: .medium))
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
                 .foregroundStyle(SBColor.ink.opacity(0.8))
                 .padding(.leading, 18)
                 .frame(height: 30)

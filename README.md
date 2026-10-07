@@ -20,7 +20,9 @@ It builds and runs in the simulator as is. For a device build, copy `Config/Loca
 | `make test` | Runs every module's unit tests on an iPhone simulator |
 | `make build` | Builds the app for the simulator, unsigned |
 
-CI (`.github/workflows/ios.yml`) runs both on every push, on a macOS runner.
+CI (`.github/workflows/ios.yml`) runs both on every push, on a macOS runner, plus the account server's tests on Linux.
+
+Before the App Store, work through `LAUNCH.md`: keys, sign-offs on real devices, the TestFlight plan and the analytics to watch.
 
 ## Design
 
@@ -34,6 +36,7 @@ Screens are exported from the real app by CI. Put `[snapshots]` in a commit mess
 | `design/lab/` | Design lab pages and the two north-star rebuilds, light and dark |
 | `design/compare/` | Each rebuild beside the north star |
 | `design/screens/` | Every screen on iPhone 16 Pro and iPhone SE |
+| `design/appstore/` | App Store screenshots at 6.9", built from the real screens |
 | `design/system.png` | The design system sheet (`python3 design/tools/system_sheet.py`) |
 
 CI also uploads the simulator build as the `ScreenshotBrain-simulator` artifact: unzip it and run `xcrun simctl install booted ScreenshotBrain.app`.
@@ -42,7 +45,11 @@ CI also uploads the simulator build as the `ScreenshotBrain-simulator` artifact:
 
 | Path | What's there |
 |---|---|
-| `App/` | The app target: entry point, environment, screens |
+| `App/` | The app target: entry point, the app model, every screen |
+| `ShareExtension/` | "Share to Screenshot Brain", for people who don't give photo access |
+| `Widgets/` | Home and Lock Screen widgets, with Keep / Done / Drop intents |
+| `server/` | The Sign in with Apple token endpoint (Cloudflare Worker) for account deletion |
+| `docs/` | App Review notes and the paywall experiment |
 | `Packages/SBKit/` | Every module, as one Swift package with a target per module |
 | `Config/` | xcconfig files: identifiers and service keys |
 | `design/` | Reference notes, design lab exports, comparisons and screen snapshots |
@@ -61,12 +68,14 @@ CI also uploads the simulator build as the `ScreenshotBrain-simulator` artifact:
 | `Triage` | The swipe deck | M5 |
 | `Actions` | Calendar, Maps, shop, copy ingredients, send | M5 |
 | `Notifications` | Nightly recap, nudges, digest | M7 |
+| `WidgetCore` | What the widget shows and when: ordering, rotation, states | M6 |
 | `Paywall` | RevenueCat premium tier | M8 |
 
 Dependencies run one way: `Core` ← `Store` / `Safety` ← `ScanEngine` and the feature modules ← the app.
 
 ## Privacy rules the code relies on
 
-- Screenshots, extracted text and detected entities stay on the device. The database and thumbnails live in the App Group container and are excluded from device backups. Only metadata (states, decisions, dates, the score, settings) will sync through CloudKit.
+- Screenshots, extracted text and detected entities stay on the device. The database and thumbnails live in the App Group container and are excluded from device backups. Only metadata (item states keyed by a hash of the Photos cloud identifier, onboarding answers, the recap time) syncs through the user's private CloudKit database.
+- Notifications name an item only when it's safe to display; anything else is described by its category.
 - Analytics are event counts only. `Analytics.track` accepts integer parameters, so content can't be sent by accident.
 - An item is not safe to display until the Safety module says so. `ScreenshotItem.isSafeToDisplay` defaults to `false`.

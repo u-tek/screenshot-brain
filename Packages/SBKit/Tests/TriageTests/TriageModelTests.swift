@@ -6,13 +6,12 @@ import Testing
 
 @MainActor
 @Suite struct TriageModelTests {
-    private func item(_ title: String, group: String? = nil, minutesAgo: Double) -> ScreenshotItem {
+    private func item(_ title: String, minutesAgo: Double) -> ScreenshotItem {
         ScreenshotItem(
             assetLocalID: title,
             createdAt: Date(timeIntervalSinceNow: -minutesAgo * 60),
             category: .place,
             confidence: 0.9,
-            groupID: group,
             title: title,
             processedAt: Date()
         )
@@ -20,10 +19,12 @@ import Testing
 
     @Test func decidingAGroupDecidesEveryScreenshotInIt() throws {
         let database = try AppDatabase.inMemory()
-        let first = item("a", group: "g", minutesAgo: 1)
-        let second = item("b", group: "g", minutesAgo: 1.5)
+        let first = item("a", minutesAgo: 1)
+        let second = item("b", minutesAgo: 1.5)
         let other = item("c", minutesAgo: 30)
         try database.save([first, second, other])
+        // Grouped the way the scan groups near-duplicates.
+        try database.saveGroups(["g": [first, second]])
         let deck = try database.triageDeck()
         #expect(deck.count == 2)
 

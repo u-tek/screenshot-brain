@@ -259,7 +259,9 @@ struct TriageCardView: View {
             }
             VStack(alignment: .leading, spacing: 0) {
                 Text(CategoryName.title(item.category))
-                    .font(.system(size: 12, weight: .medium))
+                    .font(SBFont.body(12, weight: .medium))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(SBColor.ink.opacity(0.8))
                     .padding(.leading, 18)
                     .frame(height: 30)
@@ -290,7 +292,7 @@ struct TriageCardView: View {
         VStack(alignment: .leading, spacing: 8) {
             SmallLabel(meta(item))
             Text(item.title ?? "Something you saved")
-                .font(SBFont.headline(22, bold: true))
+                .font(SBFont.body(22, weight: .semibold))
                 .foregroundStyle(SBColor.ink)
                 .lineLimit(2)
             if let action = ItemAction.suggested(for: item) {
@@ -298,7 +300,7 @@ struct TriageCardView: View {
                     Image(systemName: action.systemImage)
                         .font(.system(size: 11, weight: .medium))
                     Text(action.title)
-                        .font(.system(size: 12))
+                        .font(SBFont.body(12))
                 }
                 .foregroundStyle(SBColor.ink.opacity(0.8))
                 .padding(.horizontal, 12)

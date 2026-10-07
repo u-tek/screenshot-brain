@@ -3,7 +3,9 @@
 # into design/. Run after `xcodebuild build-for-testing` into $DERIVED_DATA (default build/DerivedData).
 #
 # Routes named lab.<name> are design-lab exports and go to design/lab/<name>-<appearance>.png
-# (iPhone 16 Pro only). Every other route is an app screen and goes to design/screens/<device>/.
+# (iPhone 16 Pro only). Routes named store.<n> are App Store screenshots, exported on the 6.9"
+# phone into design/appstore/. Every other route is an app screen and goes to
+# design/screens/<device>/.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 failed=0
@@ -11,9 +13,10 @@ shopt -s nullglob
 
 derived_data="${DERIVED_DATA:-build/DerivedData}"
 all_routes=$(grep -vE '^[[:space:]]*(#|$)' scripts/snapshot-routes.txt)
-screen_routes=$(echo "$all_routes" | grep -v '^lab\.' | paste -sd, -)
-all_routes=$(echo "$all_routes" | paste -sd, -)
-devices=("iPhone 16 Pro" "iPhone SE (3rd generation)")
+screen_routes=$(echo "$all_routes" | grep -vE '^(lab|store)\.' | paste -sd, -)
+lab_routes=$(echo "$all_routes" | grep -E '^lab\.' | paste -sd, -)
+store_routes=$(echo "$all_routes" | grep -E '^store\.' | paste -sd, -)
+devices=("iPhone 16 Pro" "iPhone SE (3rd generation)" "iPhone 16 Pro Max")
 
 for device in "${devices[@]}"; do
   udid=$(scripts/ensure-simulator.sh "$device")
@@ -27,12 +30,16 @@ for device in "${devices[@]}"; do
   xcrun simctl status_bar "$udid" override --time "9:41" --dataNetwork wifi --wifiMode active --wifiBars 3 \
     --cellularMode active --cellularBars 4 --batteryState discharging --batteryLevel 100
 
-  # Design-lab pages are only exported once, on the large phone.
+  # Design-lab pages are only exported once, on the large phone; store screenshots only at 6.9",
+  # in light (the App Store shows them on white).
   routes="$screen_routes"
-  if [[ "$slug" == "iphone-16-pro" ]]; then routes="$all_routes"; fi
+  appearances="light,dark"
+  if [[ "$slug" == "iphone-16-pro" ]]; then routes="$screen_routes,$lab_routes"; fi
+  if [[ "$slug" == "iphone-16-pro-max" ]]; then routes="$store_routes"; appearances="light"; fi
 
   # Keep going if a screen crashes: the others still export, and the run fails at the end.
   if ! TEST_RUNNER_SB_SNAPSHOT_ROUTES="$routes" TEST_RUNNER_SB_SNAPSHOT_DIR="$out" \
+    TEST_RUNNER_SB_SNAPSHOT_APPEARANCES="$appearances" \
     xcodebuild test-without-building -project ScreenshotBrain.xcodeproj -scheme ScreenshotBrain \
       -destination "platform=iOS Simulator,id=$udid" -derivedDataPath "$derived_data" \
       -only-testing:ScreenshotBrainUITests/SnapshotExportTests \
@@ -45,10 +52,12 @@ for device in "${devices[@]}"; do
     echo "::error::Screens that didn't render on $device: $(paste -sd, "$out/failures.txt")"
   fi
 
-  mkdir -p design/lab "design/screens/$slug"
+  mkdir -p design/lab design/appstore "design/screens/$slug"
   for file in "$out"/*.png; do
     base=$(basename "$file")
-    if [[ "$base" == lab.* ]]; then
+    if [[ "$base" == store.* ]]; then
+      cp "$file" "design/appstore/6.9-${base#store.}"
+    elif [[ "$base" == lab.* ]]; then
       if [[ "$slug" == "iphone-16-pro" ]]; then
         cp "$file" "design/lab/${base#lab.}"
       fi

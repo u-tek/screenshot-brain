@@ -84,7 +84,7 @@ private struct MediumItemView: View {
                 FrostPanel(shape: FolderTabShape(tabWidth: 86, tabHeight: 22, radius: 18))
             }
         }
-        .padding(10)
+        .insetBeforeIOS17()
     }
 }
 
@@ -97,7 +97,7 @@ private struct SmallItemView: View {
             DecisionButtons(itemID: item.id, compact: true)
                 .padding(8)
         }
-        .padding(8)
+        .insetBeforeIOS17()
     }
 }
 
@@ -206,7 +206,7 @@ private struct MessageCard: View {
                 .widgetAccentable()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .padding(16)
+        .insetBeforeIOS17()
     }
 }
 
@@ -335,6 +335,16 @@ enum WidgetMarkup {
 }
 
 extension View {
+    /// iOS 17 insets widget content by the system's margins; before that, add our own.
+    @ViewBuilder
+    func insetBeforeIOS17() -> some View {
+        if #available(iOSApplicationExtension 17.0, *) {
+            self
+        } else {
+            padding(14)
+        }
+    }
+
     /// iOS 17 needs the background declared as the widget's container background.
     @ViewBuilder
     func widgetBackground<Background: View>(_ background: Background) -> some View {

@@ -31,6 +31,8 @@ struct SignInScreen: View {
                 onResult(result)
             }
             .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
+            // The button doesn't restyle itself when the appearance changes; rebuild it.
+            .id(colorScheme)
             .frame(height: 58)
             .clipShape(Capsule())
             .padding(.bottom, 14)

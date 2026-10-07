@@ -93,6 +93,9 @@ enum SnapshotGallery {
         case "lab":
             return AnyView(DesignLabView())
         default:
+            if route.hasPrefix("store."), let screen = Int(route.dropFirst(6)).flatMap(StoreScreen.init(rawValue:)) {
+                return AnyView(StoreScreenView(screen: screen))
+            }
             if route.hasPrefix("reveal."), let card = RevealCard(rawValue: String(route.dropFirst(7))) {
                 return AnyView(RevealView(story: .sample, startAt: card, onFinish: {}))
             }

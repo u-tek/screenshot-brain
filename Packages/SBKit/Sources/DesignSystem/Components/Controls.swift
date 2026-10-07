@@ -101,7 +101,8 @@ public struct Chip: View {
     public var body: some View {
         HStack(spacing: 6) {
             Text(title)
-                .font(.system(size: 12, weight: .regular))
+                .font(SBFont.body(12))
+                .lineLimit(1)
             if closable {
                 Image(systemName: "xmark")
                     .font(.system(size: 9, weight: .medium))

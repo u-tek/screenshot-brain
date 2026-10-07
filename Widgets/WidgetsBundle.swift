@@ -18,7 +18,6 @@ struct SavedThingWidget: Widget {
         .configurationDisplayName("Saved things")
         .description("The things you saved, one at a time. Tick them off from here.")
         .supportedFamilies([.systemMedium, .systemSmall])
-        .contentMarginsDisabledIfAvailable()
     }
 }
 
@@ -37,14 +36,4 @@ struct ScoreWidget: Widget {
 enum WidgetKind {
     static let savedThing = "SavedThing"
     static let score = "Score"
-}
-
-extension WidgetConfiguration {
-    /// The card draws to the widget's edges itself.
-    func contentMarginsDisabledIfAvailable() -> some WidgetConfiguration {
-        if #available(iOSApplicationExtension 17.0, *) {
-            return contentMarginsDisabled()
-        }
-        return self
-    }
 }

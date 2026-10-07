@@ -1,5 +1,6 @@
 # Routes exported by scripts/export-snapshots.sh, one per line (see SnapshotGallery in the app).
 # lab.* routes are design-lab pages (iPhone 16 Pro only, into design/lab).
+# store.* routes are App Store screenshots (iPhone 16 Pro Max only, into design/appstore).
 welcome
 signin
 photoaccess
@@ -28,6 +29,11 @@ settings
 notifications
 widgetguide
 paywall
+store.1
+store.2
+store.3
+store.4
+store.5
 lab.tokens
 lab.light
 lab.components

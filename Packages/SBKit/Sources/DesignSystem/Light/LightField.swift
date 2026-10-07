@@ -44,6 +44,12 @@ public struct LightField: View {
             ForEach(Array(composition.forms.enumerated()), id: \.offset) { index, form in
                 let phase = time / SBMotion.driftPeriod * 2 * .pi + Double(index) * 1.7
                 LightFormView(form: form, size: size, night: colorScheme == .dark)
+                    // Each form is filled and blurred once, in linear colour, on a canvas a
+                    // little larger than the screen so the drift never shows its edge. The drift
+                    // below only moves the finished layer, so it costs almost nothing per frame
+                    // (an iPhone 8 can't afford to re-blur a full-screen field 30 times a second).
+                    .frame(width: size.width * 1.16, height: size.height + size.width * 0.16)
+                    .drawingGroup(colorMode: .linear)
                     // Drift: each form wanders a few points and turns a degree or two, on its own phase.
                     .offset(x: CGFloat(cos(phase)) * size.width * 0.018, y: CGFloat(sin(phase * 0.8)) * size.width * 0.022)
                     .rotationEffect(.degrees(sin(phase * 0.6) * 1.5))
@@ -53,7 +59,6 @@ public struct LightField: View {
         }
         .frame(width: size.width, height: size.height)
         .clipped()
-        .drawingGroup(colorMode: .linear)
         .overlay {
             if grain > 0 {
                 GrainOverlay(amount: grain)
