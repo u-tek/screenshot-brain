@@ -49,12 +49,14 @@ final class SnapshotExportTests: XCTestCase {
                 }
                 let name = shot.replacingOccurrences(of: "@", with: "-")
                 let screenshot = XCUIScreen.main.screenshot()
-                let attachment = XCTAttachment(screenshot: screenshot)
-                attachment.name = name
-                attachment.lifetime = .keepAlways
-                add(attachment)
                 if let outputDirectory {
                     try screenshot.pngRepresentation.write(to: outputDirectory.appendingPathComponent("\(name).png"))
+                } else {
+                    // Run from Xcode: keep it in the test report instead.
+                    let attachment = XCTAttachment(screenshot: screenshot)
+                    attachment.name = name
+                    attachment.lifetime = .keepAlways
+                    add(attachment)
                 }
             }
             if !crashed {

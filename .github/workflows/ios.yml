@@ -133,7 +133,7 @@ jobs:
       (github.event_name == 'workflow_dispatch' && inputs.snapshots) ||
       (github.event_name == 'push' && contains(github.event.head_commit.message, '[snapshots'))
     runs-on: macos-26
-    timeout-minutes: 30
+    timeout-minutes: 45
     permissions:
       contents: write
     env:
@@ -164,22 +164,26 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             | xcbeautify --renderer github-actions
 
-      # Each phone runs even if another failed, so one bad screen never hides the rest.
+      # Each phone runs even if another failed or got stuck, so one bad screen never hides the rest.
       - name: iPhone 16 Pro
         id: pro
         continue-on-error: true
+        timeout-minutes: 12
         run: scripts/export-snapshots.sh "iPhone 16 Pro"
       - name: iPhone SE
         id: se
         continue-on-error: true
+        timeout-minutes: 12
         run: scripts/export-snapshots.sh "iPhone SE (3rd generation)"
       - name: iPhone 16 Pro Max (App Store)
         id: store
         continue-on-error: true
+        timeout-minutes: 8
         run: scripts/export-snapshots.sh "iPhone 16 Pro Max"
 
       # Kept even if the push below fails.
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: design-snapshots
           path: build/design-out/design
@@ -187,6 +191,7 @@ jobs:
           retention-days: 7
 
       - name: Commit design snapshots
+        if: always()
         run: |
           [[ -d build/design-out/design ]] || { echo "Nothing exported"; exit 0; }
           cp -R build/design-out/design .
@@ -208,5 +213,5 @@ jobs:
           exit 1
 
       - name: Fail if a screen didn't render
-        if: steps.pro.outcome == 'failure' || steps.se.outcome == 'failure' || steps.store.outcome == 'failure'
+        if: always() && (steps.pro.outcome == 'failure' || steps.se.outcome == 'failure' || steps.store.outcome == 'failure')
         run: exit 1
