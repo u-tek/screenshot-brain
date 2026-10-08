@@ -52,6 +52,7 @@ final class SnapshotExportTests: XCTestCase {
                     break
                 }
                 let name = shot.replacingOccurrences(of: "@", with: "-")
+                clearSystemBanners()
                 let screenshot = XCUIScreen.main.screenshot()
                 if let outputDirectory {
                     // Atomic, so a phone cut short never leaves half a PNG behind.
@@ -84,6 +85,18 @@ final class SnapshotExportTests: XCTestCase {
             nil,
             true
         )
+    }
+
+    /// A fresh simulator posts notifications of its own (like "Ready for Apple Intelligence"):
+    /// swipe away any banner before it can cover a screen.
+    private func clearSystemBanners() {
+        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        let banner = springboard.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier == 'NotificationShortLookView' OR label BEGINSWITH 'Ready for Apple Intelligence'"))
+            .firstMatch
+        guard banner.exists else { return }
+        banner.swipeUp()
+        Thread.sleep(forTimeInterval: 0.8)
     }
 
     private func appearance(of shot: String) -> Substring {

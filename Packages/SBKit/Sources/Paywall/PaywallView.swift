@@ -38,7 +38,8 @@ public struct PaywallView: View {
 
     public var body: some View {
         GeometryReader { proxy in
-            let compact = proxy.size.height < 620
+            // Phones without a notch (iPhone 8, SE): about 650 points to work with.
+            let compact = proxy.size.height < 700
             ZStack {
                 // The sweep passes behind the lens in the hero.
                 LightField(.sweep(palette).mirrored(), drifts: true)
@@ -60,13 +61,14 @@ public struct PaywallView: View {
                     .padding(.top, 8)
 
                     Hero(palette: palette, compact: compact)
-                        .frame(height: compact ? 120 : 200)
-                        .padding(.vertical, compact ? 4 : 12)
+                        .frame(height: compact ? 112 : 200)
+                        .padding(.vertical, compact ? 2 : 12)
 
                     VStack(alignment: .leading, spacing: 8) {
                         SmallLabel("Screenshot Brain Premium")
                         MistHeadline("Keep it all **on your home screen.**", size: compact ? 26 : 30, alignment: .leading)
                         SmallLabel("The widget on your home and Lock Screen, the all-time Reveal and full monthly stats. Everything else stays free.")
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 24)
@@ -89,7 +91,7 @@ public struct PaywallView: View {
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 32)
-                        .padding(.vertical, 10)
+                        .padding(.vertical, compact ? 6 : 10)
 
                     ActionBar(isBusy ? "One moment…" : selected.actionTitle, palette: palette, action: buy)
                         .padding(.horizontal, 12)
