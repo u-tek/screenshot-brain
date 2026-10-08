@@ -163,8 +163,10 @@ public enum RevealBuilder {
 
     /// The light of the Reveal: the user's own colours, merged from their recent safe screenshots.
     static func palette(from items: [ScreenshotItem], fallback: ItemCategory?) -> LightPalette {
+        // Each colour keeps its weight within its own screenshot: dividing by the number of
+        // screenshots pushed nearly every colour under the extractor's cut-off.
         let colors = items.flatMap { item in
-            item.palette.map { PaletteColor(red: $0.red, green: $0.green, blue: $0.blue, weight: $0.weight / Double(max(items.count, 1))) }
+            item.palette.map { PaletteColor(red: $0.red, green: $0.green, blue: $0.blue, weight: $0.weight) }
         }
         if let extracted = LightPalette(extracted: colors) {
             return extracted

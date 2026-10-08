@@ -129,6 +129,7 @@ struct MainTabs: View {
             path = NavigationPath()
             path.append(HomeRoute.item(id))
         case .recap:
+            path = NavigationPath()
             tab = .recap
         case .home:
             tab = .saved

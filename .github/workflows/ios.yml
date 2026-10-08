@@ -72,7 +72,7 @@ jobs:
             -destination "$DESTINATION" -derivedDataPath build/DerivedData \
             -clonedSourcePackagesDirPath "$SPM_DIR" \
             -skipMacroValidation -skipPackagePluginValidation \
-            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_ALLOWED=NO SB_ALLOW_LOCAL_ACCOUNT=YES \
             | xcbeautify --renderer github-actions
 
       # Drag the unzipped .app onto a booted simulator to run it (`xcrun simctl install booted ScreenshotBrain.app`).
@@ -133,7 +133,7 @@ jobs:
       (github.event_name == 'workflow_dispatch' && inputs.snapshots) ||
       (github.event_name == 'push' && contains(github.event.head_commit.message, '[snapshots'))
     runs-on: macos-26
-    timeout-minutes: 45
+    timeout-minutes: 60
     permissions:
       contents: write
     env:
@@ -153,24 +153,6 @@ jobs:
             echo "Rendering every screen"
           fi
 
-      # A new simulator's first boot spends minutes setting itself up. Boot them one after another
-      # in the background while the app builds, so each is ready by its turn.
-      - name: Boot the simulators
-        run: |
-          phones=("iPhone 16 Pro" "iPhone SE (3rd generation)")
-          if [[ -z "${SB_ONLY_ROUTES:-}" || "$SB_ONLY_ROUTES" == *store.* ]]; then
-            phones+=("iPhone 16 Pro Max")
-          fi
-          mkdir -p build
-          nohup bash -c '
-            for phone in "$@"; do
-              udid=$(scripts/ensure-simulator.sh "$phone")
-              xcrun simctl boot "$udid" || true
-              xcrun simctl bootstatus "$udid" -b > /dev/null || true
-              echo "$phone booted"
-            done
-          ' boot "${phones[@]}" > build/boot.log 2>&1 &
-
       - name: Build the app and its UI tests
         run: |
           set -o pipefail
@@ -186,18 +168,22 @@ jobs:
       - name: iPhone 16 Pro
         id: pro
         continue-on-error: true
-        timeout-minutes: 12
+        timeout-minutes: 15
         run: scripts/export-snapshots.sh "iPhone 16 Pro"
       - name: iPhone SE
         id: se
         continue-on-error: true
-        timeout-minutes: 12
+        timeout-minutes: 15
         run: scripts/export-snapshots.sh "iPhone SE (3rd generation)"
       - name: iPhone 16 Pro Max (App Store)
         id: store
         continue-on-error: true
-        timeout-minutes: 8
+        timeout-minutes: 12
         run: scripts/export-snapshots.sh "iPhone 16 Pro Max"
+
+      - name: Collect the renders
+        if: always()
+        run: scripts/collect-snapshots.sh
 
       # Kept even if the push below fails.
       - uses: actions/upload-artifact@v4

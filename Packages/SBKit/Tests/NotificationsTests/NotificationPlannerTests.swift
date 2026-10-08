@@ -52,6 +52,17 @@ import Testing
         #expect(calendar.component(.minute, from: plan.fireAt) == 30)
     }
 
+    @Test func recapNamesSomethingItHasNotNamedBefore() throws {
+        var history = NotificationHistory()
+        history.nudgedItemIDs = ["a"]
+        let new = [
+            NotableItem(id: "a", title: nil, category: .event, dueDate: nil),
+            NotableItem(id: "b", title: nil, category: .place, dueDate: nil),
+        ]
+        let plan = try #require(NotificationPlanner.plan(context(now: start, new: new, history: history), calendar: calendar))
+        #expect(plan.itemID == "b")
+    }
+
     @Test func emptyNightsStayQuiet() {
         #expect(NotificationPlanner.plan(context(now: start), calendar: calendar) == nil)
     }

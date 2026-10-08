@@ -10,9 +10,13 @@ struct RootView: View {
 
     var body: some View {
         ZStack {
-            screen(for: model.step)
-                .id(model.step)
-                .transition(.opacity)
+            if model.services == nil {
+                StorageUnavailable(palette: model.palette)
+            } else {
+                screen(for: model.step)
+                    .id(model.step)
+                    .transition(.opacity)
+            }
         }
         .animation(SBMotion.settle, value: model.step)
         .task {
@@ -55,5 +59,23 @@ struct RootView: View {
         case .triage, .score, .paywall, .notifications, .widgetGuide, .home:
             AfterRevealFlow()
         }
+    }
+}
+
+/// The database couldn't be opened (no space left, or the container is unavailable). Nothing
+/// could be saved, so say so rather than run on and lose everything.
+private struct StorageUnavailable: View {
+    let palette: LightPalette
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Spacer()
+            MistHeadline("Couldn't open **your saved things.**", size: 32, alignment: .leading)
+            MistBody("Check there's some free space on this iPhone, then close Screenshot Brain and open it again.", alignment: .leading)
+            Spacer()
+        }
+        .padding(.horizontal, 24)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(LightField(.sweep(palette), drifts: false).ignoresSafeArea())
     }
 }

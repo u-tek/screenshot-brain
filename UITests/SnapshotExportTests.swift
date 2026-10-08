@@ -23,7 +23,8 @@ final class SnapshotExportTests: XCTestCase {
             try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
         }
 
-        let shots = routes.flatMap { route in appearances.map { "\(route)@\($0)" } }
+        // Every light screen, then every dark one: the appearance switches once, not every shot.
+        let shots = appearances.flatMap { appearance in routes.map { "\($0)@\(appearance)" } }
         var failures: [String] = []
         var remaining = shots[...]
         let app = XCUIApplication()
@@ -35,11 +36,14 @@ final class SnapshotExportTests: XCTestCase {
             Thread.sleep(forTimeInterval: 2.5)
 
             var crashed = false
+            var previous: String?
             for (offset, shot) in remaining.enumerated() {
-                if offset > 0 {
+                if let previous {
                     postNext()
-                    Thread.sleep(forTimeInterval: 0.9)
+                    // A change of appearance takes longer to settle than a change of screen.
+                    Thread.sleep(forTimeInterval: appearance(of: shot) == appearance(of: previous) ? 0.9 : 2.5)
                 }
+                previous = shot
                 guard app.state == .runningForeground else {
                     // This screen crashed the app: note it and carry on from the next one.
                     failures.append(shot)
@@ -50,7 +54,8 @@ final class SnapshotExportTests: XCTestCase {
                 let name = shot.replacingOccurrences(of: "@", with: "-")
                 let screenshot = XCUIScreen.main.screenshot()
                 if let outputDirectory {
-                    try screenshot.pngRepresentation.write(to: outputDirectory.appendingPathComponent("\(name).png"))
+                    // Atomic, so a phone cut short never leaves half a PNG behind.
+                    try screenshot.pngRepresentation.write(to: outputDirectory.appendingPathComponent("\(name).png"), options: .atomic)
                 } else {
                     // Run from Xcode: keep it in the test report instead.
                     let attachment = XCTAttachment(screenshot: screenshot)
@@ -79,6 +84,10 @@ final class SnapshotExportTests: XCTestCase {
             nil,
             true
         )
+    }
+
+    private func appearance(of shot: String) -> Substring {
+        shot.split(separator: "@").last ?? ""
     }
 
     private func list(_ value: String?, default fallback: [String]) -> [String] {

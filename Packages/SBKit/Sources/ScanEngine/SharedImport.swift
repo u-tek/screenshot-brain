@@ -27,16 +27,18 @@ extension ScanPipeline {
         var added: [ScreenshotItem] = []
         for (index, file) in pending.enumerated() {
             try Task.checkCancellation()
-            defer {
+            defer { progress(ScanProgress(read: index + 1, total: pending.count)) }
+            // Leaves the inbox only once it's saved (or can never be read), so a save that fails
+            // keeps it for next time.
+            func discard() {
                 try? FileManager.default.removeItem(at: file.url)
-                progress(ScanProgress(read: index + 1, total: pending.count))
             }
-            guard let data = try? Data(contentsOf: file.url) else { continue }
+            guard let data = try? Data(contentsOf: file.url) else { discard(); continue }
             // Sharing the same screenshot twice shouldn't count it twice.
             let digest = SHA256.hash(data: data).prefix(16).map { String(format: "%02x", $0) }.joined()
             let identifier = AppGroup.sharedIdentifierPrefix + digest
-            guard try !database.containsItem(assetLocalID: identifier) else { continue }
-            guard let image = Self.halfResolution(data) else { continue }
+            guard try !database.containsItem(assetLocalID: identifier) else { discard(); continue }
+            guard let image = Self.halfResolution(data) else { discard(); continue }
 
             let item = ScreenshotItem(assetLocalID: identifier, createdAt: file.takenAt, updatedAt: now)
             let read = await analyse(item, image: image, now: now)
@@ -45,6 +47,7 @@ extension ScanPipeline {
                 try? Self.writeJPEG(display, to: keep.appendingPathComponent("\(digest).jpg"))
             }
             try database.save([read])
+            discard()
             added.append(read)
         }
         try groupNearDuplicates(added)

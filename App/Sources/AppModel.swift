@@ -30,6 +30,8 @@ final class AppModel: ObservableObject {
     /// Screenshots there are to read, counting ones read in earlier runs.
     @Published private(set) var screenshotsFound = 0
     @Published private(set) var isScanning = false
+    /// Set when a scan is asked for while one is running, so it runs again straight after.
+    private var scanAgain = false
     @Published private(set) var story: RevealStory?
     /// Where a widget tap asked to go, for Home to pick up.
     @Published var pendingLink: AppLink?
@@ -81,6 +83,8 @@ final class AppModel: ObservableObject {
     /// Checks the account is still valid, resumes where onboarding left off, and picks up new
     /// screenshots.
     func start() async {
+        // Follows purchases from launch, so a renewal or a lapse shows without opening the paywall.
+        Task { await purchases.start() }
         if let account, !(await AccountStore.isStillAuthorised(account)) {
             signOutLocally()
             return
@@ -250,9 +254,17 @@ final class AppModel: ObservableObject {
             try await AccountServer.revoke(refreshToken: token, configuration: configuration)
         }
         try services?.database.eraseAll()
-        if let thumbnails = try? AppGroup.directory(.thumbnails) {
-            try? FileManager.default.removeItem(at: thumbnails)
+        // Everything kept outside the database: thumbnails, shared-in copies, images waiting in
+        // the inbox and the widget's light. Emptied rather than removed, since the scan engine
+        // keeps these folders' paths.
+        for directory in [AppGroup.Directory.thumbnails, .shared, .inbox, .widgetLight] {
+            guard let folder = try? AppGroup.directory(directory) else { continue }
+            for file in (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? [] {
+                try? FileManager.default.removeItem(at: file)
+            }
         }
+        NotificationScheduler.reset()
+        WidgetCenter.shared.reloadAllTimelines()
         AccountStore.delete()
         account = nil
         answers = OnboardingAnswers()
@@ -286,7 +298,12 @@ final class AppModel: ObservableObject {
     /// Reads new library screenshots (with photo access) and anything shared in through the
     /// share extension (with or without it).
     func startScan() {
-        guard let services, !isScanning else { return }
+        guard let services else { return }
+        guard !isScanning else {
+            // Something arrived mid-scan (pictures picked or shared): read it straight after.
+            scanAgain = true
+            return
+        }
         isScanning = true
         let hasPhotoAccess = hasPhotoAccess
         Task {
@@ -322,6 +339,10 @@ final class AppModel: ObservableObject {
             scheduleSync()
             if let services = self.services {
                 await WidgetRefresher.refresh(services: services)
+            }
+            if scanAgain {
+                scanAgain = false
+                startScan()
             }
         }
     }
@@ -374,7 +395,7 @@ final class AppModel: ObservableObject {
     private func refreshPalette() {
         guard let items = try? services?.database.recentSafeItems(limit: 12), !items.isEmpty else { return }
         let colors = items.flatMap { item in
-            item.palette.map { PaletteColor(red: $0.red, green: $0.green, blue: $0.blue, weight: $0.weight / Double(items.count)) }
+            item.palette.map { PaletteColor(red: $0.red, green: $0.green, blue: $0.blue, weight: $0.weight) }
         }
         if let extracted = LightPalette(extracted: colors) {
             palette = extracted

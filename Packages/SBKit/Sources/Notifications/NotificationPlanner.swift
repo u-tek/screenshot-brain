@@ -148,8 +148,8 @@ public enum NotificationPlanner {
 
         let isSunday = calendar.component(.weekday, from: fireAt) == 1
 
-        // Something new: the recap.
-        if let first = context.newItems.first {
+        // Something new: the recap. It names one new thing, not the same one every night.
+        if let first = context.newItems.first(where: { !context.history.nudgedItemIDs.contains($0.id) }) ?? context.newItems.first {
             let body = isSunday
                 ? NotificationCopy.digest(saved: context.weekSaved, done: context.weekDone, waiting: context.newItems.count)
                 : NotificationCopy.recap(first, others: context.newItems.count - 1, at: fireAt, calendar: calendar)

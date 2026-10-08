@@ -31,15 +31,16 @@ public actor CloudSync {
         container.privateCloudDatabase
     }
 
-    /// Pushes local changes, then pulls remote ones. Failures are logged and retried next time;
-    /// the app never depends on sync to work.
+    /// Pulls remote changes, then pushes local ones. Pulling first means a new phone adopts what
+    /// iCloud already has before anything local (like "just signed in") can overwrite it.
+    /// Failures are logged and retried next time; the app never depends on sync to work.
     public func sync() async {
         do {
             guard try await container.accountStatus() == .available else { return }
             try await ensureZone()
-            try await push()
             try await pull()
             try database.applyPendingRemoteStates()
+            try await push()
         } catch let error as CKError where error.code == .zoneNotFound || error.code == .userDeletedZone {
             try? resetState()
         } catch let error as CKError where error.code == .changeTokenExpired {
@@ -82,9 +83,16 @@ public actor CloudSync {
         if let answers = try database.onboardingAnswers(), answers.updatedAt > since {
             records.append(record(for: answers))
         }
+        var failed = 0
         for start in stride(from: 0, to: records.count, by: 300) {
             let batch = Array(records[start..<min(start + 300, records.count)])
-            _ = try await cloud.modifyRecords(saving: batch, deleting: [], savePolicy: .changedKeys, atomically: false)
+            let (saved, _) = try await cloud.modifyRecords(saving: batch, deleting: [], savePolicy: .changedKeys, atomically: false)
+            failed += saved.values.filter { if case .failure = $0 { true } else { false } }.count
+        }
+        // Some records didn't save: keep the watermark, so they go again next time.
+        guard failed == 0 else {
+            Log.sync.error("\(failed) records didn't sync; retrying next time")
+            return
         }
         state.lastPushAt = started
         try database.save(state)

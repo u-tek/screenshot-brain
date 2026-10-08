@@ -7,6 +7,15 @@ import UserNotifications
 public enum NotificationScheduler {
     static let identifierPrefix = "nightly-"
     private static let historyKey = "notifications.history"
+    private static let pendingKey = "notifications.pending"
+
+    /// The history from before the waiting notification was recorded, so a replan that replaces
+    /// it before it fires can give back whatever it used up (the trial reminder, the monthly
+    /// Reveal, a nudge about an item).
+    struct PendingRecord: Codable {
+        var fireAt: Date
+        var before: NotificationHistory
+    }
 
     public static func requestPermission() async -> Bool {
         (try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge])) ?? false
@@ -22,6 +31,7 @@ public enum NotificationScheduler {
         let center = UNUserNotificationCenter.current()
         let pending = await center.pendingNotificationRequests().map(\.identifier).filter { $0.hasPrefix(identifierPrefix) }
         center.removePendingNotificationRequests(withIdentifiers: pending)
+        discardPending()
         guard let plan, await isAuthorised() else { return }
 
         let content = UNMutableNotificationContent()
@@ -37,21 +47,53 @@ public enum NotificationScheduler {
         )
         do {
             try await center.add(request)
-            var history = loadHistory()
+            let before = loadHistory()
+            var history = before
             history.record(plan, calendar: calendar)
             saveHistory(history)
+            savePending(PendingRecord(fireAt: plan.fireAt, before: before))
         } catch {
             Log.app.error("Couldn't schedule tonight's notification: \(error.localizedDescription, privacy: .public)")
         }
     }
 
-    public static func loadHistory(_ defaults: UserDefaults? = AppGroup.defaults()) -> NotificationHistory {
+    /// What's been sent. A notification still waiting to fire doesn't count yet, so planning
+    /// again the same evening can choose it again.
+    public static func loadHistory(_ defaults: UserDefaults? = AppGroup.defaults(), now: Date = Date()) -> NotificationHistory {
+        if let pending = pendingRecord(defaults), pending.fireAt > now {
+            return pending.before
+        }
         guard let data = defaults?.data(forKey: historyKey) else { return NotificationHistory() }
         return (try? JSONDecoder().decode(NotificationHistory.self, from: data)) ?? NotificationHistory()
     }
 
+    /// Clears everything scheduled and sent (Delete everything).
+    public static func reset(_ defaults: UserDefaults? = AppGroup.defaults()) {
+        UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+        defaults?.removeObject(forKey: historyKey)
+        defaults?.removeObject(forKey: pendingKey)
+    }
+
     static func saveHistory(_ history: NotificationHistory, _ defaults: UserDefaults? = AppGroup.defaults()) {
         defaults?.set(try? JSONEncoder().encode(history), forKey: historyKey)
+    }
+
+    static func pendingRecord(_ defaults: UserDefaults?) -> PendingRecord? {
+        guard let data = defaults?.data(forKey: pendingKey) else { return nil }
+        return try? JSONDecoder().decode(PendingRecord.self, from: data)
+    }
+
+    static func savePending(_ record: PendingRecord, _ defaults: UserDefaults? = AppGroup.defaults()) {
+        defaults?.set(try? JSONEncoder().encode(record), forKey: pendingKey)
+    }
+
+    /// The waiting notification was just removed. If it hadn't fired, it never happened.
+    static func discardPending(_ defaults: UserDefaults? = AppGroup.defaults(), now: Date = Date()) {
+        guard let record = pendingRecord(defaults) else { return }
+        if record.fireAt > now {
+            saveHistory(record.before, defaults)
+        }
+        defaults?.removeObject(forKey: pendingKey)
     }
 }
 

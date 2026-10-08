@@ -2,7 +2,7 @@
 # Exports design snapshots on one simulator. Run after `xcodebuild build-for-testing` into
 # $DERIVED_DATA (default build/DerivedData).
 #
-#   scripts/export-snapshots.sh "iPhone 16 Pro" [output-dir]
+#   scripts/export-snapshots.sh "iPhone 16 Pro"
 #
 # Routes come from scripts/snapshot-routes.txt, or only those in $SB_ONLY_ROUTES (comma-separated)
 # when it's set. Which routes go where:
@@ -10,13 +10,12 @@
 #   store.<n>    App Store screenshots: iPhone 16 Pro Max only, light, into design/appstore/6.9-<n>-light.png
 #   anything else  app screens on iPhone 16 Pro and iPhone SE, into design/screens/<device>/
 #
-# The output directory (default build/design-out) mirrors the repo, so copying it over the repo
-# root updates design/. One launch of the app covers every screen (see SnapshotExportTests).
+# Renders land in build/snapshots/<phone>/; scripts/collect-snapshots.sh then lays them out under
+# design/. One launch of the app covers every screen (see SnapshotExportTests).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 device="$1"
-out_root="${2:-build/design-out}"
 derived_data="${DERIVED_DATA:-build/DerivedData}"
 slug=$(echo "$device" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/-+$//')
 
@@ -62,14 +61,5 @@ if [[ -f "$raw/failures.txt" ]]; then
   echo "::error::Screens that didn't render on $device: $(paste -sd, "$raw/failures.txt")"
 fi
 
-shopt -s nullglob
-for file in "$raw"/*.png; do
-  base=$(basename "$file")
-  case "$base" in
-    store.*) mkdir -p "$out_root/design/appstore"; cp "$file" "$out_root/design/appstore/6.9-${base#store.}" ;;
-    lab.*) mkdir -p "$out_root/design/lab"; cp "$file" "$out_root/design/lab/${base#lab.}" ;;
-    *) mkdir -p "$out_root/design/screens/$slug"; cp "$file" "$out_root/design/screens/$slug/$base" ;;
-  esac
-done
-echo "Exported $(ls "$raw"/*.png | wc -l | tr -d ' ') screens on $device"
+echo "Exported $(find "$raw" -name '*.png' | wc -l | tr -d ' ') screens on $device"
 exit "$status"

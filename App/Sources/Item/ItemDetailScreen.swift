@@ -96,7 +96,7 @@ struct ItemDetailScreen: View {
                     AssetImage(item.assetLocalID, maxPixelSize: 1400, allowsNetwork: true)
                         .background(LightField(.glow(palette(item)), grain: 0.04))
                         .aspectRatio(9 / 19.5, contentMode: .fit)
-                        .frame(maxHeight: 440)
+                        .frame(maxHeight: 340)
                         .clipShape(RoundedRectangle(cornerRadius: SBRadius.card, style: .continuous))
                         .overlay(RoundedRectangle(cornerRadius: SBRadius.card, style: .continuous).strokeBorder(.white.opacity(0.7), lineWidth: 1))
                         .shadow(color: .black.opacity(0.06), radius: 40)
