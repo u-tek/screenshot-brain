@@ -1,0 +1,88 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="kit.css"><script src="kit.js"></script>
+<style>
+  .header { position: absolute; top: 62px; left: 20px; right: 20px; display: flex; justify-content: space-between; align-items: center; }
+  .mark { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 600; letter-spacing: -.2px; }
+  .score { position: absolute; top: 108px; left: 16px; width: 361px; height: 190px; }
+  .row { position: absolute; top: 308px; left: 16px; width: 361px; height: 196px; display: flex; gap: 9px; }
+  .recap, .next { width: 176px; height: 196px; }
+  .section { position: absolute; left: 20px; right: 20px; display: flex; justify-content: space-between; }
+  .slab { position: absolute; left: 16px; width: 361px; height: 60px; border-radius: 20px; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; }
+</style></head>
+<body><div class="phone paper" id="p">
+  <div class="grain"></div>
+  <div id="status"></div>
+
+  <div class="header">
+    <div class="mark">${icon}</div>
+    <div class="mono">Wed · 08 Oct</div>
+  </div>
+
+  <!-- Score: an instrument, not a hero number. -->
+  <div class="tile score hairline">
+    <div class="bloom" style="width:300px;height:140px;left:150px;top:150px;background:radial-gradient(closest-side,var(--ref-core),transparent);opacity:.55"></div>
+    <div class="content" style="padding:20px">
+      <div style="display:flex;justify-content:space-between"><span class="mono">Your score</span><span class="mono" style="display:flex;align-items:center;gap:6px"><span style="width:6px;height:6px;border-radius:3px;background:#8fb800;box-shadow:none"></span>+2 this week</span></div>
+      <div style="display:flex;align-items:flex-end;gap:12px;margin-top:14px"><div id="score"></div><div style="font-size:24px;font-weight:300;color:var(--ink-2);margin-bottom:-4px">/ 23 done</div></div>
+      <div class="ruler" style="margin-top:16px"><div class="mark" style="left:26%"></div></div>
+      <div class="mono dim" style="margin-top:8px">Drops never count against you</div>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- Tonight's recap glows from below, like a lit tile. -->
+    <div class="tile recap" style="background:#1a0710;color:#fff;--ink:#fff;--ink-2:rgba(255,255,255,.7)">
+      <div class="bloom" style="width:260px;height:200px;left:-40px;top:110px;background:radial-gradient(closest-side,var(--event-core),var(--event-deep) 60%,transparent);filter:blur(26px)"></div>
+      <div class="bloom" style="width:120px;height:90px;left:40px;top:150px;background:radial-gradient(closest-side,#ffd0e2,transparent);filter:blur(18px);opacity:.9"></div>
+      <div class="content" style="padding:18px;display:flex;flex-direction:column">
+        <span class="mono">Tonight</span>
+        <div id="waiting" style="margin-top:16px"></div>
+        <span class="mono" style="margin-top:10px;color:var(--ink)">waiting for you</span>
+        <div style="flex:1"></div>
+        <div style="display:flex;justify-content:flex-end"><span class="circle" style="background:#fff;color:#0b0b0d">${arrow}</span></div>
+      </div>
+    </div>
+
+    <!-- The next dated thing: a folder whose top is its own screenshot. -->
+    <div class="tile next" id="next" style="background:#fff">
+      <div style="position:absolute;inset:0 0 auto 0;height:118px" id="shot"></div>
+      <div class="content" style="display:flex;flex-direction:column;justify-content:flex-end;padding:16px">
+        <span class="mono" style="color:var(--ink)">Sun 11 · in 3 days</span>
+        <div style="font-size:16px;font-weight:600;letter-spacing:-.2px;margin-top:6px;line-height:1.2">Mallrat at the Enmore</div>
+      </div>
+      <div class="mono" style="position:absolute;top:8px;left:16px;z-index:3;color:#fff">Next up</div>
+    </div>
+  </div>
+
+  <div class="section" style="top:522px"><span class="mono">Still want</span><span class="mono dim">21 things</span></div>
+  <div id="slabs"></div>
+
+  <div class="tabbar glass">
+    <div class="tab on">${stack}<span>Saved</span></div>
+    <div class="tab" style="position:relative">${cal}<span>Recap</span><span class="dot" style="position:absolute;top:10px;right:28px"></span></div>
+    <div class="tab">${sliders}<span>Settings</span></div>
+  </div>
+  <div class="home-indicator"></div>
+</div>
+<script>
+  const P = document.getElementById("p");
+  P.innerHTML = P.innerHTML
+    .replace("${icon}", icon("bracket", 18) + "<span>Screenshot Brain</span>")
+    .replace("${arrow}", icon("arrow", 18, "#0b0b0d"))
+    .replace("${stack}", icon("stack", 20)).replace("${cal}", icon("cal", 20)).replace("${sliders}", icon("sliders", 20));
+  document.getElementById("status").outerHTML = statusBar(false);
+  document.getElementById("score").innerHTML = dots("06", { dot: 8, pitch: 10.5, color: "#121214", unlit: .06, glow: false });
+  document.getElementById("waiting").innerHTML = dots("7", { dot: 7, pitch: 9, color: "#fff", unlit: .18 });
+  document.getElementById("shot").innerHTML = screenshot("event", 176, 118, { blurX: 18, blurY: 5 });
+  folderClip(document.getElementById("next"), { tab: 0.52, tabH: 14, r: 26 });
+
+  const kinds = [["Places", "09", "place"], ["Products", "06", "product"], ["Recipes", "04", "recipe"], ["Events", "02", "event"]];
+  document.getElementById("slabs").innerHTML = kinds.map(([name, n, k], i) => `
+    <div class="tile slab hairline" style="top:${548 + i * 68}px">
+      <div class="bloom" style="width:180px;height:120px;left:-70px;top:-30px;background:radial-gradient(closest-side,var(--${k}-core),var(--${k}-deep) 65%,transparent);filter:blur(22px)"></div>
+      <div class="content" style="display:flex;align-items:center;justify-content:space-between;width:100%">
+        <span style="font-size:16px;font-weight:500;letter-spacing:-.2px">${name}</span>
+        <span style="display:flex;align-items:center;gap:12px">${dots(n, { dot: 3.4, pitch: 4.4, glow: false, color: "#121214", unlit: .08 })}<span class="mono dim">›</span></span>
+      </div>
+    </div>`).join("");
+</script></body></html>

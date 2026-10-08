@@ -1,0 +1,64 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="kit.css"><script src="kit.js"></script>
+<style>
+  .apps { position: absolute; left: 30px; right: 30px; display: grid; grid-template-columns: repeat(4, 62px); justify-content: space-between; row-gap: 30px; }
+  .app { width: 62px; height: 62px; border-radius: 16px; background: rgba(255,255,255,.14); }
+  .w { position: absolute; border-radius: 26px; overflow: hidden; isolation: isolate; }
+</style></head>
+<body><div class="phone" id="p" style="background:#1b1410">
+  <!-- A wallpaper: someone in motion, blurred to colour (ref 10). -->
+  <svg width="393" height="852" style="position:absolute;inset:0"><filter id="wp"><feGaussianBlur stdDeviation="46 18"/></filter>
+    <g filter="url(#wp)"><rect width="393" height="852" fill="#2a1d14"/><ellipse cx="120" cy="300" rx="120" ry="260" fill="#e08a2a"/><ellipse cx="260" cy="420" rx="110" ry="300" fill="#3a0d0a"/><ellipse cx="320" cy="160" rx="90" ry="120" fill="#c9b8a0"/><ellipse cx="200" cy="700" rx="200" ry="160" fill="#7a2a10"/></g></svg>
+  <div class="grain" style="opacity:.24"></div>
+  <div id="status"></div>
+
+  <div style="position:absolute;top:96px;left:0;right:0;text-align:center;font-size:15px;font-weight:500;color:rgba(255,255,255,.85)">Wednesday 8 October</div>
+
+  <!-- Medium widget: the folder, its screenshot's light on the left, the decision on the right. -->
+  <div class="w" id="medium" style="top:150px;left:24px;width:345px;height:162px;background:#121214">
+    <div id="mshot" style="position:absolute;left:0;top:0;width:128px;height:162px"></div>
+    <div style="position:absolute;left:128px;top:0;bottom:0;width:30px;background:linear-gradient(90deg,rgba(18,18,20,0),#121214)"></div>
+    <div style="position:absolute;left:146px;right:16px;top:18px;bottom:14px;display:flex;flex-direction:column">
+      <span class="mono">Event · Friday</span>
+      <span style="font-size:16px;font-weight:600;letter-spacing:-.2px;margin-top:7px;line-height:1.2">Mallrat at the Enmore</span>
+      <span style="flex:1"></span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="circle outline" style="width:34px;height:34px">${x}</span>
+        <span class="pill small outline" style="height:34px;border-radius:17px">Keep</span>
+        <span style="flex:1"></span>
+        <span class="circle" style="width:38px;height:38px;background:var(--lime)">${check}</span>
+      </div>
+    </div>
+    <div class="mono" style="position:absolute;top:8px;left:14px;color:#fff">Tonight</div>
+  </div>
+
+  <!-- Small widget: the score as an instrument. -->
+  <div class="w hairline" style="top:336px;left:24px;width:160px;height:160px;background:#121214">
+    <div class="bloom" style="width:220px;height:140px;left:-30px;top:110px;background:radial-gradient(closest-side,var(--ref-core),transparent);opacity:.5"></div>
+    <div style="position:relative;z-index:2;padding:16px">
+      <span class="mono">Score</span>
+      <div style="display:flex;align-items:flex-end;gap:6px;margin-top:14px"><div id="sscore"></div><span style="font-size:15px;font-weight:300;color:var(--ink-2);margin-bottom:-2px">/23</span></div>
+      <div class="ruler" style="margin-top:16px;transform:scaleY(.8)"><div class="mark" style="left:26%"></div></div>
+    </div>
+  </div>
+  <!-- Small widget: what's next, lit by its own screenshot. -->
+  <div class="w" id="small2" style="top:336px;left:209px;width:160px;height:160px;background:#121214">
+    <div id="s2" style="position:absolute;inset:0"></div>
+    <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 35%,rgba(0,0,0,.7))"></div>
+    <div style="position:absolute;left:16px;bottom:14px;right:14px"><span class="mono" style="color:#fff">Place · 3 wks</span><div style="font-size:15px;font-weight:600;margin-top:5px">Ramen Ikkyu</div></div>
+  </div>
+
+  <div class="apps" style="top:530px"><div class="app"></div><div class="app"></div><div class="app"></div><div class="app"></div><div class="app"></div><div class="app"></div><div class="app"></div><div class="app"></div></div>
+  <div class="glass" style="position:absolute;left:14px;right:14px;bottom:18px;height:92px;border-radius:34px;background:rgba(255,255,255,.12)"></div>
+  <div class="home-indicator"></div>
+</div>
+<script>
+  const P = document.getElementById("p");
+  P.innerHTML = P.innerHTML.replace("${x}", icon("x", 16)).replace("${check}", icon("check", 20, "#0b0b0d"));
+  document.getElementById("status").outerHTML = statusBar(true);
+  document.getElementById("mshot").innerHTML = screenshot("event", 128, 162, { blurX: 20, blurY: 8 });
+  document.getElementById("s2").innerHTML = screenshot("place", 160, 160, { blurX: 18, blurY: 6 });
+  document.getElementById("sscore").innerHTML = dots("06", { dot: 5.2, pitch: 6.8 });
+  folderClip(document.getElementById("medium"), { tab: 0.3, tabH: 14, r: 24 });
+  folderClip(document.getElementById("small2"), { tab: 0.5, tabH: 12, r: 24 });
+</script></body></html>

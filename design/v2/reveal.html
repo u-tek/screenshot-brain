@@ -1,0 +1,62 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="kit.css"><script src="kit.js"></script>
+<style>
+  .bars { position: absolute; top: 58px; left: 20px; right: 20px; display: flex; gap: 5px; z-index: 5; }
+  .bars span { flex: 1; height: 2px; border-radius: 1px; background: rgba(255,255,255,.18); }
+  .bars span.on { background: #fff; }
+  .top { position: absolute; top: 74px; left: 20px; right: 20px; display: flex; justify-content: space-between; align-items: center; z-index: 5; }
+  .axis-v { position: absolute; top: 120px; bottom: 300px; left: 50%; width: 1px; background: rgba(255,255,255,.12); }
+  .axis-h { position: absolute; left: 20px; right: 20px; top: 330px; height: 1px; background: rgba(255,255,255,.12); }
+</style></head>
+<body><div class="phone" id="p" style="background:#0c0d10">
+  <!-- Smoke: grey-blue depth for the one light to move through. -->
+  <svg width="393" height="852" style="position:absolute;inset:0">
+    <filter id="smoke"><feGaussianBlur stdDeviation="40"/></filter>
+    <g filter="url(#smoke)" opacity=".85">
+      <ellipse cx="80" cy="200" rx="140" ry="110" fill="#3a4250"/>
+      <ellipse cx="330" cy="420" rx="150" ry="120" fill="#2b313c"/>
+      <ellipse cx="120" cy="560" rx="120" ry="90" fill="#232832"/>
+      <ellipse cx="300" cy="170" rx="90" ry="70" fill="#4a5262"/>
+    </g>
+    <!-- The light: a white core with a long red-pink trail, like a long exposure. -->
+    <filter id="trail" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="22 6"/></filter>
+    <g transform="rotate(32 196 270)" filter="url(#trail)">
+      <ellipse cx="236" cy="270" rx="110" ry="34" fill="#ff2f62"/>
+      <ellipse cx="190" cy="270" rx="70" ry="26" fill="#ff7a8f"/>
+    </g>
+    <filter id="core"><feGaussianBlur stdDeviation="6"/></filter>
+    <circle cx="160" cy="236" r="40" fill="#fff" filter="url(#core)"/>
+    <circle cx="160" cy="236" r="30" fill="#fff"/>
+  </svg>
+  <div class="grain" style="opacity:.22"></div>
+  <div id="status"></div>
+  <div class="bars"><span class="on"></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+  <div class="top"><span class="mono">The Reveal · 01 / 08</span><span class="pill small outline mono" style="letter-spacing:.08em">Skip ✕</span></div>
+
+  <div class="axis-v"></div><div class="axis-h"></div>
+  <span class="mono dim" style="position:absolute;top:124px;left:20px">Aug</span>
+  <span class="mono dim" style="position:absolute;top:124px;right:20px">Oct</span>
+  <span class="mono dim" style="position:absolute;top:338px;left:20px">Last 60 days</span>
+  <span class="mono dim" style="position:absolute;top:338px;right:20px">Today</span>
+
+  <div style="position:absolute;left:20px;top:410px">
+    <div class="mono" style="color:var(--ink)">You screenshotted</div>
+    <div id="total" style="margin-top:18px"></div>
+    <div style="font-size:24px;font-weight:300;letter-spacing:-.4px;margin-top:16px;width:340px;line-height:1.15">things you meant<br><span class="semi">to come back to.</span></div>
+  </div>
+
+  <div class="glass" style="position:absolute;left:16px;right:16px;bottom:40px;border-radius:24px;padding:18px 20px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:17px;font-weight:300">You guessed 150. <span class="semi">It's more.</span></span></div>
+    <div class="ruler" style="margin-top:14px;position:relative"><div class="mark" style="left:42%;background:#fff;box-shadow:none"></div><div class="mark" style="left:61%"></div></div>
+    <div style="display:flex;gap:28px;margin-top:10px">
+      <div><div class="mono dim">Guess</div><div class="mono" style="color:var(--ink);margin-top:3px">150</div></div>
+      <div><div class="mono dim">Actual</div><div class="mono" style="color:var(--lime);margin-top:3px">214</div></div>
+      <div><div class="mono dim">Off by</div><div class="mono" style="color:var(--ink);margin-top:3px">64</div></div>
+    </div>
+  </div>
+  <div class="home-indicator"></div>
+</div>
+<script>
+  document.getElementById("status").outerHTML = statusBar(true);
+  document.getElementById("total").innerHTML = dots("214", { dot: 11, pitch: 14, unlit: 0.06 });
+</script></body></html>

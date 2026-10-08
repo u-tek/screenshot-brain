@@ -1,0 +1,53 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="kit.css"><script src="kit.js"></script>
+<style>
+  .bars { position: absolute; top: 58px; left: 20px; right: 20px; display: flex; gap: 5px; }
+  .bars span { flex: 1; height: 2px; border-radius: 1px; background: rgba(255,255,255,.18); }
+  .bars span.on { background: #fff; }
+  .top { position: absolute; top: 74px; left: 20px; right: 20px; display: flex; justify-content: space-between; align-items: center; }
+  .card { position: absolute; top: 122px; left: 16px; width: 361px; height: 556px; background: #160810; }
+  .spill { position: absolute; left: 30px; top: 610px; width: 333px; height: 150px; border-radius: 50%; filter: blur(40px); opacity: .55;
+    background: radial-gradient(closest-side, var(--event-core), transparent); }
+  .controls { position: absolute; left: 0; right: 0; bottom: 44px; display: flex; justify-content: center; align-items: center; gap: 14px; }
+  .labels { position: absolute; left: 0; right: 0; bottom: 22px; display: flex; justify-content: center; gap: 0; }
+</style></head>
+<body><div class="phone" id="p">
+  <div class="grain"></div>
+  <div id="status"></div>
+  <div class="bars"><span class="on"></span><span></span><span></span><span></span></div>
+  <div class="top"><span class="mono">Tonight's recap · 01 / 04</span><span class="pill small outline mono" style="letter-spacing:.08em">Later ✕</span></div>
+
+  <div class="spill"></div>
+  <div class="card" id="card">
+    <!-- The screenshot's own light: itself, blurred to colour. -->
+    <div id="glow" style="position:absolute;inset:-40px;opacity:.95"></div>
+    <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(8,8,10,.15),rgba(8,8,10,.1) 45%,rgba(8,8,10,.75) 75%)"></div>
+    <div class="mono" style="position:absolute;top:9px;left:22px;z-index:3;color:#fff;display:flex;gap:8px;align-items:center"><span style="width:6px;height:6px;border-radius:3px;background:#fff"></span>Event</div>
+    <!-- The screenshot itself, sharp, so you know what you're deciding on. -->
+    <div id="sharp" style="position:absolute;top:52px;left:50%;transform:translateX(-50%);width:178px;height:330px;border-radius:22px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.18)"></div>
+    <div class="glass" style="position:absolute;left:10px;right:10px;bottom:10px;border-radius:22px;padding:18px 18px 16px">
+      <div class="mono">Saved 2 weeks ago · 2 screenshots</div>
+      <div style="font-size:24px;font-weight:300;letter-spacing:-.4px;margin-top:8px;line-height:1.15">Mallrat · <span class="semi">Enmore Theatre</span></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px">
+        <span class="mono" style="color:var(--ink)">Sun 11 Oct · 8:00pm</span>
+        <span class="pill small outline" style="gap:6px">${cal} Add to calendar</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <span class="circle glass" style="width:62px;height:62px">${x}</span>
+    <span class="pill glass" style="height:62px;border-radius:31px;padding:0 30px;font-size:16px">Still want</span>
+    <span class="circle" style="width:62px;height:62px;background:var(--lime);box-shadow:0 0 30px rgba(217,255,61,.35)">${check}</span>
+  </div>
+  <div class="labels"><span class="mono dim" style="width:62px;text-align:center;margin-right:14px">Drop</span><span class="mono dim" style="width:150px;text-align:center">Swipe right</span><span class="mono dim" style="width:62px;text-align:center;margin-left:14px">Done</span></div>
+  <div class="home-indicator"></div>
+</div>
+<script>
+  const P = document.getElementById("p");
+  P.innerHTML = P.innerHTML.replace("${cal}", icon("cal", 14)).replace("${x}", icon("x", 22)).replace("${check}", icon("check", 26, "#0b0b0d"));
+  document.getElementById("status").outerHTML = statusBar(true);
+  document.getElementById("glow").innerHTML = screenshot("event", 441, 636, { blurX: 46, blurY: 30 });
+  document.getElementById("sharp").innerHTML = screenshot("event", 178, 330, { sharp: true });
+  folderClip(document.getElementById("card"), { tab: 0.34, tabH: 26, r: 30 });
+</script></body></html>
