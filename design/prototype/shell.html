@@ -1,0 +1,302 @@
+<title>Screenshot Brain Prototype</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300..700&display=swap">
+<style>
+  /* One phone in the middle of a warm black room; on desktop a quiet index of screens beside it. */
+  :root {
+    --ground: #0b0a09; --panel: #141210; --ink: #f6f1ea; --ink-2: #a39b92; --ink-3: #69635d;
+    --line: rgba(255, 240, 225, .12); --ember: #ec5f2e;
+    --sans: "Inter", system-ui, -apple-system, sans-serif; --mono: "Mono", ui-monospace, "SF Mono", monospace;
+    color-scheme: dark;
+  }
+  @font-face { font-family: "Mono"; src: url("mono.woff2") format("woff2"); font-weight: 100 800; }
+  html, body { height: 100%; margin: 0; background: var(--ground); color: var(--ink); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+  body { overflow: hidden; }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+  button:focus-visible { outline: 2px solid var(--ember); outline-offset: 3px; border-radius: 8px; }
+
+  .stage { position: fixed; inset: 0; padding: env(safe-area-inset-top, 0px) 16px env(safe-area-inset-bottom, 0px);
+    display: flex; align-items: center; justify-content: center; gap: 64px; }
+  .stage::before { content: ""; position: absolute; left: 50%; top: 50%; width: 900px; height: 900px; transform: translate(-30%, -50%); border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(236, 95, 46, .10), transparent); pointer-events: none; }
+
+  /* Index of screens (desktop) */
+  .index { position: relative; width: 248px; flex: none; display: flex; flex-direction: column; gap: 28px; }
+  .mark { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 15px; letter-spacing: -.01em; }
+  .label { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+  .intro { font-size: 14px; line-height: 1.5; color: var(--ink-2); margin: 10px 0 0; max-width: 34ch; }
+  .groups { display: flex; flex-direction: column; gap: 18px; }
+  .group ul { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; }
+  .group button { width: 100%; text-align: left; display: flex; justify-content: space-between; align-items: center; padding: 7px 0; font-size: 15px; color: var(--ink-2); border-bottom: 1px solid transparent; }
+  .group button:hover { color: var(--ink); }
+  .group button[aria-current="true"] { color: var(--ink); }
+  .group button[aria-current="true"]::after { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--ember); box-shadow: 0 0 10px var(--ember); }
+  .restart { align-self: flex-start; height: 40px; padding: 0 18px; border-radius: 20px; border: 1px solid var(--line); font-size: 14px; color: var(--ink); }
+  .restart:hover { background: rgba(255, 240, 225, .06); }
+
+  /* The phone */
+  .device { position: relative; flex: none; width: calc(393px * var(--s, 1)); height: calc(852px * var(--s, 1)); }
+  .phone { position: absolute; left: 0; top: 0; width: 393px; height: 852px; transform: scale(var(--s, 1)); transform-origin: 0 0;
+    border-radius: 55px; overflow: hidden; background: var(--ground); isolation: isolate;
+    box-shadow: 0 0 0 1px rgba(255, 240, 225, .10), 0 0 0 10px #191715, 0 0 0 11px rgba(255, 240, 225, .07), 0 50px 120px rgba(0, 0, 0, .7); }
+  .layer { position: absolute; inset: 0; background: var(--ground); }
+  .layer iframe { position: absolute; left: 0; top: 0; width: 393px; height: 852px; border: 0; display: block; background: var(--ground); }
+  .layer .dim { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; }
+
+  .toast { position: absolute; left: 50%; top: 10px; z-index: 200; transform: translate(-50%, -140%); max-width: 330px;
+    padding: 12px 18px; border-radius: 22px; font-size: 14px; line-height: 1.3; text-align: center; color: var(--ink);
+    background: rgba(32, 29, 26, .82); -webkit-backdrop-filter: blur(20px) saturate(140%); backdrop-filter: blur(20px) saturate(140%);
+    box-shadow: inset 0 0 0 1px rgba(255, 240, 225, .12), 0 12px 30px rgba(0, 0, 0, .45);
+    transition: transform .45s cubic-bezier(.32, .72, 0, 1), opacity .3s; opacity: 0; pointer-events: none; }
+  .toast.show { transform: translate(-50%, 0); opacity: 1; }
+
+  /* Screen list as a sheet inside the phone (used on phones, where there is no room for the index) */
+  .sheet { position: absolute; inset: 0; z-index: 300; display: flex; flex-direction: column; justify-content: flex-end; }
+  .sheet[hidden] { display: none; }
+  .sheet .scrim { position: absolute; inset: 0; background: rgba(0, 0, 0, .5); }
+  .sheet .body { position: relative; margin: 8px; padding: 22px 22px 18px; border-radius: 40px; background: var(--panel);
+    box-shadow: inset 0 1px 0 rgba(255, 240, 225, .1); display: flex; flex-direction: column; gap: 16px; max-height: 760px; overflow: auto; }
+  .sheet .groups { gap: 12px; }
+  .sheet .group ul { display: grid; grid-template-columns: 1fr 1fr; column-gap: 16px; }
+
+  /* Phones: the frame fills the screen, the index becomes a slim bar above it. */
+  .topbar { display: none; }
+  @media (max-width: 760px) {
+    .stage { flex-direction: column; gap: 10px; padding-top: calc(env(safe-area-inset-top, 0px) + 8px); justify-content: flex-start; }
+    .stage::before { display: none; }
+    .index { display: none; }
+    .topbar { display: flex; width: calc(393px * var(--s, 1)); justify-content: space-between; align-items: center; flex: none; height: 36px; }
+    .topbar button { height: 32px; padding: 0 14px; border-radius: 16px; border: 1px solid var(--line); font-size: 13px; }
+    .phone { border-radius: calc(44px); box-shadow: 0 0 0 1px rgba(255, 240, 225, .10); }
+  }
+  @media (prefers-reduced-motion: reduce) { .toast { transition: opacity .2s; } }
+</style>
+
+<div class="stage" id="stage">
+  <nav class="index" aria-label="Screens">
+    <div>
+      <div class="mark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4H5v16h3M16 4h3v16h-3"/></svg>Screenshot Brain</div>
+      <p class="intro">Tap through it like the app. Everything here is sample data: a gig, a ramen spot, a lamp and a recipe.</p>
+    </div>
+    <div class="groups" id="groups"></div>
+    <button class="restart" id="restart" type="button">Start again from setup</button>
+  </nav>
+
+  <div class="topbar" id="topbar">
+    <button type="button" id="openSheet">All screens</button>
+    <button type="button" id="restart2">Start again</button>
+  </div>
+
+  <div class="device" id="device">
+    <div class="phone" id="phone">
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+      <div class="sheet" id="sheet" hidden>
+        <div class="scrim" id="scrim"></div>
+        <div class="body">
+          <div class="label">All screens</div>
+          <div class="groups" id="sheetGroups"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const SCREENS = {
+    scan: 'Setup scan', home: 'Home', saved: 'Saved', reveals: 'Reveals',
+    item: 'A saved thing', stillwant: 'Still want', triage: "Tonight's recap", history: 'Your score',
+    recaptime: 'Recap time', story: 'Reveal: top category', peak: 'Reveal: peak time', widget: 'Home Screen widget',
+  };
+  const GROUPS = [
+    ['Start', ['scan']], ['Tabs', ['home', 'saved', 'reveals']], ['Things', ['item', 'stillwant']],
+    ['Recap', ['triage', 'history', 'recaptime']], ['Reveal', ['story', 'peak']], ['Widget', ['widget']],
+  ];
+  const TABS = ['home', 'saved', 'reveals'];
+  const EASE = 'cubic-bezier(.32,.72,0,1)';
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const DUR = reduce ? 1 : 520;
+
+  const phone = document.getElementById('phone');
+  const device = document.getElementById('device');
+  const stage = document.getElementById('stage');
+  const toastEl = document.getElementById('toast');
+  const sheet = document.getElementById('sheet');
+
+  // Fit the 393×852 phone to the window.
+  function fit() {
+    const narrow = innerWidth <= 760;
+    const cs = getComputedStyle(stage);
+    const availH = stage.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - (narrow ? 46 + 8 : 48);
+    const availW = narrow ? stage.clientWidth - 16 : stage.clientWidth - 248 - 64 - 64;
+    const s = Math.max(.35, Math.min(1, availH / 852, availW / 393));
+    document.documentElement.style.setProperty('--s', s.toFixed(4));
+  }
+  addEventListener('resize', fit); fit();
+
+  // Navigation stack. Each entry is one screen document in its own layer.
+  const stack = [];
+  const entries = new Set();
+  let busy = false;
+
+  function makeEntry(name, data, how) {
+    const layer = document.createElement('div');
+    layer.className = 'layer';
+    const frame = document.createElement('iframe');
+    frame.title = SCREENS[name];
+    frame.src = name + '.html' + (data ? '#' + encodeURIComponent(JSON.stringify(data)) : '');
+    const dim = document.createElement('div'); dim.className = 'dim';
+    layer.append(frame, dim);
+    const entry = { name, data, how, layer, frame, dim };
+    entry.ready = new Promise(res => { entry.resolve = res; setTimeout(res, 2500); });
+    entries.add(entry);
+    return entry;
+  }
+  function mount(entry, below) {
+    if (below) phone.insertBefore(entry.layer, below.layer.nextSibling);
+    else phone.insertBefore(entry.layer, toastEl);
+  }
+  function unmount(entry) { entry.layer.remove(); entries.delete(entry); }
+  const anim = (el, frames, opts = {}) => el.animate(frames, { duration: DUR, easing: EASE, fill: 'forwards', ...opts }).finished;
+  const top = () => stack[stack.length - 1];
+
+  async function push(name, data) {
+    if (busy) return; busy = true;
+    const from = top(), to = makeEntry(name, data, 'push');
+    to.layer.style.transform = 'translateX(100%)';
+    mount(to); await to.ready;
+    await Promise.all([
+      anim(to.layer, [{ transform: 'translateX(100%)' }, { transform: 'translateX(0)' }]),
+      from && anim(from.layer, [{ transform: 'translateX(0)' }, { transform: 'translateX(-30%)' }]),
+      from && anim(from.dim, [{ opacity: 0 }, { opacity: .35 }]),
+    ]);
+    stack.push(to); busy = false; changed();
+  }
+
+  async function present(name, data) {
+    if (busy) return; busy = true;
+    const from = top(), to = makeEntry(name, data, 'modal');
+    to.layer.style.transform = 'translateY(100%)';
+    mount(to); await to.ready;
+    await Promise.all([
+      anim(to.layer, [{ transform: 'translateY(100%)' }, { transform: 'translateY(0)' }]),
+      from && anim(from.dim, [{ opacity: 0 }, { opacity: .4 }]),
+    ]);
+    stack.push(to); busy = false; changed();
+  }
+
+  async function back() {
+    if (busy || stack.length < 2) return;
+    const t = top();
+    if (t.how === 'modal') return close();
+    busy = true;
+    const under = stack[stack.length - 2];
+    await Promise.all([
+      anim(t.layer, [{ transform: 'translateX(0)' }, { transform: 'translateX(100%)' }]),
+      anim(under.layer, [{ transform: 'translateX(-30%)' }, { transform: 'translateX(0)' }]),
+      anim(under.dim, [{ opacity: .35 }, { opacity: 0 }]),
+    ]);
+    stack.pop(); unmount(t); busy = false; changed();
+  }
+
+  async function close() {
+    if (busy) return;
+    let i = stack.length - 1;
+    while (i > 0 && stack[i].how !== 'modal') i--;
+    if (i <= 0) return back();
+    busy = true;
+    const gone = stack.slice(i), under = stack[i - 1];
+    await Promise.all([
+      ...gone.map(g => anim(g.layer, [{ transform: 'translateY(0)' }, { transform: 'translateY(100%)' }])),
+      anim(under.dim, [{ opacity: .4 }, { opacity: 0 }]),
+    ]);
+    stack.splice(i); gone.forEach(unmount); busy = false; changed();
+  }
+
+  // Swap the top screen for another with a crossfade (Reveal cards, tabs, setup into Home).
+  async function replace(name, data) {
+    if (busy) return; busy = true;
+    const from = top(), to = makeEntry(name, data, from ? from.how : 'root');
+    to.layer.style.opacity = '0';
+    mount(to, from); await to.ready;
+    await anim(to.layer, [{ opacity: 0 }, { opacity: 1 }], { duration: reduce ? 1 : 260, easing: 'ease-out' });
+    stack[stack.length - 1] = to;
+    if (from) unmount(from);
+    busy = false; changed();
+  }
+
+  // Undo any slide or dim left on a layer by earlier transitions.
+  function settle(entry) {
+    [entry.layer, entry.dim].forEach(el => { el.getAnimations().forEach(a => a.cancel()); el.style.transform = ''; el.style.opacity = ''; });
+  }
+
+  async function tab(name) {
+    if (busy) return;
+    if (stack.length === 1 && top().name === name) return;
+    // Leave anything pushed on the current tab, then fade to the new tab.
+    stack.splice(1).forEach(unmount);
+    settle(stack[0]);
+    await replace(name);
+  }
+
+  // Jump straight to a screen from the index: Home underneath, the screen on top, no animation.
+  async function jump(name) {
+    busy = false;
+    [...entries].forEach(unmount); stack.length = 0;
+    hideSheet();
+    if (name === 'scan' || TABS.includes(name)) {
+      const e = makeEntry(name, null, 'root'); mount(e); stack.push(e); changed(); return;
+    }
+    const root = makeEntry('home', null, 'root'); mount(root); stack.push(root);
+    const how = ['triage', 'story', 'peak'].includes(name) ? 'modal' : 'push';
+    const e = makeEntry(name, null, how); mount(e); stack.push(e);
+    root.dim.style.opacity = how === 'modal' ? '.4' : '.35';
+    root.layer.style.transform = how === 'push' ? 'translateX(-30%)' : '';
+    changed();
+  }
+
+  let toastTimer;
+  function toast(text) {
+    toastEl.textContent = text;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2200);
+  }
+
+  // Messages from the screens.
+  addEventListener('message', (e) => {
+    const m = e.data || {};
+    const entry = [...entries].find(x => x.frame.contentWindow === e.source);
+    if (!entry) return;
+    if (m.type === 'ready') return entry.resolve();
+    if (entry !== top()) return;           // only the screen on top may navigate
+    if (m.type === 'go') return (m.how === 'modal' ? present : push)(m.to, m.data);
+    if (m.type === 'replace') return replace(m.to, m.data);
+    if (m.type === 'tab') return tab(m.to);
+    if (m.type === 'back') return back();
+    if (m.type === 'close') return close();
+    if (m.type === 'toast') return toast(m.text);
+    if (m.type === 'root') { stack.splice(0, stack.length - 1).forEach(unmount); settle(top()); return replace(m.to, m.data); }
+  });
+
+  // Index of screens, on the side (desktop) and in a sheet (phones).
+  function renderGroups(el) {
+    el.innerHTML = GROUPS.map(([g, names]) => `<div class="group"><div class="label">${g}</div><ul>${
+      names.map(n => `<li><button type="button" data-go="${n}">${SCREENS[n]}</button></li>`).join('')}</ul></div>`).join('');
+    el.addEventListener('click', (e) => { const b = e.target.closest('[data-go]'); if (b) jump(b.dataset.go); });
+  }
+  renderGroups(document.getElementById('groups'));
+  renderGroups(document.getElementById('sheetGroups'));
+  function changed() {
+    const cur = top() && top().name;
+    document.querySelectorAll('[data-go]').forEach(b => b.setAttribute('aria-current', String(b.dataset.go === cur)));
+  }
+  function showSheet() { sheet.hidden = false; sheet.querySelector('.body').animate([{ transform: 'translateY(105%)' }, { transform: 'translateY(0)' }], { duration: DUR, easing: EASE }); }
+  function hideSheet() { sheet.hidden = true; }
+  document.getElementById('openSheet').addEventListener('click', showSheet);
+  document.getElementById('scrim').addEventListener('click', hideSheet);
+  document.getElementById('restart').addEventListener('click', () => jump('scan'));
+  document.getElementById('restart2').addEventListener('click', () => jump('scan'));
+
+  jump('scan');
+})();
+</script>
