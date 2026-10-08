@@ -7,7 +7,8 @@
 # Routes come from scripts/snapshot-routes.txt, or only those in $SB_ONLY_ROUTES (comma-separated)
 # when it's set. Which routes go where:
 #   lab.<name>   design-lab pages: iPhone 16 Pro only, into design/lab/<name>-<appearance>.png
-#   store.<n>    App Store screenshots: iPhone 16 Pro Max only, light, into design/appstore/6.9-<n>-light.png
+#   store.<n>    App Store screenshots: iPhone 16 Pro Max only, light, into design/appstore/6.9-<n>-light.png,
+#                and only when $SB_ONLY_ROUTES names them ("store" means all of them)
 #   anything else  app screens on iPhone 16 Pro and iPhone SE, into design/screens/<device>/
 #
 # Renders land in build/snapshots/<phone>/; scripts/collect-snapshots.sh then lays them out under
@@ -22,7 +23,15 @@ slug=$(echo "$device" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s
 all=$(grep -vE '^[[:space:]]*(#|$)' scripts/snapshot-routes.txt)
 if [[ -n "${SB_ONLY_ROUTES:-}" ]]; then
   wanted=$(echo "$SB_ONLY_ROUTES" | tr ',' '\n' | sed 's/^ *//; s/ *$//')
+  # "store" stands for every App Store screenshot.
+  if echo "$wanted" | grep -qx store; then
+    wanted=$(printf '%s\n%s' "$wanted" "$(echo "$all" | grep -E '^store\.')")
+  fi
   all=$(echo "$all" | grep -Fxf <(echo "$wanted") || true)
+else
+  # App Store screenshots only when asked for ([snapshots: store]): they rarely change, and
+  # the 6.9" phone's first boot takes minutes.
+  all=$(echo "$all" | grep -vE '^store\.' || true)
 fi
 
 case "$slug" in

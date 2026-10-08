@@ -125,8 +125,9 @@ jobs:
           path: build/ScreenshotBrain.ipa
           retention-days: 30
 
-  # Opt-in: run the workflow by hand, or put [snapshots] in the commit message to render every
-  # screen, or [snapshots: home,item] for just those. One app launch per phone covers them all.
+  # Opt-in: run the workflow by hand, or put [snapshots] in the commit subject to render every app
+  # screen, [snapshots: home,item] for just those, or [snapshots: store] for the App Store images.
+  # One app launch per phone covers them all.
   snapshots:
     name: Design snapshots
     if: >-
@@ -177,8 +178,9 @@ jobs:
         run: scripts/export-snapshots.sh "iPhone SE (3rd generation)"
       - name: iPhone 16 Pro Max (App Store)
         id: store
+        if: contains(env.SB_ONLY_ROUTES, 'store')
         continue-on-error: true
-        timeout-minutes: 12
+        timeout-minutes: 20
         run: scripts/export-snapshots.sh "iPhone 16 Pro Max"
 
       - name: Collect the renders
