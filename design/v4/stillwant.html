@@ -1,0 +1,131 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="base.css"><script src="kit.js"></script>
+<style>
+  /* Reference status bar: time centred 40pt below the top of the screen. */
+  .status { padding: 27px 24px 0 40px; font-size: 15px; }
+  .hdr-logo { position: absolute; left: 24.5px; top: 74px; height: 44px; display: flex; align-items: center; gap: 5px; color: #e4e4e4; white-space: nowrap; }
+  .hdr-word { font-family: "Inter Display", "Inter", system-ui, sans-serif; font-weight: 600; font-size: 10px; letter-spacing: .05em; line-height: 1; }
+  .hdr-div { position: absolute; left: 145px; top: 84px; width: 1px; height: 24.5px; background: #3c3c41; }
+  .hdr-txt { position: absolute; left: 150px; top: 89.4px; font-size: 9.2px; line-height: 9.3px; white-space: nowrap; }
+  .hdr-txt .l1 { color: #d2d2d2; font-weight: 500; display: block; }
+  .hdr-txt .l2 { color: #7a7a7a; display: block; }
+  .ring-btn { position: absolute; top: 74px; width: 44px; height: 44px; border-radius: 50%; border: 1.2px solid #2a2a2e; display: flex; align-items: center; justify-content: center; }
+  .ring-btn.av { left: 275.2px; }
+  .ring-btn.fl { left: 324.7px; }
+  .ember { width: 34px; height: 34px; border-radius: 50%; background: radial-gradient(circle at 38% 34%, #ff8a4c 0%, #ff5f22 55%, #e8470f 100%); }
+  .rings { position: absolute; left: 0; top: 0; }
+  .row { position: absolute; left: 0; width: 393px; height: 0; }
+  .face { position: absolute; left: 29.3px; width: 256.7px; box-sizing: border-box; overflow: hidden; }
+  .face .ln { position: absolute; left: 7px; right: 36px; height: .7px; }
+  .thumb { position: absolute; left: 256.1px; width: 26.6px; height: 26px; overflow: hidden; }
+  .trap { position: absolute; left: 29.3px; width: 256.7px; overflow: hidden; }
+  .trap .cov { position: absolute; inset: 0; }
+  .title { position: absolute; left: 309.2px; white-space: nowrap; }
+  .title .t { font-size: 6.4px; line-height: 1; font-weight: 600; color: #e6e6e6; }
+  .title .s { font-size: 6px; line-height: 1; font-weight: 400; color: #4a4a4a; margin-top: 3.2px; }
+  .chev { position: absolute; left: 311.2px; font-size: 12.6px; line-height: 1; color: #fff; font-weight: 400; }
+  .glyph svg { display: block; }
+  .vlab { position: absolute; writing-mode: vertical-rl; font-size: 6.6px; line-height: 8px; font-weight: 600; letter-spacing: .08em; color: rgba(255,255,255,.24); white-space: nowrap; }
+</style>
+</head><body>
+<div class="phone" id="screen"></div>
+<script>
+const S = document.getElementById('screen');
+const FL = 29.3, FW = 256.7;          // reference list face: left edge and width (pt)
+
+// Per-box geometry, measured from the reference (pt, screen space).
+// faceTop/faceH: the spine face. trap: the cover trapezoid, above or below the face.
+const BOXES = [
+  { title: 'Ramen Ikkyu', sub: 'Saved 3 weeks ago', faceTop: 163.2, faceH: 32.2,
+    face: { bg: 'linear-gradient(180deg,#c2bbb5 0%,#f1e9e1 16%,#f3ebe3 78%,#e4dbd3 100%)', edge: '#cfc7c0', line: 'rgba(120,108,100,.42)' },
+    trap: { pos: 'below', top: 195.5, h: 47.5, inset: 28 },
+    cover: { kind: 'recipe', filter: 'grayscale(1) sepia(.22) brightness(1.12)', under: 'linear-gradient(180deg,#f0e9e1 0%,#8c847e 42%,#1b181a 78%,#000 100%)' },
+    thumb: { kind: 'place', filter: 'hue-rotate(190deg) saturate(.8) brightness(.85)' },
+    glow: 'rgba(243,233,225,.10)' },
+  { title: "Bar Totti's", sub: 'Saved 5 weeks ago', faceTop: 274.9, faceH: 30.3,
+    face: { bg: 'linear-gradient(180deg,#ffc3c5 0%,#ffc9cb 80%,#ffbcbe 100%)', edge: '#ff3b2c', line: 'rgba(214,92,96,.45)' },
+    trap: { pos: 'below', top: 305.2, h: 23.3, inset: 34 },
+    cover: { kind: 'place', filter: 'hue-rotate(-24deg) saturate(2.2) brightness(1.1)' },
+    thumb: { kind: 'event', filter: 'hue-rotate(20deg) saturate(1.5) brightness(1.1)' },
+    glow: 'rgba(255,40,28,.9)' },
+  { title: 'Chaco Bar', sub: 'Saved 2 months ago', faceTop: 387.9, faceH: 31.8,
+    face: { bg: 'linear-gradient(180deg,#5d3876 0%,#7b4c92 14%,#7b4c92 86%,#6c4283 100%)', edge: '#40245c', line: 'rgba(60,34,88,.55)' },
+    trap: null,
+    cover: null,
+    thumb: { kind: 'product', filter: 'hue-rotate(55deg) saturate(1.3)' },
+    glow: 'rgba(123,76,146,.35)' },
+  { title: 'Lune Croissanterie', sub: 'Saved 2 months ago', faceTop: 498.7, faceH: 32.9,
+    face: { bg: 'linear-gradient(180deg,#fcdcb9 0%,#fddcb8 80%,#f5cfa2 100%)', edge: '#dc8a44', line: 'rgba(206,140,80,.45)' },
+    trap: { pos: 'above', top: 477.8, h: 20.9, inset: 28 },
+    cover: { kind: 'place', filter: 'saturate(.9) brightness(.85)' },
+    thumb: { kind: 'place', filter: 'none' },
+    glow: 'rgba(220,138,68,.35)' },
+  { title: 'Sunday market', sub: 'Saved 3 months ago', faceTop: 613.2, faceH: 30.6,
+    face: { bg: 'linear-gradient(180deg,#aa828a 0%,#9a7980 50%,#6f5a60 100%)', edge: '#8a6970', line: 'rgba(230,180,190,.28)' },
+    trap: { pos: 'above', top: 561.6, h: 51.6, inset: 30.5 },
+    cover: { kind: 'product', filter: 'saturate(.25) brightness(1.05)' },
+    thumb: { kind: 'recipe', filter: 'grayscale(.6) sepia(.4) brightness(.9)' },
+    glow: 'rgba(170,130,138,.18)' },
+];
+
+function clipTrap(b) {
+  const t = b.trap; const w = FW, h = t.h, i = t.inset;
+  if (t.pos === 'below') return `polygon(0 0, ${w}px 0, ${w - i}px ${h}px, ${i}px ${h}px)`;
+  return `polygon(${i}px 0, ${w - i}px 0, ${w}px ${h}px, 0 ${h}px)`;
+}
+function fadeMask(pos) {
+  return pos === 'below'
+    ? 'linear-gradient(180deg,#000 0%,rgba(0,0,0,.75) 45%,rgba(0,0,0,.25) 80%,transparent 100%)'
+    : 'linear-gradient(180deg,transparent 0%,rgba(0,0,0,.35) 45%,#000 100%)';
+}
+
+let html = '';
+
+// Concentric rings behind the header (reference: two stacked sets of ellipses).
+let rings = '';
+for (let i = 0; i < 15; i++) {
+  const k = 1 - i / 15;
+  rings += `<ellipse cx="162.2" cy="122.3" rx="${(71.5 * k).toFixed(2)}" ry="${(30 * k).toFixed(2)}" fill="none" stroke="rgba(176,176,176,.14)" stroke-width=".8"/>`;
+}
+
+html += `<svg class="rings" width="393" height="852" viewBox="0 0 393 852">${rings}</svg>`;
+
+// Header: bracket mark + wordmark, divider, two-line caption, two round buttons.
+html += `<div class="hdr-logo"><span>${icon('bracket', 22, '#e4e4e4')}</span><span class="hdr-word">Screenshot Brain</span></div>`;
+html += `<div class="hdr-div"></div>`;
+html += `<div class="hdr-txt"><span class="l1">Places</span><span class="l2">Still want</span></div>`;
+html += `<div class="ring-btn av"><div class="ember"></div></div>`;
+html += `<div class="ring-btn fl"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f4f3f1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 5.5h17l-6.6 7.9v5.6l-3.8-2v-3.6z"/></svg></div>`;
+
+// The five rows.
+BOXES.forEach((b, i) => {
+  const rowCap = 171.2 + 109 * i;      // title cap-top, pitch 109pt
+  // Cover trapezoid.
+  if (b.trap) {
+    const t = b.trap;
+    const topY = t.top;
+    let cov = '', under = '';
+    if (b.cover && b.cover.under) under = `<div class="cov" style="background:${b.cover.under}"></div>`;
+    if (b.cover) {
+      cov = `<div class="cov" style="filter:${b.cover.filter}">${screenshot(b.cover.kind, FW, t.h + 4, { blurX: 22, blurY: 10 })}</div>`;
+    }
+    const bg = b.glow ? `background:linear-gradient(${t.pos === 'below' ? '180deg' : '0deg'}, ${b.glow} 0%, rgba(0,0,0,0) 100%);` : '';
+    html += `<div class="trap" style="top:${topY}px;height:${t.h}px;clip-path:${clipTrap(b)};${bg}">
+      <div class="cov" style="-webkit-mask-image:${fadeMask(t.pos)};mask-image:${fadeMask(t.pos)}">${under}${cov}</div></div>`;
+  }
+  // Face (spine) with thin page lines and the cover thumbnail at the right end.
+  const f = b.face;
+  let lines = '';
+  [9.8, 16.4, 23.0, 29.6].forEach(y => { if (y < b.faceH - 2) lines += `<div class="ln" style="top:${y}px;background:${f.line};"></div>`; });
+  html += `<div class="face" style="top:${b.faceTop}px;height:${b.faceH}px;background:${f.bg};border:1px solid ${f.edge};">${lines}</div>`;
+  const th = b.thumb;
+  html += `<div class="thumb" style="top:${b.faceTop + (b.faceH - 26) / 2}px;"><div style="width:26.6px;height:26px;filter:${th.filter}">${screenshot(th.kind, 26.6, 26, { sharp: true })}</div></div>`;
+  // Titles (small, right column). The ▶ glyph is replaced by ›.
+  html += `<div class="title" style="top:${rowCap + 0.1}px"><div class="t">${b.title}</div><div class="s">${b.sub}</div></div>`;
+  html += `<div class="chev" style="top:${rowCap + 22.7}px">›</div>`;
+});
+
+html += statusBar(true);
+html += `<div class="home-indicator"></div>`;
+S.innerHTML = html;
+</script>
+</body></html>

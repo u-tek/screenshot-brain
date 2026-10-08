@@ -1,0 +1,98 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="base.css"><script src="kit.js"></script>
+<style>
+  .phone { border-radius: 62px; background: #000; }
+  .photo { position: absolute; left: 0; top: 0; width: 393px; height: 300px; overflow: hidden; background: #dbd6d2; }
+  .photo .blur { position: absolute; left: -60px; top: -60px; width: 513px; height: 420px; filter: blur(9px); }
+  .photo .b { position: absolute; }
+  .handle { position: absolute; left: 152px; top: 282px; width: 90px; height: 4px; border-radius: 2px; background: rgba(255, 250, 246, .5); }
+  .mark { position: absolute; left: 0; top: 46.7px; width: 393px; display: flex; justify-content: center; align-items: center; gap: 9px;
+    font-family: "Inter", system-ui, sans-serif; font-size: 22px; line-height: 27px; font-weight: 600; letter-spacing: -0.02em; color: #121214; white-space: nowrap; }
+  .mark svg { display: block; flex: none; margin-top: -1px; }
+  .card { position: absolute; left: 5.4px; top: 296.5px; width: 380.3px; height: 550.5px; border-radius: 52px; overflow: hidden;
+    background: radial-gradient(225px 320px at 191.6px 283.5px, rgba(0,0,8,1) 0%, rgba(0,0,8,1) 50%, rgba(0,0,8,.97) 62%, rgba(0,0,8,.6) 68%, rgba(0,0,8,.46) 75%, rgba(0,0,8,.36) 82%, rgba(0,0,8,.27) 90%, rgba(0,0,8,.15) 100%), #8eaf9e; }
+  .title { position: absolute; left: 3px; top: 334px; width: 393px; text-align: center; font-family: "Inter", system-ui, sans-serif;
+    font-size: 20px; line-height: 25.5px; font-weight: 400; color: #f4f3f1; white-space: nowrap; }
+  .pill { position: absolute; left: 99.5px; top: 770px; width: 197px; height: 49px; border-radius: 24.5px; background: rgba(16, 20, 22, .55);
+    font-family: "Inter", system-ui, sans-serif; font-size: 15px; font-weight: 400; color: #f4f3f1; }
+  .pill .label { position: absolute; left: 30.5px; top: 0; line-height: 49px; white-space: nowrap; }
+  .pill .plus { position: absolute; left: 155.3px; top: 8.5px; width: 32px; height: 32px; border-radius: 50%; background: #ffffff; }
+  .pill .plus svg { display: block; }
+  svg.overlay { position: absolute; left: 0; top: 0; overflow: visible; }
+</style></head>
+<body>
+<div class="phone" id="phone">
+  <div class="photo"><div class="blur" id="blur"></div></div>
+  <div class="handle"></div>
+  <div class="mark"><span id="markIcon"></span><span>Screenshot Brain</span></div>
+
+  <div class="card"></div>
+  <svg class="overlay" width="393" height="852" viewBox="0 0 393 852" id="dial"></svg>
+  <div class="title">Reading your screenshots<br>on this iPhone</div>
+  <div class="pill">
+    <span class="label">Start reading</span>
+    <span class="plus"><svg width="32" height="32" viewBox="0 0 32 32"><path d="M16 11v10M11 16h10" stroke="#121214" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+  </div>
+</div>
+<script>
+(function () {
+  const NS = "http://www.w3.org/2000/svg";
+  const ph = document.getElementById("phone");
+  document.getElementById("markIcon").innerHTML = icon("bracket", 22, "#121214");
+  ph.insertAdjacentHTML("beforeend", statusBar(false) + '<div class="home-indicator"></div>');
+
+  // Photo stand-in: soft colour forms in the reference's arrangement (no person).
+  // Each blob is given as [centre x, centre y, width, height, background, rotation deg, radius]; coordinates are in pt on the phone.
+  const blur = document.getElementById("blur");
+  // The photo area holds the user's own screenshots, softly out of focus (no person).
+  [["event", -6], ["place", 96], ["product", 198], ["recipe", 300]].forEach(([kind, x]) => {
+    const d = document.createElement("div");
+    d.className = "b";
+    d.style.cssText = `left:${x + 60}px; top:${92 + 60}px; width:96px; height:208px; border-radius:16px; overflow:hidden;`;
+    d.innerHTML = screenshot(kind, 96, 208, { sharp: true });
+    blur.appendChild(d);
+  });
+
+  const svg = document.getElementById("dial");
+  const el = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); (parent || svg).appendChild(e); return e; };
+  const P = (a, r) => { const t = a * Math.PI / 180; return [r * Math.cos(t), r * Math.sin(t)]; };
+
+  const defs = el("defs", {});
+  const dg = el("radialGradient", { id: "dg", cx: "45%", cy: "40%", r: "62%" }, defs);
+  el("stop", { offset: "0", "stop-color": "#f5f5f7" }, dg);
+  el("stop", { offset: ".8", "stop-color": "#eff0f3" }, dg);
+  el("stop", { offset: "1", "stop-color": "#e0e4ea" }, dg);
+
+  // faint phone outline at the bottom (pt)
+  const o = el("g", { fill: "none", stroke: "rgba(235,235,240,.28)", "stroke-width": "1.1" });
+  el("rect", { x: "100", y: "707", width: "190", height: "190", rx: "30" }, o);
+  el("path", { d: "M148 707 V717 Q148 731 162 731 H228 Q242 731 242 717 V707" }, o);
+  el("rect", { x: "181", y: "717", width: "26", height: "3.5", rx: "1.75" }, o);
+  el("circle", { cx: "221.5", cy: "721", r: "23", fill: "rgba(0,0,0,.18)", stroke: "none" }, svg);
+  el("circle", { cx: "221.5", cy: "721", r: "2.8", fill: "rgba(255,255,255,.85)", stroke: "none" }, svg);
+
+  // dial, drawn in reference-zoom units and centred on (200.5, 539) pt
+  const dial = el("g", { transform: "translate(200.5 539) scale(0.299)" });
+  const a1 = 84, a2 = 174.4;
+  const s1 = P(a1, 262), s2 = P(a2, 262), i1 = P(a1, 196), i2 = P(a2, 196);
+  el("path", { d: `M${s1} A262 262 0 0 1 ${s2} L${i2} A196 196 0 0 0 ${i1} Z`, fill: "#15151c" }, dial);
+  el("circle", { r: "262", fill: "none", stroke: "rgba(190,195,205,.5)", "stroke-width": "4" }, dial);
+  for (let k = 0; k < 75; k++) {
+    const th = -87.6 + k * 4.8;
+    const n = ((th % 360) + 360) % 360;
+    if (n > 121 && n < 148) continue;
+    const [x1, y1] = P(th, 406), [x2, y2] = P(th, 428);
+    el("line", { x1, y1, x2, y2, stroke: "#f4f4f5", "stroke-width": "6" }, dial);
+  }
+  const hatch = [[-349.5, 250, -299.5, 200], [-324.5, 280, -245.5, 202], [-271.5, 332, -194.5, 254], [-239.5, 354, -196.5, 310]];
+  hatch.forEach(([x1, y1, x2, y2]) => el("line", { x1, y1, x2, y2, stroke: "#f4f4f5", "stroke-width": "6.5" }, dial));
+  el("line", { x1: -301.5, y1: 307, x2: -186.5, y2: 192, stroke: "#dcf06a", "stroke-width": "7.5" }, dial);
+  el("line", { x1: P(a2, 262)[0], y1: P(a2, 262)[1], x2: P(a2, 452)[0], y2: P(a2, 452)[1], stroke: "rgba(255,255,255,.75)", "stroke-width": "2.2", "stroke-dasharray": "7 6" }, dial);
+  el("line", { x1: P(a1, 262)[0], y1: P(a1, 262)[1], x2: P(a1, 470)[0], y2: P(a1, 470)[1], stroke: "rgba(255,255,255,.75)", "stroke-width": "2.2", "stroke-dasharray": "7 6" }, dial);
+  el("circle", { r: "196", fill: "url(#dg)" }, dial);
+  el("circle", { r: "178", fill: "none", stroke: "rgba(255,255,255,.7)", "stroke-width": "4" }, dial);
+  el("circle", { r: "190", fill: "none", stroke: "rgba(160,166,176,.22)", "stroke-width": "3" }, dial);
+  el("circle", { r: "20", fill: "none", stroke: "#8b919b", "stroke-width": "4", opacity: ".8" }, dial);
+  el("circle", { r: "5", fill: "#8b919b", opacity: ".8" }, dial);
+})();
+</script>
+</body></html>

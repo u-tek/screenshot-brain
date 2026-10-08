@@ -1,0 +1,166 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="base.css"><script src="kit.js"></script>
+<style>
+  .bg { position: absolute; left: 0; top: 0; width: 393px; height: 852px; }
+
+  /* Top card: copied from the "Your Energy" card. Built at its native 436 x 257 and scaled to 353 wide. */
+  .energy { position: absolute; left: 20px; top: 66px; width: 353px; height: 208px; }
+  .energy-in { position: absolute; left: 0; top: 0; width: 436px; height: 257px; transform: scale(.80963); transform-origin: 0 0;
+    border-radius: 40px; overflow: hidden;
+    background:
+      linear-gradient(90deg, rgba(70,0,4,.86) 0%, rgba(70,0,4,.6) 20%, rgba(70,0,4,.14) 42%, rgba(70,0,4,0) 56%),
+      linear-gradient(180deg, #6c1a02 0%, #a14c02 52%, #d68206 100%);
+    box-shadow: inset 0 0 0 1.5px rgba(255,236,220,.22), inset 0 2px 0 rgba(255,236,220,.28), 0 24px 48px rgba(60,10,0,.22);
+    backdrop-filter: blur(18px) saturate(1.1); -webkit-backdrop-filter: blur(18px) saturate(1.1); }
+  .e-title { position: absolute; left: 37px; top: 44px; font: 600 29px/1 Inter, sans-serif; letter-spacing: -.02em; color: #fff; white-space: nowrap; }
+  .e-sub { position: absolute; left: 37px; top: 79px; font: 400 15px/1 Inter, sans-serif; color: rgba(255,236,226,.55); white-space: nowrap; }
+  .e-score { position: absolute; right: 45.5px; top: 39.6px; font: 600 56px/1 Inter, sans-serif; letter-spacing: -.03em; color: #fff; white-space: nowrap; }
+  .e-score span { font: 500 18px/1 Inter, sans-serif; letter-spacing: 0; color: rgba(255,240,230,.72); margin-left: 4px; }
+  .e-bar { position: absolute; left: 44px; top: 118px; width: 358px; height: 32px; border-radius: 16px; background: rgba(255,255,255,.22); overflow: hidden; }
+  .e-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 26.1%; border-radius: 16px;
+    background: linear-gradient(90deg, rgba(255,255,255,.14) 0%, rgba(255,255,255,.5) 42%, #fff 100%); }
+  .e-lbl { position: absolute; top: 175px; font: 600 15px/1 Inter, sans-serif; color: #fff; white-space: nowrap; }
+  .e-num { position: absolute; top: 198.5px; font: 500 26px/1 Inter, sans-serif; letter-spacing: -.02em; color: #fff; white-space: nowrap; }
+  .e-num span { font: 400 13px/1 Inter, sans-serif; letter-spacing: 0; color: rgba(255,240,230,.75); margin-left: 3px; }
+  .ring { position: absolute; top: 179px; width: 40px; height: 40px; }
+
+  /* Timeline card: copied from the "Timeline" glass card. Built at its native 665 x 742 and scaled to 353 wide. */
+  .tl { position: absolute; left: 20px; top: 318px; width: 353px; height: 394px; }
+  .tl-in { position: absolute; left: 0; top: 0; width: 665px; height: 742px; transform: scale(.53083); transform-origin: 0 0; }
+  .tl-shape { position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(255,240,225,.2) 0%, rgba(255,240,225,.08) 45%, rgba(40,10,10,.14) 100%);
+    backdrop-filter: blur(22px) saturate(1.2); -webkit-backdrop-filter: blur(22px) saturate(1.2); }
+  .tl-rim { position: absolute; left: 0; top: 0; overflow: visible; }
+  .tl-title { position: absolute; left: 0; width: 665px; top: 24.6px; text-align: center; font: 400 23px/1 Inter, sans-serif; color: rgba(255,255,255,.92); }
+  .tl-year { position: absolute; left: 46px; font: 300 24px/1 Inter, sans-serif; color: rgba(255,255,255,.9); }
+  .tl-first { position: absolute; right: 193px; top: 121.5px; font: 300 17px/1 Inter, sans-serif; color: rgba(255,255,255,.58); white-space: nowrap; }
+  .tl-date { position: absolute; right: 48px; top: 121.5px; font: 500 17px/1 Inter, sans-serif; color: rgba(255,255,255,.95); white-space: nowrap; }
+  .tile { position: absolute; width: 90px; height: 133px; border-radius: 14px; border: 1.5px solid rgba(255,255,255,.24);
+    background: rgba(255,255,255,.16); }
+  .tile.dk { background: rgba(40,14,14,.3); border-color: rgba(255,255,255,.14); }
+  .tile .m { position: absolute; left: 0; right: 0; top: 19px; text-align: center; font: 400 17px/1 Inter, sans-serif; color: rgba(255,255,255,.92); }
+  .dot { position: absolute; left: 26.5px; top: 79.5px; width: 37px; height: 37px; border-radius: 50%; background: #dcff3a; display: flex; align-items: center; justify-content: center; }
+  .dot.dk { background: rgba(50,22,22,.8); }
+  .xmark { position: absolute; left: 39px; top: 90px; }
+  .pillbar { position: absolute; left: 14px; top: 641px; width: 637px; height: 89px; border-radius: 44.5px;
+    background: rgba(255,238,210,.12);
+    box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.4), inset 0 3px 0 rgba(255,255,255,.2);
+    backdrop-filter: blur(18px) saturate(1.3); -webkit-backdrop-filter: blur(18px) saturate(1.3); }
+  .pill { position: absolute; top: 651px; height: 69px; border-radius: 34.5px; display: flex; align-items: center; gap: 14px; padding-left: 28px;
+    font: 500 19px/1 Inter, sans-serif; white-space: nowrap; }
+  .pill.white { left: 22px; width: 225px; background: #fff; color: #111; }
+  .pill.glass { background: rgba(30,12,4,.16); color: #fff;
+    box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.38), inset 0 -12px 22px rgba(0,0,0,.08);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+  .pill.h { left: 252px; width: 215px; }
+  .pill.s { left: 475px; width: 165px; }
+</style></head>
+<body>
+<div class="phone">
+  <svg class="bg" viewBox="231 0 738 1600" preserveAspectRatio="xMidYMid slice">
+    <defs>
+      <filter id="bA" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="60"/></filter>
+      <filter id="bB" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="30"/></filter>
+      <filter id="gr" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
+    </defs>
+    <rect x="0" y="0" width="1200" height="1600" fill="#d9c4ad"/>
+    <g filter="url(#bA)">
+      <ellipse cx="900" cy="40" rx="470" ry="200" fill="#b1b2b2"/>
+      <ellipse cx="1130" cy="420" rx="200" ry="330" fill="#c4bdb4"/>
+      <ellipse cx="1110" cy="1000" rx="200" ry="420" fill="#c4b09e"/>
+      <ellipse cx="0" cy="250" rx="200" ry="260" fill="#dcc0a0"/>
+      <ellipse cx="0" cy="700" rx="170" ry="520" fill="#e2c7a4"/>
+      <ellipse cx="200" cy="620" rx="130" ry="260" fill="#dcc0a2"/>
+      <ellipse cx="420" cy="640" rx="120" ry="150" fill="#d4a270"/>
+      <ellipse cx="240" cy="300" rx="130" ry="180" fill="#e6a878"/>
+      <ellipse cx="380" cy="380" rx="150" ry="150" fill="#c8561c"/>
+      <ellipse cx="260" cy="880" rx="180" ry="160" fill="#e3a766"/>
+      <ellipse cx="260" cy="1150" rx="260" ry="480" fill="#eba321"/>
+      <ellipse cx="600" cy="680" rx="150" ry="200" fill="#b8703a"/>
+      <ellipse cx="770" cy="820" rx="150" ry="230" fill="#3f2222"/>
+      <ellipse cx="660" cy="1180" rx="190" ry="500" fill="#1d0710"/>
+      <ellipse cx="980" cy="1080" rx="170" ry="520" fill="#140b10"/>
+      <ellipse cx="1110" cy="1360" rx="230" ry="260" fill="#a64a3c"/>
+      <ellipse cx="440" cy="1500" rx="200" ry="200" fill="#e08b08"/>
+      <ellipse cx="770" cy="260" rx="170" ry="190" fill="#55656c"/>
+    </g>
+    <g filter="url(#bB)">
+      <ellipse cx="540" cy="250" rx="230" ry="200" fill="#0d0608"/>
+      <ellipse cx="500" cy="150" rx="150" ry="85" fill="#150a0d"/>
+      <ellipse cx="410" cy="330" rx="60" ry="90" fill="#9a3010" opacity=".75"/>
+    </g>
+    <rect x="0" y="0" width="1200" height="1600" filter="url(#gr)" opacity=".16" style="mix-blend-mode:overlay"/>
+  </svg>
+
+  <div class="energy"><div class="energy-in">
+    <div class="e-title">Your score</div>
+    <div class="e-sub">Two more than last week</div>
+    <div class="e-score">6<span>/23</span></div>
+    <div class="e-bar"><div class="e-fill"></div></div>
+
+    <svg class="ring" style="left:53px" viewBox="0 0 40 40"><defs><linearGradient id="rg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".3"/><stop offset="1" stop-color="#fff"/></linearGradient></defs>
+      <circle cx="20" cy="20" r="16.5" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="7"/>
+      <circle cx="20" cy="20" r="16.5" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-dasharray="49.6 103.7" transform="rotate(-90 20 20)"/></svg>
+    <div class="e-lbl" style="left:105px">Kept</div>
+    <div class="e-num" style="left:105px">11<span>/23</span></div>
+
+    <svg class="ring" style="left:235.5px" viewBox="0 0 40 40">
+      <circle cx="20" cy="20" r="16.5" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="7"/>
+      <circle cx="20" cy="20" r="16.5" fill="none" stroke="url(#rg2)" stroke-width="7" stroke-linecap="round" stroke-dasharray="27.1 103.7" transform="rotate(-90 20 20)"/></svg>
+    <div class="e-lbl" style="left:291.5px">Done</div>
+    <div class="e-num" style="left:291.5px">6<span>/23</span></div>
+  </div></div>
+
+  <div class="tl"><div class="tl-in" id="tl">
+    <div class="tl-shape" id="tlShape"></div>
+    <svg class="tl-rim" width="665" height="742" viewBox="0 0 665 742"><path d="M0 110 Q0 70 40 70 L176 70 C206 70 216 0 250 0 L415 0 C449 0 459 70 489 70 L625 70 Q665 70 665 110 L665 702 Q665 742 625 742 L40 742 Q0 742 0 702 Z" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.6"/></svg>
+    <div class="tl-title">Recaps</div>
+    <div class="tl-year" style="top:118px">2026</div>
+    <div class="tl-first">First recap</div>
+    <div class="tl-date">03.02.2026</div>
+    <div class="tl-year" style="top:508px">2027</div>
+  </div></div>
+
+  <div class="home-indicator"></div>
+</div>
+<script>
+  const phone = document.querySelector('.phone');
+  phone.insertAdjacentHTML('afterbegin', statusBar(false));
+
+  // Timeline card: the pill row and the month tiles sit in the same native space as the card.
+  const tl = document.getElementById('tl');
+  document.getElementById('tlShape').style.clipPath = "path('M0 110 Q0 70 40 70 L176 70 C206 70 216 0 250 0 L415 0 C449 0 459 70 489 70 L625 70 Q665 70 665 110 L665 702 Q665 742 625 742 L40 742 Q0 742 0 702 Z')";
+
+  const X_SVG = (cls, color) => `<svg class="${cls}" width="12" height="12" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="${color}" stroke-width="2.4" stroke-linecap="round"/></svg>`;
+  const CHECK = `<svg width="16" height="16" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#1c1d12" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+  // Year 2026: Jan to Dec, marks as in the reference (ok = check, no = x in a dark circle, miss = bare x).
+  const y26 = [['Jan', ''], ['Feb', 'ok'], ['Mar', 'ok'], ['Apr', 'ok'], ['May', 'no'], ['Jun', 'ok'],
+               ['Jul', 'ok'], ['Aug', 'ok'], ['Sep', 'miss'], ['Oct', 'ok'], ['Nov', ''], ['Dec', '']];
+  const y27 = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+
+  const tile = (x, y, label, mark, dark) => {
+    let m = '';
+    if (mark === 'ok') m = `<div class="dot">${CHECK}</div>`;
+    if (mark === 'no') m = `<div class="dot dk">${X_SVG('', 'rgba(255,255,255,.75)')}</div>`;
+    if (mark === 'miss') m = X_SVG('xmark', 'rgba(255,255,255,.7)');
+    return `<div class="tile${dark ? ' dk' : ''}" style="left:${x}px;top:${y}px"><div class="m">${label}</div>${m}</div>`;
+  };
+  let html = '';
+  y26.forEach(([l, mk], i) => {
+    const col = i % 6, row = Math.floor(i / 6);
+    html += tile(46 + col * 96.4, 179 + row * 137, l, mk, mk === 'no' || mk === 'miss');
+  });
+  y27.forEach((l, i) => {
+    const col = i % 6;
+    html += tile(46 + col * 96.4, 570, l, '', false);
+  });
+  tl.insertAdjacentHTML('beforeend', html);
+
+  // Pill row inside the card: white Start recap, glass History, glass Settings.
+  tl.insertAdjacentHTML('beforeend', `
+    <div class="pillbar"></div>
+    <div class="pill white">${icon('stack', 20, '#111')}Start recap</div>
+    <div class="pill glass h">${icon('cal', 20, '#fff')}History</div>
+    <div class="pill glass s">${icon('sliders', 20, '#fff')}Settings</div>`);
+</script>
+</body></html>

@@ -1,0 +1,80 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="base.css"><script src="kit.js"></script>
+<style>
+  /* Screen: near-black card on black, rim light on the left edge (reference "Light / kitchen" screen). */
+  .phone { background: #0d0d0d; }
+  .card { position: absolute; left: 6px; right: 6px; top: 47px; bottom: 0; border-radius: 21px 21px 0 0;
+    border-top: 1px solid rgba(255,255,255,.14); border-left: 1px solid rgba(255,255,255,.06);
+    background: linear-gradient(90deg, rgba(255,255,255,.09), rgba(255,255,255,.04) 14px, rgba(255,255,255,0) 44px), #0d0d0d; }
+  .card-fade { position: absolute; left: 6px; right: 6px; bottom: 0; height: 52px; border-radius: 0;
+    background: linear-gradient(180deg, rgba(0,0,0,0), #000 92%); }
+  .status { height: 44px; padding: 0 32px 0 52px; font-size: 15px; align-items: center; }
+  .home-indicator { width: 114px; bottom: 10px; }
+
+  .abs { position: absolute; left: 0; right: 0; text-align: center; white-space: nowrap; }
+  .ticket { position: absolute; left: 174.5px; top: 91.5px; }
+  .title { top: 132.5px; font-size: 43px; line-height: 43px; font-weight: 400; color: #f2f2f2; letter-spacing: -0.2px; }
+  .sub { top: 179.4px; font-size: 15px; line-height: 15px; color: #cfcfcf; }
+
+  /* Tile: vertical grey gradient, lit along its left edge. */
+  .tile { position: absolute; left: 21px; top: 218px; width: 351px; height: 300px; border-radius: 26px; overflow: hidden;
+    background:
+      radial-gradient(ellipse 56px 200px at 0% 10%, rgba(255,255,255,.2), rgba(255,255,255,0) 100%),
+      linear-gradient(180deg, #141414 0%, #151515 20%, #171717 25%, #151515 27%, #191919 33%, #212121 40%, #2c2c2c 46%, #383838 53%, #464646 59%, #515151 66%, #5b5b5b 72%, #616161 78%, #646464 85%, #646464 100%);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.07); }
+  .shot { position: absolute; left: 109.5px; top: 16px; width: 132px; height: 236px; border-radius: 18px; overflow: hidden; box-shadow: 0 16px 34px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.12); }
+  .shot svg { width: 132px; height: 236px; }
+  .tile-label { position: absolute; left: 0; right: 0; top: 252px; bottom: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 15px; color: #dedede; letter-spacing: .3px; }
+
+  .head { top: 543px; font-size: 27px; line-height: 27px; color: #eeeeee; font-weight: 400; }
+
+  /* Pills: same radius, outlines and fills as the reference rows. */
+  .pill { position: absolute; height: 64px; border-radius: 17px; display: flex; align-items: center; justify-content: center;
+    font-size: 15.5px; color: #dcdcdc; }
+  .p-cal { left: 21px; width: 351px; top: 590px; border: 1.6px solid #f08d7d; box-shadow: 0 0 7px rgba(240,120,100,.28); }
+  .p-maps { left: 21px; width: 351px; top: 662px; color: #fff; border: 0;
+    background:
+      radial-gradient(70px 52px at 58% 50%, rgba(255,214,176,.75), rgba(255,214,176,0) 100%),
+      linear-gradient(90deg, #e04e76 0%, #e64d73 5%, #e95670 10%, #f17068 15%, #f99260 19%, #fda65b 24%, #fca45b 32%, #fca05a 42%, #fca66a 49%, #fbb082 53%, #fbbb96 58%, #fbc7a5 63%, #fca36a 80%, #f47a6e 100%);
+    box-shadow: 0 0 14px rgba(255,130,90,.22); }
+  .p-send { left: 21px; width: 171.5px; top: 734px; border: 1.6px solid #4fd0cc; box-shadow: 0 0 7px rgba(80,220,210,.25); }
+  .p-done { left: 200.5px; width: 171.5px; top: 734px; border: 1.6px solid #d967d6; box-shadow: 0 0 7px rgba(217,103,214,.25); }
+
+  .mono { font-family: "Mono", ui-monospace, monospace; }
+  .home-indicator { z-index: 85; }
+</style></head>
+<body>
+<div class="phone" id="screen"></div>
+<script>
+  const s = document.getElementById('screen');
+  s.innerHTML = `
+    <div class="card"></div>
+    <div class="card-fade"></div>
+    ${statusBar(true)}
+
+    <div class="ticket">
+      <svg width="44" height="30" viewBox="0 0 44 30" style="display:block;overflow:visible;filter:drop-shadow(0 0 8px rgba(255,255,255,.5))">
+        <path d="M5 0H39Q44 0 44 5V11A4 4 0 0 0 44 19V25Q44 30 39 30H5Q0 30 0 25V19A4 4 0 0 0 0 11V5Q0 0 5 0Z" fill="#f5f5f5"/>
+        <path d="M31 5V25" stroke="#0d0d0d" stroke-width="1.6" stroke-dasharray="2 2.4"/>
+      </svg>
+    </div>
+
+    <div class="abs title">Mallrat</div>
+    <div class="abs sub">at the Enmore</div>
+
+    <div class="tile">
+      <div class="shot">${screenshot('event', 132, 236, {sharp: true})}</div>
+      <div class="tile-label mono">SUN 11 OCT · 8PM</div>
+    </div>
+
+    <div class="abs head">Do it</div>
+
+    <div class="pill p-cal mono">CALENDAR</div>
+    <div class="pill p-maps mono">MAPS</div>
+    <div class="pill p-send mono">SEND</div>
+    <div class="pill p-done mono">DONE</div>
+
+    <div class="home-indicator"></div>
+  `;
+</script>
+</body></html>
