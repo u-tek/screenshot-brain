@@ -171,8 +171,10 @@ jobs:
         continue-on-error: true
         timeout-minutes: 15
         run: scripts/export-snapshots.sh "iPhone 16 Pro"
+      # A narrowed run ([snapshots: a,b]) is a quick check: the iPhone 16 Pro only.
       - name: iPhone SE
         id: se
+        if: env.SB_ONLY_ROUTES == ''
         continue-on-error: true
         timeout-minutes: 15
         run: scripts/export-snapshots.sh "iPhone SE (3rd generation)"
