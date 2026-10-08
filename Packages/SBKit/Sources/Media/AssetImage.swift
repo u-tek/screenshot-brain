@@ -74,6 +74,9 @@ public struct AssetImage: View {
 
     public var body: some View {
         ZStack {
+            // Takes the space it's offered even before (or without) an image, so whatever sits
+            // behind it, like a placeholder light, still shows.
+            Color.clear
             if let image {
                 Image(decorative: image, scale: 1)
                     .resizable()

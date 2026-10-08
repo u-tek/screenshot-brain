@@ -44,6 +44,9 @@ mkdir -p "$raw"
 
 xcrun simctl boot "$udid" 2>/dev/null || true
 xcrun simctl bootstatus "$udid" -b
+# Deny photo access up front: the system prompt must never cover a screen.
+bundle_id=$(sed -nE 's/^SB_BUNDLE_ID *= *//p' Config/Shared.xcconfig)
+xcrun simctl privacy "$udid" revoke photos "$bundle_id" || true
 xcrun simctl status_bar "$udid" override --time "9:41" --dataNetwork wifi --wifiMode active --wifiBars 3 \
   --cellularMode active --cellularBars 4 --batteryState discharging --batteryLevel 100
 
