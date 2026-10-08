@@ -32,7 +32,7 @@ enum NightlyRecap {
         let lastRecap = (try? database.scanState())?.lastRecapAt ?? .distantPast
         let new = ((try? database.recapDeck(newSince: lastRecap, olderLimit: 0)) ?? []).map { notable($0.item) }
         let dated = ((try? database.comingUp(now: now, days: 3)) ?? []).map(notable)
-        let week = (try? database.weekStats(now: now)) ?? (0, 0)
+        let week = (try? database.weekStats(now: now)) ?? (saved: 0, done: 0)
         return NotificationContext(
             now: now,
             recapMinutes: answers?.recapMinutes ?? answers?.windDownMinutes ?? 21 * 60 + 30,
@@ -72,7 +72,7 @@ enum NightlyRecap {
             // A refresh gets about 30 seconds: find what's new and read the newest of it.
             let access = ScreenshotLibrary.currentAccess()
             if access == .full || access == .limited {
-                try? services.pipeline.discover()
+                _ = try? services.pipeline.discover()
                 try? await services.pipeline.readPending(limit: 24)
             }
             let answers = try? services.database.onboardingAnswers()
