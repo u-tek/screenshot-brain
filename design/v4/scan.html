@@ -1,44 +1,37 @@
-<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="base.css"><script src="kit.js"></script>
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="base.css"><link rel="stylesheet" href="system.css"><script src="kit.js"></script>
 <style>
-  .phone { border-radius: 62px; background: #000; }
-  .photo { position: absolute; left: 0; top: 0; width: 393px; height: 300px; overflow: hidden; background: #dbd6d2; }
-  .photo .blur { position: absolute; left: -60px; top: -60px; width: 513px; height: 420px; filter: blur(9px); }
+  html, body { background: var(--ground); }
+  .photo { position: absolute; left: 0; top: 0; width: 393px; height: 300px; overflow: hidden; background: var(--ground); }
+  .photo .blur { position: absolute; left: -60px; top: -60px; width: 513px; height: 420px; filter: blur(9px); opacity: .7; }
   .photo .b { position: absolute; }
-  .handle { position: absolute; left: 152px; top: 282px; width: 90px; height: 4px; border-radius: 2px; background: rgba(255, 250, 246, .5); }
-  .mark { position: absolute; left: 0; top: 46.7px; width: 393px; display: flex; justify-content: center; align-items: center; gap: 9px;
-    font-family: "Inter", system-ui, sans-serif; font-size: 22px; line-height: 27px; font-weight: 600; letter-spacing: -0.02em; color: #121214; white-space: nowrap; }
-  .mark svg { display: block; flex: none; margin-top: -1px; }
-  .card { position: absolute; left: 5.4px; top: 296.5px; width: 380.3px; height: 550.5px; border-radius: 52px; overflow: hidden;
-    background: radial-gradient(225px 320px at 191.6px 283.5px, rgba(0,0,8,1) 0%, rgba(0,0,8,1) 50%, rgba(0,0,8,.97) 62%, rgba(0,0,8,.6) 68%, rgba(0,0,8,.46) 75%, rgba(0,0,8,.36) 82%, rgba(0,0,8,.27) 90%, rgba(0,0,8,.15) 100%), #8eaf9e; }
-  .title { position: absolute; left: 3px; top: 334px; width: 393px; text-align: center; font-family: "Inter", system-ui, sans-serif;
-    font-size: 20px; line-height: 25.5px; font-weight: 400; color: #f4f3f1; white-space: nowrap; }
-  .pill { position: absolute; left: 99.5px; top: 770px; width: 197px; height: 49px; border-radius: 24.5px; background: rgba(16, 20, 22, .55);
-    font-family: "Inter", system-ui, sans-serif; font-size: 15px; font-weight: 400; color: #f4f3f1; }
-  .pill .label { position: absolute; left: 30.5px; top: 0; line-height: 49px; white-space: nowrap; }
-  .pill .plus { position: absolute; left: 155.3px; top: 8.5px; width: 32px; height: 32px; border-radius: 50%; background: #ffffff; }
-  .pill .plus svg { display: block; }
+  .handle { position: absolute; left: 152px; top: 282px; width: 90px; height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--ink) 50%, transparent); }
+  .mark { position: absolute; left: 0; right: 0; top: 66px; transform: translateY(-50%); justify-content: center; white-space: nowrap; }
+  .mark svg { display: block; flex: none; }
+  .card { position: absolute; left: 5.4px; top: 296.5px; width: 380.3px; height: 550.5px; border-radius: var(--r-card); overflow: hidden; --core: var(--ground);
+    background: radial-gradient(225px 320px at 191.6px 283.5px, var(--core) 0%, var(--core) 50%, color-mix(in srgb, var(--core) 97%, transparent) 62%, color-mix(in srgb, var(--core) 60%, transparent) 68%, color-mix(in srgb, var(--core) 46%, transparent) 75%, color-mix(in srgb, var(--core) 36%, transparent) 82%, color-mix(in srgb, var(--core) 27%, transparent) 90%, color-mix(in srgb, var(--core) 15%, transparent) 100%), var(--recipes-c); }
+  .title { position: absolute; top: 334px; left: var(--gutter); right: var(--gutter); text-align: center; white-space: nowrap; }
+  .cta { position: absolute; left: 50%; top: 770px; width: 197px; transform: translateX(-50%); }
   svg.overlay { position: absolute; left: 0; top: 0; overflow: visible; }
 </style></head>
 <body>
 <div class="phone" id="phone">
   <div class="photo"><div class="blur" id="blur"></div></div>
   <div class="handle"></div>
-  <div class="mark"><span id="markIcon"></span><span>Screenshot Brain</span></div>
+  <span class="mark" id="mark"></span>
 
   <div class="card"></div>
   <svg class="overlay" width="393" height="852" viewBox="0 0 393 852" id="dial"></svg>
-  <div class="title">Reading your screenshots<br>on this iPhone</div>
-  <div class="pill">
-    <span class="label">Start reading</span>
-    <span class="plus"><svg width="32" height="32" viewBox="0 0 32 32"><path d="M16 11v10M11 16h10" stroke="#121214" stroke-width="1.5" stroke-linecap="round"/></svg></span>
-  </div>
+  <div class="t-nav title">Reading your screenshots<br>on this iPhone</div>
+  <div class="cta"><span>Start reading</span><span class="go" id="go"></span></div>
+  <div class="grain"></div>
 </div>
 <script>
 (function () {
   const NS = "http://www.w3.org/2000/svg";
   const ph = document.getElementById("phone");
-  document.getElementById("markIcon").innerHTML = icon("bracket", 22, "#121214");
-  ph.insertAdjacentHTML("beforeend", statusBar(false) + '<div class="home-indicator"></div>');
+  document.getElementById("mark").innerHTML = icon("bracket", 18) + "Screenshot Brain";
+  document.getElementById("go").innerHTML = icon("plus", 18);
+  ph.insertAdjacentHTML("beforeend", statusBar(true) + '<div class="home-indicator"></div>');
 
   // Photo stand-in: soft colour forms in the reference's arrangement (no person).
   // Each blob is given as [centre x, centre y, width, height, background, rotation deg, radius]; coordinates are in pt on the phone.
@@ -85,7 +78,7 @@
   }
   const hatch = [[-349.5, 250, -299.5, 200], [-324.5, 280, -245.5, 202], [-271.5, 332, -194.5, 254], [-239.5, 354, -196.5, 310]];
   hatch.forEach(([x1, y1, x2, y2]) => el("line", { x1, y1, x2, y2, stroke: "#f4f4f5", "stroke-width": "6.5" }, dial));
-  el("line", { x1: -301.5, y1: 307, x2: -186.5, y2: 192, stroke: "#dcf06a", "stroke-width": "7.5" }, dial);
+  el("line", { x1: -301.5, y1: 307, x2: -186.5, y2: 192, style: "stroke: var(--lime)", "stroke-width": "7.5" }, dial);
   el("line", { x1: P(a2, 262)[0], y1: P(a2, 262)[1], x2: P(a2, 452)[0], y2: P(a2, 452)[1], stroke: "rgba(255,255,255,.75)", "stroke-width": "2.2", "stroke-dasharray": "7 6" }, dial);
   el("line", { x1: P(a1, 262)[0], y1: P(a1, 262)[1], x2: P(a1, 470)[0], y2: P(a1, 470)[1], stroke: "rgba(255,255,255,.75)", "stroke-width": "2.2", "stroke-dasharray": "7 6" }, dial);
   el("circle", { r: "196", fill: "url(#dg)" }, dial);

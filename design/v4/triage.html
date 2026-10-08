@@ -1,32 +1,31 @@
-<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="base.css"><script src="kit.js"></script>
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="base.css"><link rel="stylesheet" href="system.css"><script src="kit.js"></script>
 <style>
-  /* Folder card: measured from reference 09 at half scale (690 px ref card -> 345 pt). */
-  .card { position: absolute; left: 24px; top: 112px; width: 345px; height: 521.5px; border-radius: 38px; background: #000; overflow: hidden; }
-  /* Inner area: 8.5 px bezel on every side, inner corner radius 29.5 (concentric). */
-  .in { position: absolute; left: 8.5px; top: 8.5px; width: 328px; height: 504px; border-radius: 29.5px; overflow: hidden; background: #000; }
-  .shot { position: absolute; left: -10px; top: -10px; width: 348px; height: 520px; }
-  .shot svg { display: block; }
-  .tint { position: absolute; inset: 0; mix-blend-mode: color; background: linear-gradient(115deg, #ff2b1c 0%, #d8170f 45%, #ff5a1c 80%, #ff7b22 100%); }
-  .shade { position: absolute; inset: 0; background: radial-gradient(circle at 100% 0%, rgba(14,8,8,.6), rgba(14,8,8,0) 50%); }
-  .glow { position: absolute; inset: 0; pointer-events: none; opacity: .45; background: radial-gradient(ellipse 40% 34% at 50% 12%, rgba(255,236,226,.6), rgba(255,236,226,0) 70%), radial-gradient(ellipse 26% 44% at 0% 22%, rgba(255,196,96,.85), rgba(255,196,96,0) 72%), radial-gradient(ellipse 46% 40% at 72% 96%, rgba(255,120,40,.6), rgba(255,120,40,0) 70%); }
-  .folder { position: absolute; left: 0; top: 0; width: 328px; height: 504px; display: block; }
-  .rec { position: absolute; right: 23.5px; top: 31px; text-align: right; font-size: 15px; line-height: 17.5px; font-weight: 600; color: #fff; white-space: nowrap; }
-  .t1 { position: absolute; left: 15.5px; top: 291.5px; font-size: 16px; line-height: 16px; font-weight: 600; color: #fff; white-space: nowrap; }
-  .t2 { position: absolute; left: 15.5px; top: 313.5px; font-size: 16px; line-height: 16px; font-weight: 400; color: #a2a2a1; white-space: nowrap; }
-  .num { position: absolute; left: 15.5px; top: 454.8px; display: flex; align-items: baseline; gap: 6px; white-space: nowrap; }
-  .num b { font-size: 34px; line-height: 34px; font-weight: 600; color: #fff; letter-spacing: -0.5px; }
-  .num span { font-size: 15px; line-height: 15px; font-weight: 400; color: #fff; }
-  .cnt { position: absolute; right: 23.5px; top: 468px; font-size: 16px; line-height: 16px; font-weight: 600; color: #fff; white-space: nowrap; }
+  html, body { background: var(--ground); }
 
-  /* Pill row: reference 10 row (container 639 x 89, pills 224/216/168 x 68, inset 10.5) at card scale 0.516; row is 97% of the visible card width as in ref 09. */
-  .row { position: absolute; left: 36.75px; top: 681.5px; width: 319.5px; height: 46px; border-radius: 23px; padding: 5.5px; display: flex; gap: 3px;
-    background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.13); box-shadow: inset 0 1px 0 rgba(255,255,255,.08); backdrop-filter: blur(14px); }
-  .pill { height: 35px; border-radius: 18px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; font-weight: 400; white-space: nowrap; }
-  .pill svg { flex: none; }
-  .pill.white { flex: 224 1 0; background: #fff; color: #121214; }
-  .pill.glass { background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.16); box-shadow: inset 0 1px 0 rgba(255,255,255,.12); color: #f4f3f1; backdrop-filter: blur(10px); }
-  .pill.g1 { flex: 216 1 0; }
-  .pill.g2 { flex: 168 1 0; }
+  /* Folder card: the visible image runs from y 122 (under the header) to y 754 (16pt above the
+     decision row) and sits on the 16pt gutters. The 8.5 px bezel is outside that box, so the
+     card's outer edge is 8.5 px beyond the gutters. */
+  .card { position: absolute; left: calc(var(--gutter) - 8.5px); right: calc(var(--gutter) - 8.5px); top: 113.5px; bottom: 89.5px; border-radius: var(--r-card); background: var(--ground); overflow: hidden; }
+  /* Inner area: 8.5 px bezel on every side, inner radius concentric with the card (34 - 8.5). */
+  .in { position: absolute; inset: 8.5px; border-radius: calc(var(--r-card) - 8.5px); overflow: hidden; background: var(--ground); }
+  .shot { position: absolute; left: -10px; top: -10px; }
+  .shot svg { display: block; }
+  .shade { position: absolute; inset: 0; background: radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--ground) 60%, transparent), transparent 50%); }
+  .glow { position: absolute; inset: 0; pointer-events: none; opacity: .45;
+    background:
+      radial-gradient(ellipse 40% 34% at 50% 12%, color-mix(in srgb, var(--reference-c) 60%, transparent), transparent 70%),
+      radial-gradient(ellipse 26% 44% at 0% 22%, color-mix(in srgb, var(--reference-c) 85%, transparent), transparent 72%),
+      radial-gradient(ellipse 46% 40% at 72% 96%, color-mix(in srgb, var(--places-c) 60%, transparent), transparent 70%); }
+
+  /* The folder panel: surface fill, outline (raised tab) set in script from the reference shape. */
+  .panel { position: absolute; left: 0; right: 0; bottom: 0; height: 228px; padding: 22px 20px 20px; background: var(--surface);
+    display: flex; flex-direction: column; justify-content: space-between; }
+  .meta { display: flex; flex-direction: column; gap: 8px; }
+  .kind { display: flex; align-items: center; gap: 8px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--events-c); }
+  .ttl { font-size: 20px; }
+  .when { display: flex; align-items: baseline; justify-content: space-between; }
+  .date { display: flex; align-items: baseline; gap: 6px; }
 </style>
 </head><body>
 <div class="phone">
@@ -35,36 +34,38 @@
       <div class="shot" id="shot"></div>
       <div class="shade"></div>
       <div class="glow"></div>
-      <div class="rec">Tonight's recap<br>1 of 4</div>
-      <svg class="folder" viewBox="0 0 328 504">
-        <path fill="#1e1e1e" d="M0 292 Q0 276 16 276 L190 276 Q207 276 213 286 L230 300 Q234 304 240 304 L313 304 Q328 304 328 319 L328 474.5 Q328 504 298.5 504 L29.5 504 Q0 504 0 474.5 Z"/>
-      </svg>
-      <div class="t1">Mallrat at the Enmore</div>
-      <div class="t2">Event · Enmore Theatre</div>
-      <div class="num"><b>11</b><span>Oct</span></div>
-      <div class="cnt">2 screenshots</div>
-    </div>
-  </div>
-
-  <div class="row">
-    <div class="pill white">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v16l-5-4-5 4z"/></svg>
-      <span>Still want</span>
-    </div>
-    <div class="pill glass g1">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
-      <span>Drop</span>
-    </div>
-    <div class="pill glass g2">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
-      <span>Done</span>
+      <div class="panel" id="panel">
+        <div class="meta">
+          <div class="kind"><i class="dot"></i><span class="t-label">EVENT</span></div>
+          <div class="t-title ttl">Mallrat at the Enmore</div>
+          <div class="t-body">Event · Enmore Theatre</div>
+        </div>
+        <div class="when">
+          <div class="date"><span class="t-num-l">11</span><span class="t-unit">Oct</span></div>
+          <span class="t-body" style="color:var(--ink)">2 screenshots</span>
+        </div>
+      </div>
     </div>
   </div>
 
   <script>
-    document.getElementById('shot').innerHTML = screenshot('event', 348, 520, { blurX: 7, blurY: 3 });
-    document.querySelector('.phone').insertAdjacentHTML('afterbegin', statusBar(true));
+    const phone = document.querySelector('.phone');
+    const header = `<div style="position:absolute;top:62px;left:16px;right:16px;display:flex;align-items:center;gap:14px;z-index:60"><span class="btn-circle">${icon('x',20)}</span><span class="t-nav">Tonight's recap</span><span style="flex:1"></span><span class="t-label dim">1 OF 4</span></div>`;
+    const decide = `<div class="seg" style="position:absolute;left:var(--gutter);right:var(--gutter);bottom:24px;z-index:70"><div class="seg-btn primary">${icon('bookmark',18)}Still want</div><div class="seg-btn">${icon('x',18)}Drop</div><div class="seg-btn">${icon('check',18)}Done</div></div>`;
+    phone.insertAdjacentHTML('afterbegin', statusBar(true) + header + decide);
+
+    // Screenshot covers the inner area with a 10 px overscan so the blur has no edges.
+    const inEl = document.querySelector('.in');
+    const { width: W, height: H } = inEl.getBoundingClientRect();
+    const R = parseFloat(getComputedStyle(inEl).borderTopLeftRadius);
+    document.getElementById('shot').innerHTML = screenshot('event', W + 20, H + 20, { blurX: 7, blurY: 3 });
+
+    // Folder outline: the reference tab (328 wide, 228 tall panel), scaled to the measured width.
+    const panel = document.getElementById('panel');
+    const P = panel.offsetHeight, s = W / 328, x = v => (v * s).toFixed(2);
+    panel.style.clipPath = `path('M0 16 Q0 0 16 0 L${x(190)} 0 Q${x(207)} 0 ${x(213)} 10 L${x(230)} 24 Q${x(234)} 28 ${x(240)} 28 L${x(313)} 28 Q${W} 28 ${W} 43 L${W} ${P - R} Q${W} ${P} ${W - R} ${P} L${R} ${P} Q0 ${P} 0 ${P - R} Z')`;
   </script>
+  <div class="grain"></div>
   <div class="home-indicator"></div>
 </div>
 </body></html>

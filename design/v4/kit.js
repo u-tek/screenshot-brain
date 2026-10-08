@@ -110,6 +110,13 @@ function icon(name, size = 18, color = "currentColor") {
     stack: `<rect x="5" y="9" width="14" height="11" rx="3"/><path d="M7 6h10M9 3h6"/>`,
     sliders: `<path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/>`,
     bracket: `<path d="M8 4H5v16h3M16 4h3v16h-3"/>`,
+    home: `<path d="M4 11l8-7 8 7v8.5a1.5 1.5 0 0 1-1.5 1.5H15v-6H9v6H5.5A1.5 1.5 0 0 1 4 19.5z"/>`,
+    bookmark: `<path d="M7 4h10v16l-5-4-5 4z"/>`,
+    spark: `<path d="M12 3l1.8 5.4L19 10l-5.2 1.6L12 17l-1.8-5.4L5 10l5.2-1.6z"/><path d="M19 16l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/>`,
+    search: `<circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/>`,
+    filter: `<path d="M4 6h16l-6 7.5V19l-4 1.5v-7z"/>`,
+    ticket: `<path d="M4 7h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4z"/><path d="M14 7v10" stroke-dasharray="1.5 2"/>`,
+    plus: `<path d="M12 5v14M5 12h14"/>`,
   };
   return `<svg ${s}>${paths[name]}</svg>`;
 }
