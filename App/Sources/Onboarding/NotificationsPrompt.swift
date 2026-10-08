@@ -84,7 +84,7 @@ struct WidgetPreview: View {
             LightField(.glow(.category(.event)), grain: 0.04)
                 .frame(width: 84)
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(.white.opacity(0.7), lineWidth: 1))
+                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(SBColor.warm(0.14), lineWidth: 1))
             VStack(alignment: .leading, spacing: 4) {
                 Text("Events")
                     .font(.system(size: 11, weight: .medium))
@@ -117,7 +117,7 @@ struct WidgetPreview: View {
             LightField(.bloom(.category(.event)).shifted(down: -0.1), grain: 0.04)
                 .clipShape(shape)
         }
-        .overlay(shape.strokeBorder(.white.opacity(0.6), lineWidth: 1))
+        .overlay(shape.strokeBorder(SBColor.warm(0.14), lineWidth: 1))
         .accessibilityElement()
         .accessibilityLabel(Text("A preview of the widget, showing a saved gig with Drop, Keep and Done buttons"))
     }

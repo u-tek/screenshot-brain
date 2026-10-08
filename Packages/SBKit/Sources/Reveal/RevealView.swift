@@ -74,19 +74,18 @@ public struct RevealView: View {
             .accessibilityHidden(true)
 
             VStack(spacing: 0) {
-                VStack(spacing: 14) {
-                    ProgressSegments(count: cards.count, current: index)
-                    HStack {
-                        SmallLabel("The Reveal · \(String(format: "%02d", index + 1))")
+                VStack(spacing: 10) {
+                    SBStoryBars(count: cards.count, current: index)
+                    HStack(spacing: 12) {
+                        SBMark()
                         Spacer()
-                        Button(action: onFinish) {
-                            Chip("Skip", closable: true)
-                        }
-                        .buttonStyle(.plain)
+                        SBLabel("\(index + 1) / \(cards.count)")
+                            .monospacedDigit()
+                        SBCircleButton(.x, label: "Skip", size: 36, action: onFinish)
                     }
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 8)
+                .padding(.horizontal, SBSpace.gutter)
+                .padding(.top, 4)
 
                 cardView(card)
                     .id(card)
@@ -151,8 +150,7 @@ private struct BigNumber: View {
         VStack(alignment: .leading, spacing: 0) {
             CountingNumber(value, font: SBFont.number(150))
             Text(unit)
-                .font(SBFont.body(20, weight: .semibold))
-                .foregroundStyle(SBColor.ink)
+                .sbText(.unit)
                 .padding(.leading, 6)
         }
     }
@@ -188,7 +186,7 @@ private struct TotalCard: View {
     var body: some View {
         CardLayout {
             VStack(alignment: .leading, spacing: 12) {
-                SmallLabel(story.isLimited ? "From the screenshots you picked" : story.periodLabel)
+                SBLabel(story.isLimited ? "From the screenshots you picked" : story.periodLabel)
                 BigNumber(value: story.total, unit: story.total == 1 ? "screenshot" : "screenshots")
             }
         } bottom: {
@@ -225,7 +223,7 @@ private struct PeakTimeCard: View {
     var body: some View {
         CardLayout {
             VStack(alignment: .leading, spacing: 18) {
-                SmallLabel("When you screenshot")
+                SBLabel("When you screenshot")
                 MistHeadline("Your peak screenshot time is **\(story.peakTimeText ?? "").**", size: 34, alignment: .leading)
                 if let guessed = story.guessedPeakPeriod, let hour = story.peakHour {
                     MistBody(DayPeriod(hour: hour) == guessed
@@ -258,7 +256,7 @@ private struct BusiestDayCard: View {
     var body: some View {
         CardLayout {
             VStack(alignment: .leading, spacing: 12) {
-                SmallLabel("Your busiest day")
+                SBLabel("Your busiest day")
                 BigNumber(value: story.busiestDayCount, unit: "in one day")
             }
         } bottom: {
@@ -275,7 +273,7 @@ private struct CategoriesCard: View {
     var body: some View {
         CardLayout {
             VStack(alignment: .leading, spacing: 14) {
-                SmallLabel("What you save")
+                SBLabel("What you save")
                 MistHeadline(headline, size: 32, alignment: .leading)
                 if story.unsureCount > 0 {
                     MistBody("\(story.unsureCount) we weren't sure about. **They're in triage.**", alignment: .leading)
@@ -332,7 +330,11 @@ private struct TopCategoryCard: View {
         CardLayout {
             if let top = story.topCategory {
                 VStack(alignment: .leading, spacing: 14) {
-                    SmallLabel("Your top category")
+                    SBLabel("Your top category")
+                    Text(CategoryWords.plural(top))
+                        .sbText(.story)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
                     MistHeadline("**\(story.topCategoryCount) \(CategoryWords.plural(top))** \(CategoryWords.meantTo(top)).", size: 32, alignment: .leading)
                 }
             }
@@ -346,10 +348,10 @@ private struct TopCategoryCard: View {
                     }
                         .frame(width: 118, height: 210)
                         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(.white.opacity(0.7), lineWidth: 1))
-                        .shadow(color: .black.opacity(0.08), radius: 20)
-                        .rotationEffect(.degrees(Double(index - 1) * 6))
+                        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(SBColor.warm(0.14), lineWidth: 1))
+                        .shadow(color: .black.opacity(0.4), radius: 20, y: 12)
                         .offset(y: index == 1 ? -14 : 0)
+                        .zIndex(index == 1 ? 1 : 0)
                 }
             }
             .frame(maxWidth: .infinity)
@@ -370,7 +372,7 @@ private struct OldestCard: View {
         CardLayout {
             if let item = story.oldestUndone {
                 VStack(alignment: .leading, spacing: 14) {
-                    SmallLabel("The oldest thing you never did")
+                    SBLabel("The oldest thing you never did")
                     MistHeadline("Saved **\(item.createdAt.formatted(.relative(presentation: .named)))**", size: 34, alignment: .leading)
                 }
             }
@@ -394,7 +396,7 @@ private struct DatedCard: View {
     var body: some View {
         CardLayout {
             VStack(alignment: .leading, spacing: 12) {
-                SmallLabel("Screenshots with a date in them")
+                SBLabel("Screenshots with a date in them")
                 BigNumber(value: story.datedCount, unit: "had a date")
             }
         } bottom: {
@@ -415,7 +417,7 @@ private struct ShareCardScreen: View {
             ShareCardView(story: story)
                 .frame(width: 216, height: 384)
                 .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).strokeBorder(.white.opacity(0.7), lineWidth: 1))
+                .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).strokeBorder(SBColor.warm(0.14), lineWidth: 1))
                 .shadow(color: .black.opacity(0.06), radius: 20)
                 .accessibilityLabel(Text("Your share card"))
             MistHeadline("Post it. **Go on.**", size: 28)
@@ -432,7 +434,7 @@ private struct ShareCardScreen: View {
                     .simultaneousGesture(TapGesture().onEnded(onShare))
                 }
                 Button(action: onFinish) {
-                    Chip("Keep going")
+                    SBChip("Keep going")
                 }
                 .buttonStyle(.plain)
             }

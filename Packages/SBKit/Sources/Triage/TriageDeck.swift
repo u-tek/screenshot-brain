@@ -17,6 +17,7 @@ public struct TriageDeck: View {
     @State private var isCommitting = false
     @State private var pulse = 0.0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.sbBottomClearance) private var bottomClearance
 
     /// How far a card must travel (or be flung) to count.
     private static let threshold: CGFloat = 110
@@ -34,16 +35,16 @@ public struct TriageDeck: View {
 
             VStack(spacing: 0) {
                 header
-                    .padding(.horizontal, 20)
-                    .padding(.top, 8)
 
                 deck
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 20)
+                    .padding(.horizontal, SBSpace.gutter)
+                    .padding(.top, 16)
+                    .padding(.bottom, 16)
                     .frame(maxHeight: .infinity)
 
                 controls
-                    .padding(.bottom, 12)
+                    .padding(.horizontal, SBSpace.gutter)
+                    .padding(.bottom, bottomClearance > 0 ? bottomClearance + 12 : 12)
             }
         }
         .onChange(of: model.isFinished) { finished in
@@ -54,24 +55,20 @@ public struct TriageDeck: View {
     // MARK: Parts
 
     private var header: some View {
-        HStack {
-            SmallLabel(model.isFinished ? label : "\(label) · \(model.position + 1) of \(model.cards.count)")
-                .monospacedDigit()
-            Spacer()
-            if model.canUndo {
-                Button {
-                    Haptics.selection()
-                    withAnimation(SBMotion.snappy) { model.undo() }
-                } label: {
-                    Chip("Undo")
+        SBNavHeader(title: label, leading: .x, leadingLabel: "Finish later", onLeading: onFinish) {
+            HStack(spacing: 12) {
+                if model.canUndo {
+                    SBCircleButton(.system("arrow.uturn.backward"), label: "Undo") {
+                        Haptics.selection()
+                        withAnimation(SBMotion.snappy) { model.undo() }
+                    }
+                    .transition(.opacity)
                 }
-                .buttonStyle(.plain)
-                .transition(.opacity)
+                if !model.isFinished {
+                    SBLabel("\(model.position + 1) / \(model.cards.count)")
+                        .monospacedDigit()
+                }
             }
-            Button(action: onFinish) {
-                Chip("Finish later", closable: true)
-            }
-            .buttonStyle(.plain)
         }
     }
 
@@ -107,25 +104,9 @@ public struct TriageDeck: View {
     }
 
     private var controls: some View {
-        HStack(spacing: 22) {
-            Button { commit(.drop) } label: { DropMark(size: 58) }
-                .buttonStyle(.plain)
-                .accessibilityLabel(Text("Drop"))
-            Button { commit(.keep) } label: {
-                Text("Still want")
-                    .font(SBFont.body(16, weight: .semibold))
-                    .foregroundStyle(SBColor.ink)
-                    .padding(.horizontal, 26)
-                    .frame(height: 58)
-                    .sbGlass(in: Capsule())
-            }
-            .buttonStyle(.plain)
-            Button { commit(.done) } label: { DoneMark(size: 58) }
-                .buttonStyle(.plain)
-                .accessibilityLabel(Text("Done"))
-        }
-        .disabled(model.isFinished)
-        .opacity(model.isFinished ? 0 : 1)
+        SBDecisionRow(onDrop: { commit(.drop) }, onKeep: { commit(.keep) }, onDone: { commit(.done) })
+            .disabled(model.isFinished)
+            .opacity(model.isFinished ? 0 : 1)
     }
 
     // MARK: Gesture
@@ -218,35 +199,33 @@ public struct TriageDeck: View {
     }
 }
 
-/// The light behind the deck.
+/// The light behind the deck: the warm ground with one soft glow of the card's kind under it. It
+/// warms for keep, dims for drop, and pulses warm white once for done.
 struct TriageLight: View {
     let palette: LightPalette
     /// 0...1 towards keep: the light warms.
     let warmth: Double
-    /// 0...1 towards drop: the light fades to grey mist.
+    /// 0...1 towards drop: the light dims.
     let fade: Double
-    /// 0...1: the accent pulse on done.
+    /// 0...1: the pulse on done.
     let pulse: Double
-
-    private static let warm = LightPalette.category(.place)
-    private static let accent = LightPalette(colors: [RGB(hex: 0xFF6A3D), RGB(hex: 0xFFA27F), RGB(hex: 0xFFD2BD)])
 
     var body: some View {
         ZStack {
-            LightField(.sweep(palette), drifts: true)
-                .saturation(1 - fade * 0.9)
-                .opacity(1 - fade * 0.55)
+            SBGround()
+            SBLight(Color(rgb: palette.color(at: 1)), width: 380, height: 460, opacity: 0.22 * (1 - fade * 0.8), blur: 90)
+                .offset(y: 60)
                 .animation(SBMotion.settle, value: palette)
-            LightField(.sweep(Self.warm), ground: false, grain: 0)
-                .opacity(warmth * 0.55)
-            LightField(.glow(Self.accent).shifted(down: 0.25), ground: false, grain: 0)
-                .opacity(pulse * 0.5)
+            SBLight(SBRamp.r4, width: 380, height: 460, opacity: warmth * 0.3, blur: 90)
+                .offset(y: 60)
+            SBLight(SBColor.accent, width: 300, height: 300, opacity: pulse * 0.35, blur: 80)
+                .offset(y: -40)
         }
     }
 }
 
-/// One card: the screenshot itself in the upper part, framed by its own light, and a frosted
-/// panel with the title, when it was saved and the suggested action. Groups show as a stack.
+/// One card: the screenshot filling the upper part, lit by its kind, and a folder panel with the
+/// kind, the title, when, and the date or the suggested action. Groups show as a stack.
 struct TriageCardView: View {
     let card: TriageCard
     var direction: TriageDecision?
@@ -254,76 +233,87 @@ struct TriageCardView: View {
 
     var body: some View {
         let item = card.item
-        let shape = FolderTabShape(tabWidth: 124, tabHeight: 30)
-        let palette = LightPalette.item(category: item.category, colors: item.palette, isSafeToDisplay: item.isSafeToDisplay)
+        let shape = RoundedRectangle(cornerRadius: SBRadius.objectCard, style: .continuous)
+        let kind = SBKind(item.category)
         ZStack {
             if card.groupSize > 1 {
-                StackEdge(shape: shape, palette: palette, depth: 2)
-                StackEdge(shape: shape, palette: palette, depth: 1)
+                StackEdge(shape: shape, depth: 2)
+                StackEdge(shape: shape, depth: 1)
             }
-            VStack(alignment: .leading, spacing: 0) {
-                Text(CategoryName.title(item.category))
-                    .font(SBFont.body(12, weight: .medium))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                    .foregroundStyle(SBColor.ink.opacity(0.8))
-                    .padding(.leading, 18)
-                    .frame(height: 30)
-
-                AssetImage(item.assetLocalID, maxPixelSize: 900)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(.white.opacity(0.45), lineWidth: 1))
-                    .padding(.horizontal, 10)
-                    .padding(.top, 4)
-
-                panel(item)
-                    .padding(8)
+            ZStack(alignment: .bottom) {
+                // The screenshot fills the card above the panel, lit by its kind behind.
+                ZStack {
+                    kind.deep
+                    SBLight(kind.core, width: 300, height: 360, opacity: 0.55, blur: 60)
+                    AssetImage(item.assetLocalID, maxPixelSize: 900)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                        .clipped()
+                    LinearGradient(colors: [SBColor.shade(0.12), .clear, .clear, SBColor.shade(0.5)], startPoint: .top, endPoint: .bottom)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                panel(item, kind: kind)
             }
-            .background {
-                LightField(.bloom(palette).shifted(down: 0.1), grain: 0.04)
-                    .clipShape(shape)
-            }
+            .clipShape(shape)
             .overlay {
                 wash.clipShape(shape).allowsHitTesting(false)
             }
-            .overlay(shape.strokeBorder(Color.white.opacity(0.5), lineWidth: 0.75))
+            .overlay(shape.strokeBorder(SBColor.warm(0.12), lineWidth: 1))
             .contentShape(shape)
         }
     }
 
-    private func panel(_ item: ScreenshotItem) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            SmallLabel(meta(item))
-            Text(item.title ?? "Something you saved")
-                .font(SBFont.body(22, weight: .semibold))
-                .foregroundStyle(SBColor.ink)
-                .lineLimit(2)
-            if let action = ItemAction.suggested(for: item) {
-                HStack(spacing: 6) {
-                    Image(systemName: action.systemImage)
-                        .font(.system(size: 11, weight: .medium))
-                    Text(action.title)
-                        .font(SBFont.body(12))
+    /// The folder panel: kind, name, when, and the date or what to do, low down.
+    private func panel(_ item: ScreenshotItem, kind: SBKind) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 8) {
+                    Circle()
+                        .fill(kind.core)
+                        .frame(width: 6, height: 6)
+                        .shadow(color: kind.core, radius: 4)
+                    SBLabel(CategoryName.title(item.category), dim: false)
                 }
-                .foregroundStyle(SBColor.ink.opacity(0.8))
-                .padding(.horizontal, 12)
-                .padding(.vertical, 7)
-                .sbGlass(in: Capsule(), style: .clear)
+                Text(item.title ?? "Something you saved")
+                    .sbText(.title)
+                    .lineLimit(2)
+                Text(meta(item))
+                    .sbText(.body)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 16)
+            HStack(alignment: .firstTextBaseline) {
+                if let due = item.dueDate {
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Text(due.formatted(.dateTime.day()))
+                            .sbText(.numL)
+                        Text(due.formatted(.dateTime.month(.abbreviated)))
+                            .sbText(.unit)
+                    }
+                } else {
+                    SBLabel("Saved \(item.createdAt.formatted(.relative(presentation: .named)))")
+                }
+                Spacer(minLength: 8)
+                if card.groupSize > 1 {
+                    SBLabel("\(card.groupSize) screenshots")
+                } else if let action = ItemAction.suggested(for: item) {
+                    SBLabel(action.title)
+                }
             }
         }
-        .padding(18)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .sbGlass(in: RoundedRectangle(cornerRadius: SBRadius.card - 8, style: .continuous))
+        .padding(.horizontal, 20)
+        .padding(.top, 22 + 28)
+        .padding(.bottom, 20)
+        .frame(maxWidth: .infinity, minHeight: 228, alignment: .topLeading)
+        .background(SBFolderPanelShape().fill(SBColor.surface))
     }
 
     private func meta(_ item: ScreenshotItem) -> String {
-        var parts = ["Saved \(item.createdAt.formatted(.relative(presentation: .named)))"]
+        var parts: [String] = []
         if let due = item.dueDate {
-            parts.append(due.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated)))
-        }
-        if card.groupSize > 1 {
-            parts.append("\(card.groupSize) screenshots")
+            parts.append(due.formatted(.dateTime.weekday(.wide)))
+            parts.append(due.formatted(.dateTime.hour().minute()))
+        } else {
+            parts.append("Saved \(item.createdAt.formatted(.relative(presentation: .named)))")
         }
         return parts.joined(separator: " · ")
     }
@@ -335,24 +325,24 @@ struct TriageCardView: View {
             LinearGradient(colors: [SBColor.accent.opacity(0.35 * strength), .clear], startPoint: .trailing, endPoint: .leading)
                 .overlay(alignment: .topLeading) {
                     Text("Still want")
-                        .font(SBFont.body(15, weight: .semibold))
-                        .foregroundStyle(SBColor.ink)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                        .sbGlass(in: Capsule())
-                        .padding(.top, 44)
-                        .padding(.leading, 18)
+                        .font(.system(size: 15))
+                        .foregroundStyle(SBColor.ground)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 9)
+                        .background(Capsule().fill(SBColor.accent))
+                        .padding(.top, 24)
+                        .padding(.leading, 20)
                         .opacity(strength)
                 }
         case .drop?:
-            Color(white: 0.85).opacity(0.5 * strength)
+            SBColor.ground.opacity(0.55 * strength)
                 .overlay(alignment: .topTrailing) {
-                    DropMark(size: 52).padding(.top, 44).padding(.trailing, 18).opacity(strength)
+                    DropMark(size: 52).padding(.top, 24).padding(.trailing, 20).opacity(strength)
                 }
         case .done?:
             LinearGradient(colors: [SBColor.accent.opacity(0.3 * strength), .clear], startPoint: .top, endPoint: .center)
                 .overlay(alignment: .top) {
-                    DoneMark(size: 56).padding(.top, 52).opacity(strength)
+                    DoneMark(size: 56).padding(.top, 32).opacity(strength)
                 }
         case nil:
             Color.clear
@@ -362,15 +352,13 @@ struct TriageCardView: View {
 
 /// The edge of a card behind, peeking out above: this card stands for a group of near-duplicates.
 private struct StackEdge: View {
-    let shape: FolderTabShape
-    let palette: LightPalette
+    let shape: RoundedRectangle
     let depth: Int
 
     var body: some View {
-        LightField(.bloom(palette), grain: 0)
-            .opacity(0.5)
-            .clipShape(shape)
-            .overlay(shape.strokeBorder(Color.white.opacity(0.5), lineWidth: 0.75))
+        shape
+            .fill(SBColor.surface2)
+            .overlay(shape.strokeBorder(SBColor.warm(0.12), lineWidth: 1))
             .scaleEffect(1 - CGFloat(depth) * 0.04, anchor: .top)
             .offset(y: CGFloat(depth) * -10)
             .accessibilityHidden(true)

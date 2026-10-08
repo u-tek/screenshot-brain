@@ -19,8 +19,10 @@ struct SettingsScreen: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 26) {
                     VStack(alignment: .leading, spacing: 8) {
-                        SmallLabel("Settings")
-                        MistHeadline("Yours, **on this iPhone.**", size: 32, alignment: .leading)
+                        Text("Settings")
+                            .sbText(.large)
+                            .accessibilityAddTraits(.isHeader)
+                        MistBody("Yours, **on this iPhone.**", alignment: .leading)
                     }
 
                     section("Recap") {
@@ -80,7 +82,7 @@ struct SettingsScreen: View {
                         } label: {
                             Text(isDeleting ? "Deleting…" : "Delete account")
                                 .font(SBFont.body(16, weight: .semibold))
-                                .foregroundStyle(Color.red)
+                                .foregroundStyle(SBKind.events.core)
                         }
                         .buttonStyle(.plain)
                         .disabled(isDeleting)
@@ -106,14 +108,11 @@ struct SettingsScreen: View {
                     }
                     #endif
                 }
-                .padding(.horizontal, 20)
+                .padding(.horizontal, SBSpace.gutter)
                 .padding(.top, 12)
                 .padding(.bottom, 120)
             }
-            .background {
-                LinearGradient(colors: [SBColor.mistTop, SBColor.mistBottom], startPoint: .top, endPoint: .bottom)
-                    .ignoresSafeArea()
-            }
+            .sbScreen()
             .toolbar(.hidden, for: .navigationBar)
         }
         .sheet(isPresented: $showsDebug) {
@@ -153,13 +152,13 @@ struct SettingsScreen: View {
 
     private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            SmallLabel(title)
+            SBLabel(title)
             VStack(alignment: .leading, spacing: 12) {
                 content()
             }
             .padding(18)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .sbGlass(in: RoundedRectangle(cornerRadius: SBRadius.card, style: .continuous))
+            .background(RoundedRectangle(cornerRadius: SBRadius.tile, style: .continuous).fill(SBColor.surface))
         }
     }
 }

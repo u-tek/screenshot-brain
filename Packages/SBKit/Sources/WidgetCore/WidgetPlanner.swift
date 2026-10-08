@@ -78,11 +78,12 @@ public struct WidgetItem: Hashable, Sendable {
 /// Pre-rendered light images for the widget, which can't run the app's light.
 public enum WidgetLight {
     public static func fileName(forItem id: String) -> String {
-        "item-\(id).png"
+        // "v4-": the warm lights. Older cached files (the earlier colourful lights) are ignored.
+        "v4-item-\(id).png"
     }
 
     public static func fileName(for category: ItemCategory) -> String {
-        "category-\(category.rawValue).png"
+        "v4-category-\(category.rawValue).png"
     }
 }
 

@@ -964,3 +964,55 @@ public struct SBChip: View {
         .padding(.vertical, 6)
     }
 }
+
+// MARK: - Layout helpers
+
+extension EnvironmentValues {
+    /// How much of the bottom of the screen is covered by chrome (the tab bar), so bottom controls
+    /// can sit above it.
+    public var sbBottomClearance: CGFloat {
+        get { self[SBBottomClearanceKey.self] }
+        set { self[SBBottomClearanceKey.self] = newValue }
+    }
+}
+
+private struct SBBottomClearanceKey: EnvironmentKey {
+    static let defaultValue: CGFloat = 0
+}
+
+/// The recap card's panel: a folder with a raised tab on the left of its top edge.
+public struct SBFolderPanelShape: InsettableShape {
+    private let bottomRadius: CGFloat
+    private var inset: CGFloat = 0
+
+    public init(bottomRadius: CGFloat = SBRadius.objectCard) {
+        self.bottomRadius = bottomRadius
+    }
+
+    public func path(in rect: CGRect) -> Path {
+        let r = rect.insetBy(dx: inset, dy: inset)
+        let w = r.width, h = r.height, s = w / 328, radius = min(bottomRadius, h / 2)
+        func pt(_ x: CGFloat, _ y: CGFloat) -> CGPoint { CGPoint(x: r.minX + x, y: r.minY + y) }
+        var p = Path()
+        p.move(to: pt(0, 16))
+        p.addQuadCurve(to: pt(16, 0), control: pt(0, 0))
+        p.addLine(to: pt(190 * s, 0))
+        p.addQuadCurve(to: pt(213 * s, 10), control: pt(207 * s, 0))
+        p.addLine(to: pt(230 * s, 24))
+        p.addQuadCurve(to: pt(240 * s, 28), control: pt(234 * s, 28))
+        p.addLine(to: pt(w - 15, 28))
+        p.addQuadCurve(to: pt(w, 43), control: pt(w, 28))
+        p.addLine(to: pt(w, h - radius))
+        p.addQuadCurve(to: pt(w - radius, h), control: pt(w, h))
+        p.addLine(to: pt(radius, h))
+        p.addQuadCurve(to: pt(0, h - radius), control: pt(0, h))
+        p.closeSubpath()
+        return p
+    }
+
+    public func inset(by amount: CGFloat) -> SBFolderPanelShape {
+        var shape = self
+        shape.inset += amount
+        return shape
+    }
+}

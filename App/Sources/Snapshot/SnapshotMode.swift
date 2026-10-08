@@ -39,7 +39,7 @@ struct SnapshotMode: Sendable {
         let shots = list.split(separator: ",").compactMap { token -> Shot? in
             let parts = token.split(separator: "@", maxSplits: 1).map(String.init)
             guard let route = parts.first, !route.isEmpty else { return nil }
-            let appearance = parts.count > 1 ? Appearance(rawValue: parts[1]) ?? .light : .light
+            let appearance = parts.count > 1 ? Appearance(rawValue: parts[1]) ?? .dark : .dark
             return Shot(route: route, appearance: appearance)
         }
         return shots.isEmpty ? nil : SnapshotMode(shots: shots)
@@ -74,7 +74,7 @@ enum SnapshotGallery {
             return AnyView(FinishingUpScreen(palette: palette, read: 182, total: 240))
         case "sharecard":
             return AnyView(ZStack {
-                Color(white: 0.86).ignoresSafeArea()
+                SBColor.surface2.ignoresSafeArea()
                 ShareCardView(story: .sample)
                     .aspectRatio(9 / 16, contentMode: .fit)
                     .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
@@ -139,7 +139,8 @@ struct SnapshotHost: View {
         }
         // A fresh screen for every shot: no state carries over from the last one.
         .id(stepper.index)
-        .preferredColorScheme(shot.appearance.colorScheme)
+        // The app is dark-only.
+        .preferredColorScheme(.dark)
         .environment(\.lightIsStill, true)
         .onAppear {
             UIView.setAnimationsEnabled(false)

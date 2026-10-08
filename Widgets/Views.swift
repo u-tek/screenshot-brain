@@ -60,11 +60,17 @@ private struct MediumItemView: View {
             Thumbnail(name: item.thumbnailName)
                 .frame(width: 84)
             VStack(alignment: .leading, spacing: 0) {
-                Text(CategoryTitle.of(item.category))
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(SBColor.ink.opacity(0.8))
-                    .padding(.leading, 14)
-                    .frame(height: 22)
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(SBKind(item.category).core)
+                        .frame(width: 5, height: 5)
+                    Text(CategoryTitle.of(item.category).uppercased())
+                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                        .tracking(0.8)
+                        .foregroundStyle(SBColor.ink)
+                }
+                .padding(.leading, 14)
+                .frame(height: 22)
                 VStack(alignment: .leading, spacing: 4) {
                     Text(item.title)
                         .font(.system(size: 15, weight: .semibold))
@@ -72,8 +78,8 @@ private struct MediumItemView: View {
                         .lineLimit(2)
                         .widgetAccentable()
                     Text(item.detail.uppercased())
-                        .font(.system(size: 10, weight: .regular, design: .monospaced))
-                        .foregroundStyle(SBColor.inkSecondary)
+                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                        .foregroundStyle(SBColor.ink2)
                     Spacer(minLength: 6)
                     DecisionButtons(itemID: item.id, compact: false)
                 }
@@ -101,36 +107,29 @@ private struct SmallItemView: View {
     }
 }
 
-/// ✕, keep and ✓. Buttons on iOS 17 and later; before that the whole widget opens the item.
+/// Drop, Still want and Done, in the app's order, Still want warm white in the middle. Buttons on
+/// iOS 17 and later; before that the whole widget opens the item.
 private struct DecisionButtons: View {
     let itemID: String
     let compact: Bool
 
     var body: some View {
         if #available(iOS 17.0, *) {
-            HStack(spacing: compact ? 0 : 8) {
+            HStack(spacing: 0) {
                 Button(intent: DropItemIntent(itemID: itemID)) {
-                    Mark(systemImage: "xmark", filled: false, size: compact ? 34 : 32)
+                    Mark(icon: .x, filled: false, size: compact ? 34 : 32)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(Text("Drop"))
-                if compact {
-                    Spacer()
-                } else {
-                    Button(intent: KeepItemIntent(itemID: itemID)) {
-                        Text("Keep")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(SBColor.ink)
-                            .padding(.horizontal, 14)
-                            .frame(height: 32)
-                            .background(FrostPanel(shape: Capsule()))
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(Text("Still want"))
-                    Spacer(minLength: 0)
+                Spacer(minLength: 0)
+                Button(intent: KeepItemIntent(itemID: itemID)) {
+                    Mark(icon: .bookmark, filled: true, size: compact ? 34 : 32)
                 }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text("Still want"))
+                Spacer(minLength: 0)
                 Button(intent: DoneItemIntent(itemID: itemID)) {
-                    Mark(systemImage: "checkmark", filled: true, size: compact ? 34 : 32)
+                    Mark(icon: .check, filled: false, size: compact ? 34 : 32)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(Text("Done"))
@@ -138,30 +137,29 @@ private struct DecisionButtons: View {
         } else {
             HStack {
                 Text("Tap to open")
-                    .font(.system(size: 10, design: .monospaced))
-                    .foregroundStyle(SBColor.inkSecondary)
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .foregroundStyle(SBColor.ink2)
                 Spacer()
             }
         }
     }
 }
 
-/// ✓ in an orange circle, ✕ in a frosted one.
+/// The main one warm white with a dark glyph; the others dark with a dim glyph.
 private struct Mark: View {
-    let systemImage: String
+    let icon: SBIcon
     let filled: Bool
     let size: CGFloat
 
     var body: some View {
-        Image(systemName: systemImage)
-            .font(.system(size: size * 0.36, weight: filled ? .semibold : .regular))
-            .foregroundStyle(filled ? Color.white : SBColor.inkSecondary)
+        SBIconView(icon, size: size * 0.5)
+            .foregroundStyle(filled ? SBColor.ground : SBColor.ink2)
             .frame(width: size, height: size)
             .background {
                 if filled {
                     Circle().fill(SBColor.accent).widgetAccentable()
                 } else {
-                    FrostPanel(shape: Circle())
+                    Circle().fill(SBColor.surface2)
                 }
             }
     }
@@ -178,12 +176,12 @@ private struct Thumbnail: View {
                     .resizable()
                     .aspectRatio(contentMode: .fill)
             } else {
-                Color.white.opacity(0.2)
+                SBColor.surface2
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .clipShape(shape)
-        .overlay(shape.strokeBorder(Color.white.opacity(0.7), lineWidth: 1))
+        .overlay(shape.strokeBorder(SBColor.warm(0.14), lineWidth: 1))
     }
 }
 
@@ -198,9 +196,10 @@ private struct MessageCard: View {
         VStack(alignment: .leading, spacing: 6) {
             AppMark(size: 13)
             Spacer(minLength: 0)
-            Text(label)
-                .font(.system(size: 11))
-                .foregroundStyle(SBColor.inkSecondary)
+            Text(label.uppercased())
+                .font(.system(size: 10, weight: .medium, design: .monospaced))
+                .tracking(0.8)
+                .foregroundStyle(SBColor.ink2)
             Text(WidgetMarkup.attributed(headline, size: compact ? 17 : 20))
                 .lineLimit(3)
                 .widgetAccentable()
@@ -288,18 +287,16 @@ struct WidgetLightBackground: View {
     }
 }
 
-/// Widgets can't blur what's behind them, so glass here is a white veil with the inner stroke.
+/// Widgets can't blur what's behind them, so glass here is a dark warm veil with a warm hairline.
 struct FrostPanel<S: InsettableShape>: View {
     let shape: S
-    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        let dark = colorScheme == .dark
         shape
-            .fill(dark ? Color.black.opacity(0.45) : Color.white.opacity(0.6))
+            .fill(SBColor.surface.opacity(0.88))
             .overlay(
                 shape.strokeBorder(
-                    LinearGradient(colors: [.white.opacity(dark ? 0.35 : 0.85), .white.opacity(dark ? 0.06 : 0.25)], startPoint: .top, endPoint: .bottom),
+                    LinearGradient(colors: [SBColor.warm(0.2), SBColor.warm(0.06)], startPoint: .top, endPoint: .bottom),
                     lineWidth: 1
                 )
             )
@@ -319,15 +316,15 @@ enum CategoryTitle {
     }
 }
 
-/// Light words with one bold phrase, as in the app.
+/// Two-tone words: dim, with one bright phrase, as in the app.
 enum WidgetMarkup {
     static func attributed(_ markup: String, size: CGFloat) -> AttributedString {
         var result = AttributedString()
         for (index, part) in markup.components(separatedBy: "**").enumerated() where !part.isEmpty {
             var run = AttributedString(part)
             let bold = index % 2 == 1
-            run.font = .system(size: size, weight: bold ? .semibold : .light)
-            run.foregroundColor = bold ? SBColor.ink : SBColor.inkLight
+            run.font = .system(size: size, weight: .regular)
+            run.foregroundColor = bold ? SBColor.ink : SBColor.ink2
             result.append(run)
         }
         return result

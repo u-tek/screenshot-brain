@@ -177,6 +177,11 @@ extension Color {
         })
     }
 
+    /// A colour from a palette sample.
+    public init(rgb: RGB, opacity: Double = 1) {
+        self.init(.sRGB, red: rgb.red, green: rgb.green, blue: rgb.blue, opacity: opacity)
+    }
+
     init(_ rgb: RGB, opacity: Double = 1) {
         self.init(.sRGB, red: rgb.red, green: rgb.green, blue: rgb.blue, opacity: opacity)
     }

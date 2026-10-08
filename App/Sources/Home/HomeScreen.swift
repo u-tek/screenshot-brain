@@ -11,7 +11,7 @@ enum HomeRoute: Hashable {
     case category(ItemCategory)
 }
 
-/// The score, then Coming up on the timeline, then Still want as light tiles, then search.
+/// The score, the recap tile, Coming up on the timeline, Still want as kind tiles, then search.
 struct HomeScreen: View {
     @ObservedObject var home: HomeModel
     var palette: LightPalette = .sampleTopScreenshots
@@ -44,29 +44,40 @@ struct HomeScreen: View {
                     DroppedRow(count: home.droppedCount, action: onDeleteDropped)
                 }
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, SBSpace.gutter)
             .padding(.top, 12)
             .padding(.bottom, 120)
         }
         .scrollDismissesKeyboard(.interactively)
-        .background {
-            LightField(.sweep(palette).shifted(down: -0.08), drifts: true)
-                .ignoresSafeArea()
-        }
+        .sbScreen()
     }
 
+    /// The mark, then the score: a big light number, what it's out of, and how far along.
     private var header: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(spacing: 0) {
             HStack {
                 AppMark()
                 Spacer()
             }
-            .padding(.bottom, 18)
-            SmallLabel("Your score")
-            ScoreView(done: home.score.done, total: home.score.total)
-            SmallLabel(scoreLine)
+            .padding(.bottom, 28)
+            Text("Score")
+                .sbText(.body)
+            Text("\(home.score.done)")
+                .sbText(.numXL)
+                .monospacedDigit()
+                .padding(.top, 4)
+            Text(home.score.total == 0 ? "nothing kept yet" : "of \(home.score.total) done")
+                .sbText(.unit, color: SBColor.ink2)
                 .padding(.top, 6)
+            ScoreTrack(done: home.score.done, total: home.score.total)
+                .padding(.top, 22)
+            Text(scoreLine)
+                .sbText(.body)
+                .multilineTextAlignment(.center)
+                .padding(.top, 14)
         }
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
     }
 
     private var scoreLine: String {
@@ -80,27 +91,77 @@ struct HomeScreen: View {
 
 // MARK: - Sections
 
+/// The wide warm tile: tonight's recap and how many are waiting.
 private struct RecapPrompt: View {
     let count: Int
     let palette: LightPalette
     let action: () -> Void
 
     var body: some View {
+        let shape = RoundedRectangle(cornerRadius: SBRadius.tile, style: .continuous)
         Button(action: action) {
-            FrostedCard(palette: palette) {
-                HStack(alignment: .center, spacing: 14) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        SmallLabel(count == 1 ? "1 waiting" : "\(count) waiting")
-                        MistHeadline("Time for **your recap.**", size: 24, alignment: .leading)
+            HStack(alignment: .center, spacing: 14) {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Tonight's recap")
+                        .sbText(.body, color: SBColor.ink)
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Text("\(count)")
+                            .sbText(.numL)
+                            .monospacedDigit()
+                        Text("waiting")
+                            .sbText(.unit)
                     }
-                    Spacer()
-                    Image(systemName: "arrow.right")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundStyle(SBColor.ink)
                 }
+                Spacer()
+                SBIconView(.arrow, size: 18)
+                    .foregroundStyle(SBColor.ground)
+                    .frame(width: 44, height: 44)
+                    .background(Circle().fill(SBColor.accent))
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 18)
+            .frame(maxWidth: .infinity, minHeight: 112, alignment: .leading)
+            .background {
+                ZStack(alignment: .bottomTrailing) {
+                    LinearGradient(
+                        stops: [
+                            .init(color: SBKind.events.deep, location: 0),
+                            .init(color: SBRamp.r2, location: 0.45),
+                            .init(color: SBKind.events.core, location: 1),
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    SBLight(SBKind.places.core, width: 240, height: 150, opacity: 0.55)
+                        .offset(x: 30, y: 90)
+                }
+                .clipShape(shape)
+            }
+            .contentShape(shape)
+        }
+        .buttonStyle(SBPressStyle())
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(Text(count == 1 ? "Tonight's recap, 1 waiting" : "Tonight's recap, \(count) waiting"))
+        .accessibilityAddTraits(.isButton)
+    }
+}
+
+/// How far along the score is: a warm track with the done part in warm white.
+private struct ScoreTrack: View {
+    let done: Int
+    let total: Int
+
+    var body: some View {
+        GeometryReader { proxy in
+            ZStack(alignment: .leading) {
+                Capsule().fill(SBColor.warm(0.14))
+                Capsule()
+                    .fill(SBColor.accent)
+                    .frame(width: proxy.size.width * CGFloat(total > 0 ? Double(done) / Double(total) : 0))
             }
         }
-        .buttonStyle(.plain)
+        .frame(height: 4)
+        .accessibilityHidden(true)
     }
 }
 
@@ -109,7 +170,7 @@ private struct ComingUpSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            SmallLabel("Coming up")
+            SBLabel("Coming up")
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(alignment: .top, spacing: 0) {
                     ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
@@ -119,14 +180,14 @@ private struct ComingUpSection: View {
                         .buttonStyle(.plain)
                     }
                 }
-                .padding(.horizontal, 20)
+                .padding(.horizontal, SBSpace.gutter)
             }
-            .padding(.horizontal, -20)
+            .padding(.horizontal, -SBSpace.gutter)
         }
     }
 }
 
-/// A folder-tab card standing on the timeline line, the soonest one marked in orange.
+/// A folder-tab card standing on the timeline line, the soonest one marked in warm white.
 private struct ComingUpColumn: View {
     let item: ScreenshotItem
     let isNext: Bool
@@ -136,19 +197,17 @@ private struct ComingUpColumn: View {
             FolderTabCard(tab: dayText, palette: palette) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(item.title ?? "Something you saved")
-                        .font(SBFont.body(15, weight: .semibold))
-                        .foregroundStyle(SBColor.ink)
+                        .sbText(.title)
                         .lineLimit(2)
                     Text(relative)
-                        .font(SBFont.mono(11))
-                        .foregroundStyle(SBColor.inkSecondary)
+                        .sbText(.labelDim)
                 }
             }
             .frame(width: 196, height: 196)
             ZStack(alignment: .leading) {
-                Rectangle().fill(SBColor.hairline).frame(height: 1)
+                Rectangle().fill(SBColor.line).frame(height: 1)
                 Circle()
-                    .fill(isNext ? SBColor.accent : SBColor.inkSecondary.opacity(0.5))
+                    .fill(isNext ? SBColor.accent : SBColor.warm(0.3))
                     .frame(width: 7, height: 7)
                     .padding(.leading, 18)
             }
@@ -180,13 +239,14 @@ private struct StillWantSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            SmallLabel("Still want")
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+            SBLabel("Still want")
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: SBSpace.gap), GridItem(.flexible(), spacing: SBSpace.gap)], spacing: SBSpace.gap) {
                 ForEach(shelves) { shelf in
                     NavigationLink(value: HomeRoute.category(shelf.category)) {
-                        LightTile(CategoryName.title(shelf.category), detail: detail(shelf), palette: palette(shelf))
+                        SBKindTile(kind: SBKind(shelf.category), title: CategoryName.title(shelf.category), count: shelf.items.count, height: 180)
+                            .accessibilityHint(Text(detail(shelf)))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(SBPressStyle())
                 }
             }
         }
@@ -212,11 +272,10 @@ private struct SearchSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            SmallLabel("Find anything you saved")
+            SBLabel("Find anything you saved")
             HStack(spacing: 10) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 15, weight: .light))
-                    .foregroundStyle(SBColor.inkSecondary)
+                SBIconView(.search, size: 18)
+                    .foregroundStyle(SBColor.ink2)
                 TextField("Wifi password, that address, the recipe…", text: $home.query)
                     .font(SBFont.body(16))
                     .foregroundStyle(SBColor.ink)
@@ -227,9 +286,8 @@ private struct SearchSection: View {
                     Button {
                         home.query = ""
                     } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(SBColor.inkSecondary)
+                        SBIconView(.x, size: 14)
+                            .foregroundStyle(SBColor.ink2)
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(Text("Clear search"))
@@ -241,15 +299,16 @@ private struct SearchSection: View {
 
             if !home.query.isEmpty {
                 if home.results.isEmpty {
-                    SmallLabel("Nothing matches that yet.")
+                    Text("Nothing matches that yet.")
+                        .sbText(.body)
                         .padding(.leading, 18)
                 } else {
-                    VStack(spacing: 8) {
+                    VStack(spacing: SBSpace.gap) {
                         ForEach(home.results) { item in
                             NavigationLink(value: HomeRoute.item(item.id)) {
                                 ItemRow(item: item)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(SBPressStyle())
                         }
                     }
                 }
@@ -265,27 +324,32 @@ struct ItemRow: View {
     var body: some View {
         HStack(spacing: 14) {
             ZStack {
-                LightField(.glow(.item(category: item.category, colors: item.palette, isSafeToDisplay: item.isSafeToDisplay)), grain: 0)
+                SBColor.surface2
                 AssetImage(item.assetLocalID, maxPixelSize: 180)
             }
             .frame(width: 52, height: 64)
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            VStack(alignment: .leading, spacing: 3) {
+            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(SBColor.line, lineWidth: 1))
+            VStack(alignment: .leading, spacing: 5) {
                 Text(item.title ?? "Something you saved")
-                    .font(SBFont.body(15, weight: .semibold))
-                    .foregroundStyle(SBColor.ink)
+                    .sbText(.title)
                     .lineLimit(1)
-                Text("\(CategoryName.title(item.category).uppercased()) · \(item.createdAt.formatted(date: .abbreviated, time: .omitted).uppercased())")
-                    .font(SBFont.mono(11))
-                    .foregroundStyle(SBColor.inkSecondary)
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(SBKind(item.category).core)
+                        .frame(width: 6, height: 6)
+                        .shadow(color: SBKind(item.category).core, radius: 4)
+                    Text("\(CategoryName.title(item.category)) · \(item.createdAt.formatted(date: .abbreviated, time: .omitted))")
+                        .sbText(.labelDim)
+                        .lineLimit(1)
+                }
             }
             Spacer(minLength: 0)
-            Image(systemName: "chevron.right")
-                .font(.system(size: 12, weight: .light))
-                .foregroundStyle(SBColor.inkSecondary)
+            SBIconView(.system("chevron.right"), size: 14)
+                .foregroundStyle(SBColor.ink2)
         }
         .padding(10)
-        .sbGlass(in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(SBColor.surface))
         .accessibilityElement(children: .combine)
     }
 }
@@ -299,24 +363,23 @@ private struct RevealsSection: View {
     var body: some View {
         let lastMonth = RevealPeriod.lastMonth()
         VStack(alignment: .leading, spacing: 14) {
-            SmallLabel("Your Reveals")
-            HStack(spacing: 12) {
+            SBLabel("Your Reveals")
+            HStack(spacing: SBSpace.gap) {
                 Button { onReveal(lastMonth) } label: {
                     LightTile("\(lastMonth.name()) Reveal", detail: isPremium ? "FULL STATS" : "FREE · FULL WITH PREMIUM", palette: palette)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(SBPressStyle())
                 Button { onReveal(.allTime) } label: {
                     LightTile("All-time Reveal", detail: isPremium ? "EVERY SCREENSHOT" : "PREMIUM", palette: palette.reversed)
                         .overlay(alignment: .topTrailing) {
                             if !isPremium {
-                                Image(systemName: "lock")
-                                    .font(.system(size: 12, weight: .light))
+                                SBIconView(.system("lock"), size: 14)
                                     .foregroundStyle(SBColor.ink)
-                                    .padding(14)
+                                    .padding(16)
                             }
                         }
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(SBPressStyle())
             }
         }
     }
@@ -330,18 +393,18 @@ private struct DroppedRow: View {
         HStack(spacing: 14) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(count == 1 ? "1 dropped screenshot" : "\(count) dropped screenshots")
-                    .font(SBFont.body(15, weight: .semibold))
-                    .foregroundStyle(SBColor.ink)
-                SmallLabel("Clear them out of Photos in one go")
+                    .sbText(.title)
+                Text("Clear them out of Photos in one go")
+                    .sbText(.body)
             }
             Spacer()
             Button(action: action) {
-                Chip("Delete")
+                SBChip("Delete")
             }
-            .buttonStyle(.plain)
+            .buttonStyle(SBPressStyle())
         }
         .padding(18)
-        .sbGlass(in: RoundedRectangle(cornerRadius: SBRadius.card, style: .continuous))
+        .background(RoundedRectangle(cornerRadius: SBRadius.tile, style: .continuous).fill(SBColor.surface))
     }
 }
 

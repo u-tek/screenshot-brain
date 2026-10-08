@@ -21,11 +21,11 @@ enum MainTab: String, CaseIterable, Identifiable {
         }
     }
 
-    var systemImage: String {
+    var icon: SBIcon {
         switch self {
-        case .saved: "square.stack"
-        case .recap: "rectangle.on.rectangle.angled"
-        case .settings: "slider.horizontal.3"
+        case .saved: .bookmark
+        case .recap: .stack
+        case .settings: .sliders
         }
     }
 }
@@ -166,45 +166,56 @@ struct MainTabs: View {
     }
 }
 
-/// The floating glass tab bar.
+/// The floating tab bar: a warm glass capsule, the current tab lit.
 struct GlassTabBar: View {
     @Binding var selection: MainTab
     var recapCount: Int = 0
 
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 2) {
             ForEach(MainTab.allCases) { tab in
                 Button {
                     Haptics.selection()
                     selection = tab
                 } label: {
                     VStack(spacing: 4) {
-                        Image(systemName: tab.systemImage)
-                            .font(.system(size: 17, weight: selection == tab ? .regular : .light))
+                        SBIconView(tab.icon, size: 20)
                             .overlay(alignment: .topTrailing) {
                                 if tab == .recap, recapCount > 0 {
-                                    Circle().fill(SBColor.accent).frame(width: 7, height: 7).offset(x: 6, y: -2)
+                                    Circle()
+                                        .fill(SBColor.accent)
+                                        .frame(width: 7, height: 7)
+                                        .shadow(color: SBKind.events.core, radius: 4)
+                                        .offset(x: 6, y: -2)
                                 }
                             }
                         Text(tab.title)
-                            .font(.system(size: 10, weight: selection == tab ? .semibold : .regular))
+                            .font(.system(size: 11, weight: .medium))
                     }
-                    .foregroundStyle(selection == tab ? SBColor.ink : SBColor.inkSecondary)
-                    .frame(width: 88, height: 54)
+                    .foregroundStyle(selection == tab ? SBColor.ink : SBColor.ink2)
+                    .frame(width: 96, height: 56)
                     .background {
                         if selection == tab {
-                            Capsule().fill(Color.white.opacity(0.35))
+                            Capsule().fill(SBColor.warm(0.12))
                         }
                     }
                     .contentShape(Capsule())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(SBPressStyle())
                 .accessibilityLabel(Text(tab == .recap && recapCount > 0 ? "Recap, \(recapCount) waiting" : tab.title))
                 .accessibilityAddTraits(selection == tab ? .isSelected : [])
             }
         }
-        .padding(6)
-        .sbGlass(in: Capsule())
+        .padding(4)
+        .background {
+            ZStack {
+                Capsule().fill(.ultraThinMaterial)
+                Capsule().fill(SBColor.tabBarFill)
+                Capsule().strokeBorder(SBColor.line, lineWidth: 1)
+                Capsule().strokeBorder(LinearGradient(colors: [SBColor.warm(0.08), .clear], startPoint: .top, endPoint: UnitPoint(x: 0.5, y: 0.2)), lineWidth: 1)
+            }
+            .shadow(color: .black.opacity(0.4), radius: 15, y: 10)
+        }
     }
 }
 
@@ -222,6 +233,8 @@ struct RecapTab: View {
                     self.triage = nil
                     onFinish()
                 }
+                // The tab bar stays under the deck, so the decision row sits above it.
+                .environment(\.sbBottomClearance, SBSpace.tabBarHeight + 4)
             } else {
                 CaughtUp(palette: model.palette)
             }
@@ -245,13 +258,14 @@ private struct CaughtUp: View {
                 Spacer()
                 GlassLens(diameter: 140)
                 Spacer()
-                SmallLabel("Recap")
+                SBLabel("Recap")
                 MistHeadline("All caught up. **Nice.**", size: 32)
                 MistBody("New screenshots turn up here at **wind-down time.**")
                     .padding(.horizontal, 36)
                     .padding(.bottom, 120)
             }
         }
+        .sbScreen()
     }
 }
 
@@ -262,31 +276,26 @@ struct CategoryScreen: View {
     let items: [ScreenshotItem]
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                HStack {
-                    GlassIconButton("chevron.left", label: "Back") { dismiss() }
-                    Spacer()
-                }
-                SmallLabel(items.count == 1 ? "1 kept" : "\(items.count) kept")
-                MistHeadline("Still want: **\(CategoryName.title(category).lowercased()).**", size: 30, alignment: .leading)
-                VStack(spacing: 8) {
-                    ForEach(items) { item in
-                        NavigationLink(value: HomeRoute.item(item.id)) {
-                            ItemRow(item: item)
+        VStack(spacing: 0) {
+            SBNavHeader(title: CategoryName.title(category), onLeading: { dismiss() })
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    SBLabel("Still want · \(items.count)")
+                    VStack(spacing: SBSpace.gap) {
+                        ForEach(items) { item in
+                            NavigationLink(value: HomeRoute.item(item.id)) {
+                                ItemRow(item: item)
+                            }
+                            .buttonStyle(SBPressStyle())
                         }
-                        .buttonStyle(.plain)
                     }
                 }
+                .padding(.horizontal, SBSpace.gutter)
+                .padding(.top, 16)
+                .padding(.bottom, 40)
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 8)
-            .padding(.bottom, 40)
         }
-        .background {
-            LightField(.bloom(.category(category)).shifted(down: -0.1), drifts: true)
-                .ignoresSafeArea()
-        }
+        .sbScreen()
         .toolbar(.hidden, for: .navigationBar)
     }
 }

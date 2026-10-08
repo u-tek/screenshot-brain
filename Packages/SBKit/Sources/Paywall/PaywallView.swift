@@ -277,7 +277,7 @@ struct TickingWidget: View {
             LightField(.bloom(.category(item.category)).shifted(down: -0.1), grain: 0.04)
                 .clipShape(shape)
         }
-        .overlay(shape.strokeBorder(.white.opacity(0.6), lineWidth: 1))
+        .overlay(shape.strokeBorder(SBColor.warm(0.14), lineWidth: 1))
         .offset(y: ticking ? -14 : 0)
         .opacity(ticking ? 0 : 1)
         .accessibilityElement()

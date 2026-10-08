@@ -7,8 +7,8 @@ import SwiftUI
 import Triage
 import UIKit
 
-/// One saved thing: the screenshot lifted over a huge soft blur of itself, what was read from
-/// it, and what to do about it.
+/// One saved thing: what it is, the screenshot in a lit tile, what was read from it, and what to
+/// do about it.
 struct ItemDetailScreen: View {
     @EnvironmentObject private var model: AppModel
     @Environment(\.dismiss) private var dismiss
@@ -61,79 +61,91 @@ struct ItemDetailScreen: View {
     /// A link to something that's been deleted since: say so, with a way back.
     private var missing: some View {
         VStack(alignment: .leading, spacing: 12) {
-            GlassIconButton("chevron.left", label: "Back") { dismiss() }
+            SBNavHeader(onLeading: { dismiss() })
+                .padding(.horizontal, -SBSpace.gutter)
             Spacer()
             MistHeadline("This one's **gone.**", size: 30, alignment: .leading)
             MistBody("It may have been deleted, here or in Photos.", alignment: .leading)
             Spacer()
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 8)
+        .padding(.horizontal, SBSpace.gutter)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(LightField(.sweep(model.palette)).ignoresSafeArea())
+        .sbScreen()
     }
 
     private func content(_ item: ScreenshotItem) -> some View {
-        ZStack(alignment: .bottom) {
-            // A huge, soft blur of the screenshot itself, misted over.
-            AssetImage(item.assetLocalID, maxPixelSize: 200)
-                .blur(radius: 60)
-                .scaleEffect(1.4)
-                .opacity(0.8)
-                .overlay(LinearGradient(colors: [SBColor.mistTop.opacity(0.45), SBColor.mistBottom.opacity(0.85)], startPoint: .top, endPoint: .bottom))
-                .background(LightField(.sweep(palette(item))))
-                .ignoresSafeArea()
-
+        let kind = SBKind(item.category)
+        return ZStack(alignment: .bottom) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
-                    HStack {
-                        GlassIconButton("chevron.left", label: "Back") { dismiss() }
-                        Spacer()
+                    SBNavHeader(onLeading: { dismiss() }) {
                         decisionMenu(item)
                     }
+                    .padding(.horizontal, -SBSpace.gutter)
 
-                    // The item's own light shows until the screenshot loads (or if it's gone).
-                    AssetImage(item.assetLocalID, maxPixelSize: 1400, allowsNetwork: true)
-                        .background(LightField(.glow(palette(item)), grain: 0.04))
-                        .aspectRatio(9 / 19.5, contentMode: .fit)
-                        .frame(maxHeight: 340)
-                        .clipShape(RoundedRectangle(cornerRadius: SBRadius.card, style: .continuous))
-                        .overlay(RoundedRectangle(cornerRadius: SBRadius.card, style: .continuous).strokeBorder(.white.opacity(0.7), lineWidth: 1))
-                        .shadow(color: .black.opacity(0.06), radius: 40)
-                        .frame(maxWidth: .infinity)
-
-                    VStack(alignment: .leading, spacing: 10) {
-                        SmallLabel("\(CategoryName.title(item.category)) · Saved \(item.createdAt.formatted(.relative(presentation: .named)))")
-                        MistHeadline(headline(item), size: 30, alignment: .leading)
+                    // What it is: the kind and when, the name, and the day for events.
+                    VStack(spacing: 10) {
+                        HStack(spacing: 8) {
+                            Circle()
+                                .fill(kind.core)
+                                .frame(width: 6, height: 6)
+                                .shadow(color: kind.core, radius: 4)
+                            SBLabel("\(CategoryName.title(item.category)) · Saved \(item.createdAt.formatted(.relative(presentation: .named)))", dim: false)
+                        }
+                        Text(item.title ?? "Something you saved")
+                            .sbText(.large)
+                            .multilineTextAlignment(.center)
+                            .lineLimit(3)
+                            .minimumScaleFactor(0.7)
+                        if let day = dayLine(item) {
+                            Text(day)
+                                .sbText(.body)
+                        }
                     }
+                    .frame(maxWidth: .infinity)
+
+                    // The screenshot, lit from behind in its kind's colour. The tile shows the
+                    // light until the screenshot loads (or if it's gone).
+                    ZStack {
+                        SBColor.surface
+                        SBLight(kind.core, width: 260, height: 300, opacity: 0.5, blur: 50)
+                        AssetImage(item.assetLocalID, maxPixelSize: 1400, allowsNetwork: true)
+                            .aspectRatio(9 / 19.5, contentMode: .fit)
+                            .frame(maxHeight: 326)
+                            .clipShape(RoundedRectangle(cornerRadius: SBRadius.shot, style: .continuous))
+                            .overlay(RoundedRectangle(cornerRadius: SBRadius.shot, style: .continuous).strokeBorder(SBColor.warm(0.14), lineWidth: 1))
+                            .shadow(color: .black.opacity(0.55), radius: 24, y: 24)
+                            .padding(.vertical, 28)
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: SBRadius.tile, style: .continuous))
 
                     DataRows(rows(item))
 
                     actions(item)
-
-                    if let note {
-                        SmallLabel(note)
-                            .transition(.opacity)
-                    }
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 8)
+                .padding(.horizontal, SBSpace.gutter)
                 .padding(.bottom, 120)
             }
 
-            primaryAction(item)
-                .padding(.horizontal, 12)
-                .padding(.bottom, 8)
+            VStack(spacing: 12) {
+                if let note {
+                    SBToast(note)
+                        .transition(.opacity.combined(with: .offset(y: 8)))
+                }
+                primaryAction(item)
+            }
+            .padding(.horizontal, 12)
+            .padding(.bottom, 8)
         }
+        .sbScreen()
     }
 
     // MARK: Parts
 
-    private func headline(_ item: ScreenshotItem) -> String {
-        let title = item.title ?? "Something you saved"
-        guard let due = item.dueDate, item.category == .event else { return "**\(title)**" }
-        let day = Calendar.current.isDateInToday(due) ? "today" : due.formatted(.dateTime.weekday(.wide))
-        return "\(title) is **\(day).**"
+    /// "Today" or the weekday, for events.
+    private func dayLine(_ item: ScreenshotItem) -> String? {
+        guard let due = item.dueDate, item.category == .event else { return nil }
+        return Calendar.current.isDateInToday(due) ? "Today" : due.formatted(.dateTime.weekday(.wide).day().month(.wide))
     }
 
     private func rows(_ item: ScreenshotItem) -> [(String, String)] {
@@ -167,31 +179,40 @@ struct ItemDetailScreen: View {
         }
     }
 
+    /// What to do about it: the first action as a solid pill, the rest as outlined pills in rows of
+    /// up to three, all lit in the item's kind.
     private func actions(_ item: ScreenshotItem) -> some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 10) {
-                ForEach(ItemAction.available(for: item)) { action in
-                    Button {
-                        run(action, on: item)
-                    } label: {
-                        HStack(spacing: 7) {
-                            Image(systemName: action.systemImage)
-                                .font(.system(size: 13, weight: .light))
-                            Text(action.shortTitle)
-                                .font(SBFont.body(14))
+        let available = ItemAction.available(for: item)
+        let kind = SBKind(item.category)
+        let rest = Array(available.dropFirst())
+        let rows = stride(from: 0, to: rest.count, by: 3).map { Array(rest[$0..<min($0 + 3, rest.count)]) }
+        return VStack(alignment: .leading, spacing: SBSpace.gap) {
+            if !available.isEmpty {
+                SBLabel("Do it")
+                    .padding(.bottom, 4)
+            }
+            if let first = available.first {
+                SBScenarioButton(
+                    first.shortTitle,
+                    icon: SBIcon(systemName: first.systemImage),
+                    color: kind.core,
+                    fill: LinearGradient(colors: [SBRamp.r4, kind.core], startPoint: UnitPoint(x: 0, y: 0.4), endPoint: UnitPoint(x: 1, y: 0.6))
+                ) {
+                    run(first, on: item)
+                }
+                .accessibilityLabel(Text(first.title))
+            }
+            ForEach(rows.indices, id: \.self) { index in
+                HStack(spacing: SBSpace.gap) {
+                    ForEach(rows[index]) { action in
+                        SBScenarioButton(action.shortTitle, icon: SBIcon(systemName: action.systemImage), color: kind.core) {
+                            run(action, on: item)
                         }
-                        .foregroundStyle(SBColor.ink)
-                        .padding(.horizontal, 16)
-                        .frame(height: 44)
-                        .sbGlass(in: Capsule())
+                        .accessibilityLabel(Text(action.title))
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(Text(action.title))
                 }
             }
-            .padding(.horizontal, 20)
         }
-        .padding(.horizontal, -20)
     }
 
     private func decisionMenu(_ item: ScreenshotItem) -> some View {
@@ -202,11 +223,7 @@ struct ItemDetailScreen: View {
                 Button { decide(.reference, item) } label: { Label("Just for reference", systemImage: "archivebox") }
             }
         } label: {
-            Image(systemName: "ellipsis")
-                .font(.system(size: 15, weight: .light))
-                .foregroundStyle(SBColor.ink)
-                .frame(width: SBRadius.iconButton, height: SBRadius.iconButton)
-                .sbGlass(in: Circle())
+            SBCircleLabel(.more)
         }
         .accessibilityLabel(Text("More"))
     }
