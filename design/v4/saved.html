@@ -13,10 +13,7 @@
   /* One light per tile: a wide ellipse centred on the top edge. Full core colour across the top, then the deep edge, then the surface. */
   .light { left: -60%; right: -60%; top: -100px; height: 200px; background: radial-gradient(ellipse closest-side, var(--c) 0%, var(--c) 40%, var(--d) 75%, transparent 100%); }
 
-  .lbl { position: absolute; left: 0; right: 0; top: 85.5%; transform: translateY(-50%); z-index: 2; text-align: center; white-space: nowrap; }
-  .reference .lbl { top: 49.2%; }
-  .recipes .lbl { top: 74%; }
-  .grip { position: absolute; top: 17.5px; right: 16px; width: 13px; height: 13px; z-index: 2; }
+  .lbl { position: absolute; left: 0; right: 0; bottom: 26px; z-index: 2; text-align: center; white-space: nowrap; }
 </style>
 </head><body>
 <div class="phone" id="phone">
@@ -27,11 +24,11 @@
   </div>
 
   <div class="grid">
-    <div class="tile places"><div class="light" style="--c: var(--places-c); --d: var(--places-d)"></div><div class="t-label lbl">PLACES <span class="t-label dim">· 9</span></div><div class="grip" data-grip></div></div>
-    <div class="tile events"><div class="light" style="--c: var(--events-c); --d: var(--events-d)"></div><div class="t-label lbl">EVENTS <span class="t-label dim">· 14</span></div><div class="grip" data-grip></div></div>
-    <div class="tile reference"><div class="light" style="--c: var(--reference-c); --d: var(--reference-d)"></div><div class="t-label lbl">REFERENCE <span class="t-label dim">· 23</span></div><div class="grip" data-grip></div></div>
-    <div class="tile products"><div class="light" style="--c: var(--products-c); --d: var(--products-d)"></div><div class="t-label lbl">PRODUCTS <span class="t-label dim">· 6</span></div><div class="grip" data-grip></div></div>
-    <div class="tile recipes"><div class="light" style="--c: var(--recipes-c); --d: var(--recipes-d)"></div><div class="t-label lbl">RECIPES <span class="t-label dim">· 4</span></div><div class="grip" data-grip></div></div>
+    <div class="tile places"><div class="light" style="--c: var(--places-c); --d: var(--places-d)"></div><div class="t-label lbl">PLACES <span class="t-label dim">· 9</span></div></div>
+    <div class="tile events"><div class="light" style="--c: var(--events-c); --d: var(--events-d)"></div><div class="t-label lbl">EVENTS <span class="t-label dim">· 14</span></div></div>
+    <div class="tile reference"><div class="light" style="--c: var(--reference-c); --d: var(--reference-d)"></div><div class="t-label lbl">REFERENCE <span class="t-label dim">· 23</span></div></div>
+    <div class="tile products"><div class="light" style="--c: var(--products-c); --d: var(--products-d)"></div><div class="t-label lbl">PRODUCTS <span class="t-label dim">· 6</span></div></div>
+    <div class="tile recipes"><div class="light" style="--c: var(--recipes-c); --d: var(--recipes-d)"></div><div class="t-label lbl">RECIPES <span class="t-label dim">· 4</span></div></div>
   </div>
 
   <div class="tabbar">
@@ -46,8 +43,7 @@
 <script>
   const ph = document.getElementById('phone');
   ph.insertAdjacentHTML('afterbegin', statusBar(true));
-  const grip = '<svg width="13" height="13" viewBox="0 0 13 13"><g style="fill:var(--ink-2)"><circle cx="1.75" cy="1.75" r="1.75"/><circle cx="11.25" cy="1.75" r="1.75"/><circle cx="1.75" cy="11.25" r="1.75"/><circle cx="11.25" cy="11.25" r="1.75"/></g></svg>';
-  document.querySelectorAll('[data-grip]').forEach(el => el.innerHTML = grip);
+  // width="13" height="13" viewBox="0 0 13 13"><g style="fill:var(--ink-2)"><circle cx="1.75" cy="1.75" r="1.75"/><circle cx="11.25" cy="1.75" r="1.75"/><circle cx="1.75" cy="11.25" r="1.75"/><circle cx="11.25" cy="11.25" r="1.75"/></g></svg>';
   document.querySelectorAll('[data-icon]').forEach(el => el.insertAdjacentHTML('afterbegin', icon(el.dataset.icon, 20)));
 </script>
 </body></html>

@@ -1,25 +1,35 @@
-/* Screenshot Brain design system: one ground, five lights, one accent, one set of components.
+/* Screenshot Brain design system: one warm ground, one warm ramp, one set of components.
    Every screen links base.css then system.css, and uses these tokens and classes instead of its
    own colours, fonts and button styles. */
 
 :root {
-  /* Ground and surfaces */
-  --ground: #0b0b0c;
-  --surface: #161618;          /* neutral tiles and panels */
-  --surface-2: #1f1f22;        /* circle buttons, dark controls */
-  --line: rgba(255, 255, 255, .13);
+  /* Ground and surfaces: warm blacks, never blue. */
+  --ground: #0b0a09;
+  --surface: #161412;          /* neutral tiles and panels */
+  --surface-2: #211e1b;        /* circle buttons, dark controls */
+  --line: rgba(255, 240, 225, .12);
   /* Ink */
-  --ink: #f4f3f1;
-  --ink-2: #a3a3a8;
-  --ink-3: #66666b;
-  /* The one accent: done, progress, the live marker. Nothing else is yellow or green. */
-  --lime: #d9ff3d;
-  /* The five lights: one per kind of thing. -c is the bright core, -d the deep edge. */
-  --places-c: #ff8a6b;   --places-d: #a8402c;
-  --events-c: #e66aa8;   --events-d: #8e2560;
-  --products-c: #8b90f2; --products-d: #343890;
-  --recipes-c: #92b8a4;  --recipes-d: #36533f;
-  --reference-c: #f2dcc0; --reference-d: #7d6a52;
+  --ink: #f6f1ea;
+  --ink-2: #a39b92;
+  --ink-3: #69635d;
+  /* One warm ramp. Every colour in the app is a neutral or a step on it. */
+  --ramp-0: #1d0e08;
+  --ramp-1: #4a1c0c;
+  --ramp-2: #8e3415;
+  --ramp-3: #e2582b;
+  --ramp-4: #ff8a57;
+  --ramp-5: #ffb381;
+  --ramp-6: #f2d4b6;
+  --ramp-7: #f6ece2;
+  /* The accent for done, progress and the live point is warm white, not a new hue. */
+  --accent: #f6ece2;
+  --lime: var(--accent);
+  /* The five kinds are five steps on the ramp. -c is the lit core, -d the deep edge. */
+  --events-c: #ec5f2e;    --events-d: #5a1707;
+  --places-c: #ff8a57;    --places-d: #7c2c10;
+  --products-c: #ffb381;  --products-d: #7f4520;
+  --recipes-c: #e8c49e;   --recipes-d: #5f442c;
+  --reference-c: #d6cdc3; --reference-d: #48423c;
   /* Shape */
   --r-tile: 28px;
   --r-card: 34px;
@@ -37,7 +47,7 @@
 .t-unit { font-family: "Inter", sans-serif; font-weight: 400; font-size: 17px; color: var(--ink); }
 .t-title { font-family: "Inter", sans-serif; font-weight: 600; font-size: 17px; line-height: 1.2; letter-spacing: -0.01em; color: var(--ink); }
 .t-body { font-family: "Inter", sans-serif; font-weight: 400; font-size: 15px; line-height: 1.35; color: var(--ink-2); }
-.t-label { font-family: "Mono", ui-monospace, monospace; font-weight: 500; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink); }
+.t-label { font-family: "Mono", ui-monospace, monospace; font-weight: 500; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink); }
 .t-label.dim { color: var(--ink-2); }
 .t-story { font-family: "Serif", Georgia, serif; font-weight: 400; font-size: 52px; line-height: 1; letter-spacing: .14em; text-transform: uppercase; color: var(--ink); }
 

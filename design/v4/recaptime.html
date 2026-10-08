@@ -1,105 +1,65 @@
 <!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="base.css"><link rel="stylesheet" href="system.css"><script src="kit.js"></script>
 <style>
-  .phone { font-family: "Inter", system-ui, sans-serif; background: var(--ground); }
   .abs { position: absolute; white-space: nowrap; line-height: 1; }
-
-  /* The big card: same box, radius from the system; colour is the events light. */
-  .card { position: absolute; left: 6px; top: 141px; width: 381px; height: 704px; border-radius: var(--r-card); background: var(--events-c); overflow: hidden;
-    /* The events light, muted for a whole surface: closer to the dusty pink of the reference. */
-    --events-c: color-mix(in srgb, #e66aa8 58%, #c4adbd); }
-  .glow { position: absolute; left: 5.5px; top: 28px; width: 370px; height: 436px;
-    background: radial-gradient(185px 218px at 50% 50%,
-      var(--ground) 0%, color-mix(in srgb, var(--events-d) 9%, var(--ground)) 12%, color-mix(in srgb, var(--events-d) 18%, var(--ground)) 25%,
-      color-mix(in srgb, var(--events-d) 57%, var(--ground)) 30%, color-mix(in srgb, var(--events-c) 10%, var(--events-d)) 36%,
-      color-mix(in srgb, var(--events-c) 28%, var(--events-d)) 41%, color-mix(in srgb, var(--events-c) 36%, var(--events-d)) 47%,
-      color-mix(in srgb, var(--events-c) 40%, var(--events-d)) 52%, color-mix(in srgb, var(--events-c) 48%, var(--events-d)) 58%,
-      color-mix(in srgb, var(--events-c) 55%, var(--events-d)) 63%, color-mix(in srgb, var(--events-c) 62%, var(--events-d)) 68%,
-      color-mix(in srgb, var(--events-c) 68%, var(--events-d)) 74%, color-mix(in srgb, var(--events-c) 75%, var(--events-d)) 79%,
-      color-mix(in srgb, var(--events-c) 80%, var(--events-d)) 85%, color-mix(in srgb, var(--events-c) 86%, var(--events-d)) 90%,
-      color-mix(in srgb, var(--events-c) 90%, var(--events-d)) 95%, var(--events-c) 100%); }
-
-  .label { left: 51px; top: 197px; }
-  .toggle { position: absolute; left: 253px; top: 187px; width: 89px; height: 44px; border-radius: 22px; background: rgba(255,255,255,.22); }
-  .toggle .on { position: absolute; left: 14px; top: 15.5px; font-size: 15px; font-weight: 400; color: var(--ink); line-height: 1; }
-  .toggle .tknob { position: absolute; left: 53px; top: 7px; width: 29px; height: 29px; border-radius: 50%; background: #fff; }
-
-  .big { left: 0; width: 393px; text-align: center; top: 340.5px; }
-  .unit { left: 0; width: 393px; text-align: center; top: 445px; }
-
-  .tick { position: absolute; top: 475.6px; height: 36px; width: 1.5px; background: rgba(255,255,255,.55); }
-  .tick.minor { top: 482.6px; height: 22px; width: 1px; background: rgba(255,255,255,.3); }
-  .now { position: absolute; left: 195px; top: 475.6px; width: 3px; height: 36px; border-radius: 1.5px; background: var(--lime); }
-
-  .pd { position: absolute; border-radius: 50%; background: #fff; }
-
-  .day { left: 50px; top: 631.8px; color: var(--ink); }
-  .date { left: 50px; top: 664.6px; color: var(--ink); opacity: .4; font-variant-numeric: tabular-nums; }
-  .mk { position: absolute; left: 115.8px; width: 29px; height: 29px; }
-  .val { left: 158px; }
-
-  .dial-halo { position: absolute; left: 247.2px; top: 609px; width: 100px; height: 100px; border-radius: 50%;
-    background: radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--events-d) 40%, var(--ground)) 0, color-mix(in srgb, var(--events-d) 65%, var(--ground)) 26px,
-      color-mix(in srgb, var(--events-d) 60%, transparent) 36px, color-mix(in srgb, var(--events-d) 30%, transparent) 41px, transparent 48px); }
-  .dial-svg { position: absolute; left: 247.2px; top: 609px; width: 100px; height: 100px; }
-  .dknob { position: absolute; left: 274.2px; top: 636px; width: 46px; height: 46px; border-radius: 50%; background: #f7f6f6; }
-  .dknob::after { content: ""; position: absolute; left: 20.5px; top: 20.5px; width: 4px; height: 4px; border-radius: 50%; background: rgba(40,20,35,.45); }
+  /* One warm surface, a deep well of light in the middle where the time sits. */
+  .card { position: absolute; left: var(--gutter); right: var(--gutter); top: 122px; height: 704px; border-radius: 44px; overflow: hidden;
+    --card: color-mix(in srgb, var(--ramp-4) 62%, var(--ramp-6)); --deep: var(--ramp-1);
+    background: radial-gradient(120% 70% at 50% 100%, color-mix(in srgb, var(--card) 85%, var(--ramp-3)), var(--card) 60%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 30px 60px rgba(0,0,0,.4); }
+  .well { position: absolute; left: 50%; top: 232px; width: 360px; height: 420px; transform: translate(-50%, -50%); border-radius: 50%;
+    background: radial-gradient(closest-side, var(--ground) 0%, color-mix(in srgb, var(--deep) 60%, var(--ground)) 30%, var(--deep) 46%,
+      color-mix(in srgb, var(--ramp-3) 70%, var(--deep)) 64%, color-mix(in srgb, var(--card) 80%, var(--ramp-3)) 84%, var(--card) 100%); filter: blur(6px); }
+  .card > * { position: absolute; }
+  .label { left: 28px; top: 40px; color: #1d0e08; }
+  .toggle { right: 24px; top: 30px; width: 64px; height: 38px; border-radius: 19px; background: #1d0e08; }
+  .toggle i { position: absolute; right: 4px; top: 4px; width: 30px; height: 30px; border-radius: 50%; background: var(--ramp-7); }
+  .big { left: 0; right: 0; text-align: center; top: 176px; }
+  .unit { left: 0; right: 0; text-align: center; top: 282px; color: rgba(246,236,226,.7); }
+  .ruler { left: 40px; right: 40px; top: 322px; height: 36px; }
+  .ruler span { position: absolute; top: 7px; width: 1px; height: 22px; background: rgba(246,236,226,.4); }
+  .ruler span.maj { top: 0; height: 36px; width: 1.5px; background: rgba(246,236,226,.7); }
+  .ruler span.now { top: -4px; height: 44px; width: 3px; border-radius: 1.5px; background: var(--accent); box-shadow: 0 0 10px rgba(246,236,226,.8); }
+  .foot { left: 28px; right: 28px; top: 440px; display: flex; justify-content: space-between; align-items: center; color: #1d0e08; }
+  .knob { width: 92px; height: 92px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(circle, color-mix(in srgb, var(--deep) 70%, transparent) 40%, transparent 70%); }
+  .knob b { width: 50px; height: 50px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #fff, var(--ramp-7) 60%, var(--ramp-6));
+    box-shadow: 0 6px 14px rgba(29,14,8,.45), inset 0 -2px 3px rgba(29,14,8,.15); position: relative; }
+  .knob b::after { content: ""; position: absolute; left: 23px; top: 7px; width: 4px; height: 10px; border-radius: 2px; background: rgba(29,14,8,.4); }
+  .days { left: 28px; right: 28px; top: 552px; display: flex; justify-content: space-between; }
+  .days span { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font: 500 14px Inter; color: #1d0e08; border: 1px solid rgba(29,14,8,.25); }
+  .days span.on { background: #1d0e08; color: var(--ramp-7); border-color: #1d0e08; }
 </style>
 </head><body>
-<div class="phone">
+<div class="phone" id="p">
+  <div class="card">
+    <div class="well"></div>
+    <div class="t-nav label">Nightly recap</div>
+    <div class="toggle"><i></i></div>
+    <div class="t-num-xl big" style="font-size:104px">9:30</div>
+    <div class="t-unit unit">pm</div>
+    <div class="ruler" id="ruler"></div>
+    <div class="foot">
+      <div><div class="t-label" style="color:#1d0e08">WEEKNIGHTS</div><div class="t-body" style="color:rgba(29,14,8,.7);margin-top:6px">About two minutes</div></div>
+      <div class="knob"><b></b></div>
+    </div>
+    <div class="days" id="days"></div>
+  </div>
+  <div style="position:absolute;left:0;right:0;top:748px;display:flex;justify-content:center;z-index:5"><div class="cta" id="cta" style="background:#1d0e08">Set recap time</div></div>
   <div class="grain"></div>
-
-  <div class="card"><div class="glow"></div></div>
-
-  <div class="abs t-nav label">Nightly recap</div>
-  <div class="toggle"><div class="on">On</div><div class="tknob"></div></div>
-
-  <div class="abs t-num-xl big">9:30</div>
-  <div class="abs t-unit unit">pm</div>
-
-  <script>
-    (function () {
-      var phone = document.querySelector('.phone');
-      var html = '';
-      // header: back circle + title, at y = 62
-      html += '<div style="position:absolute;top:62px;left:16px;right:16px;display:flex;align-items:center;gap:14px;z-index:60"><span class="btn-circle">' + icon('back', 20) + '</span><span class="t-nav">Your recap</span><span style="flex:1"></span></div>';
-      // ruler: 24 ticks around a lime centre marker, pitch 10.5px; majors every 4th
-      for (var k = -12; k <= 12; k++) {
-        if (k === 0) continue;
-        var x = 196.5 + k * 10.5;
-        var major = (Math.abs(k) % 4 === 0);
-        var op = 1 - 0.55 * Math.pow(Math.abs(k) / 12, 2);
-        html += '<div class="tick' + (major ? '' : ' minor') + '" style="left:' + (x - (major ? 0.75 : 0.5)) + 'px;opacity:' + op.toFixed(3) + '"></div>';
-      }
-      html += '<div class="now"></div>';
-      // page dots: active first, then three small
-      html += '<div class="pd" style="left:178.75px;top:583.15px;width:6.5px;height:6.5px"></div>';
-      [191.8, 201.6, 211.4].forEach(function (cx) {
-        html += '<div class="pd" style="left:' + (cx - 2) + 'px;top:584.4px;width:4px;height:4px;opacity:.6"></div>';
-      });
-      // bottom-left block
-      html += '<div class="abs t-body day">mon</div>';
-      html += '<div class="abs t-num-l date">14</div>';
-      // hour marker (white; hand at 285deg = 21h) and minute marker (events light; hand at 180deg = :30)
-      var hr = 285 * Math.PI / 180, hx = 14.5 + Math.sin(hr) * 8.7, hy = 14.5 - Math.cos(hr) * 8.7;
-      html += '<svg class="mk" style="top:631.3px" width="29" height="29" viewBox="0 0 29 29"><circle cx="14.5" cy="14.5" r="14.5" fill="#fff"/><line x1="14.5" y1="14.5" x2="' + hx.toFixed(2) + '" y2="' + hy.toFixed(2) + '" style="stroke:var(--events-d)" stroke-width="2.4" stroke-linecap="round"/></svg>';
-      html += '<svg class="mk" style="top:668.2px" width="29" height="29" viewBox="0 0 29 29"><circle cx="14.5" cy="14.5" r="13.75" style="fill:var(--events-c);stroke:var(--events-d);stroke-width:1.5"/><line x1="14.5" y1="14.5" x2="14.5" y2="24.6" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></svg>';
-      html += '<div class="abs t-nav val" style="top:634.8px">21</div>';
-      html += '<div class="abs t-nav val" style="top:671.7px">30</div>';
-      // dial: halo, tick ring, knob
-      var ticks = '';
-      for (var i = 0; i < 36; i++) {
-        ticks += '<line x1="50" y1="4" x2="50" y2="10.5" transform="rotate(' + (i * 10) + ' 50 50)"/>';
-      }
-      html += '<div class="dial-halo"></div>';
-      html += '<svg class="dial-svg" viewBox="0 0 100 100"><g stroke="rgba(255,255,255,.66)" stroke-width="1.2" stroke-linecap="round" fill="none">' + ticks + '</g></svg>';
-      html += '<div class="dknob"></div>';
-      // forward action: centred .cta with the plus in its .go circle
-      html += '<div style="position:absolute;left:0;right:0;top:760.5px;display:flex;justify-content:center"><div class="cta">Set recap time<span class="go">' + icon('plus', 18) + '</span></div></div>';
-      phone.insertAdjacentHTML('beforeend', html);
-      phone.insertAdjacentHTML('afterbegin', statusBar(true));
-    })();
-  </script>
-
   <div class="home-indicator"></div>
 </div>
+<script>
+  const p = document.getElementById('p');
+  p.insertAdjacentHTML('afterbegin', statusBar(true) +
+    `<div style="position:absolute;top:62px;left:16px;right:16px;display:flex;align-items:center;gap:14px;z-index:60"><span class="btn-circle">${icon('back', 20)}</span><span class="t-nav">Your recap</span></div>`);
+  document.getElementById('cta').insertAdjacentHTML('beforeend', `<span class="go">${icon('check', 18)}</span>`);
+  // Ruler: quarter hours either side of 9:30, the hours taller, fading towards the edges.
+  const R = document.getElementById('ruler'), w = 281; let h = '';
+  for (let k = -12; k <= 12; k++) {
+    const x = w / 2 + k * 11, op = 1 - .7 * Math.pow(Math.abs(k) / 12, 2);
+    h += `<span class="${k === 0 ? 'now' : (k + 2) % 4 === 0 ? 'maj' : ''}" style="left:${x - (k === 0 ? 1.5 : .5)}px;opacity:${k === 0 ? 1 : op.toFixed(2)}"></span>`;
+  }
+  R.innerHTML = h;
+  document.getElementById('days').innerHTML = ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => `<span class="${i < 5 ? 'on' : ''}">${d}</span>`).join('');
+</script>
 </body></html>

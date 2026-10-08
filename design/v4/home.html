@@ -1,141 +1,112 @@
 <!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="base.css"><link rel="stylesheet" href="system.css"><script src="kit.js"></script>
 <style>
   .abs { position: absolute; white-space: nowrap; }
-  .tick { position: absolute; width: 1px; height: 19px; background: rgba(255,255,255,.25); }
+  .days { position: absolute; top: 70px; left: var(--gutter); right: var(--gutter); display: flex; justify-content: space-between; }
+  .centre { position: absolute; left: 0; right: 0; text-align: center; }
+
+  .bento { position: absolute; top: 360px; left: var(--gutter); right: var(--gutter); display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 112px 128px 128px; gap: var(--gap); }
+  .bento .wide { grid-column: 1 / span 2; }
+  .tile .head { position: absolute; left: 20px; top: 18px; z-index: 1; color: var(--ink); }
+  .tile .foot { position: absolute; left: 20px; bottom: 18px; z-index: 1; display: flex; align-items: baseline; gap: 6px; }
+  .tile .light { width: 170px; height: 150px; opacity: .55; }
+
+  /* A proportion of the 23: hairline track, warm-white fill. */
+  .bar { position: absolute; left: 20px; right: 20px; top: 56px; height: 4px; border-radius: 2px; background: rgba(255,240,225,.14); z-index: 1; }
+  .bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px; background: var(--accent); }
+  .week { position: absolute; left: 20px; right: 20px; top: 46px; display: flex; justify-content: space-between; z-index: 1; }
+  .week span { width: 3px; height: 14px; border-radius: 1.5px; background: rgba(255,240,225,.18); }
+  .week span.on { height: 22px; margin-top: -8px; background: var(--accent); }
 </style></head>
 <body>
-<div class="phone">
-  <div class="grain"></div>
-  <script>document.currentScript.parentElement.insertAdjacentHTML('afterbegin', statusBar(true));</script>
+<div class="phone" id="p">
+  <div class="days" id="days"></div>
 
-  <!-- top row: calendar (btn-circle) and five day chips, W selected -->
-  <span class="btn-circle abs" style="left:20px;top:73px;"><script>document.currentScript.parentElement.innerHTML = icon('cal', 20);</script></span>
-  <div class="chip-circle abs" style="left:80px;top:73px;">M</div>
-  <div class="chip-circle abs" style="left:142.25px;top:73px;">T</div>
-  <div class="chip-circle on abs" style="left:204.5px;top:73px;">W</div>
-  <div class="chip-circle abs" style="left:266.75px;top:73px;">T</div>
-  <div class="chip-circle abs" style="left:329px;top:73px;">F</div>
+  <div class="t-body centre" style="top:136px">Score</div>
+  <div class="t-num-xl centre" style="top:160px">6</div>
+  <div class="t-body centre" style="top:262px;color:var(--ink-2)">of 23 done</div>
 
-  <!-- score: label, big reading, unit line -->
-  <div class="t-nav abs" style="left:0;width:393px;top:146px;text-align:center;">Score</div>
-  <div class="t-num-xl abs" style="left:0;width:393px;top:178px;text-align:center;">6</div>
-  <div class="t-unit abs" style="left:0;width:393px;top:280px;text-align:center;color:var(--ink-2);">of 23 done</div>
+  <svg class="abs" style="left:0;top:292px" width="393" height="56" id="chart"></svg>
 
-  <!-- wave lines, triangle marker and straight line -->
-  <svg class="abs" style="left:0;top:0" width="393" height="852" viewBox="0 0 393 852" id="wave"></svg>
-  <script>
-    (function () {
-      const svg = document.getElementById('wave');
-      const cy = 326.0, A = 15.8, P = 95.6, xc = 130.2;
-      const wave = (x, shift, amp) => cy - amp * Math.cos(2 * Math.PI * (x - xc - shift) / P);
-      const path = (shift, amp) => {
-        let d = '';
-        for (let x = 0; x <= 194.2; x += 0.5) d += (x ? 'L' : 'M') + x + ' ' + wave(x, shift, amp).toFixed(2) + ' ';
-        return d;
-      };
-      svg.innerHTML = `
-        <defs>
-          <linearGradient id="fadeW" gradientUnits="userSpaceOnUse" x1="0" x2="80" y1="0" y2="0">
-            <stop offset="0" style="stop-color:var(--lime)" stop-opacity="0"/>
-            <stop offset="1" style="stop-color:var(--lime)" stop-opacity="1"/>
-          </linearGradient>
-          <linearGradient id="lineG" gradientUnits="userSpaceOnUse" x1="0" x2="393" y1="0" y2="0">
-            <stop offset="${40.6/393}" stop-color="#f4f3f1" stop-opacity=".05"/>
-            <stop offset="${60/393}" stop-color="#f4f3f1" stop-opacity=".47"/>
-            <stop offset="${100/393}" stop-color="#f4f3f1" stop-opacity=".65"/>
-            <stop offset="${150/393}" stop-color="#f4f3f1" stop-opacity=".85"/>
-            <stop offset="${185/393}" stop-color="#f4f3f1" stop-opacity=".85"/>
-            <stop offset="${200/393}" stop-color="#ffffff" stop-opacity=".93"/>
-            <stop offset="${230/393}" stop-color="#f4f3f1" stop-opacity=".76"/>
-            <stop offset="${260/393}" stop-color="#f4f3f1" stop-opacity=".58"/>
-            <stop offset="${300/393}" stop-color="#f4f3f1" stop-opacity=".34"/>
-            <stop offset="${340/393}" stop-color="#f4f3f1" stop-opacity=".1"/>
-            <stop offset="${352.4/393}" stop-color="#f4f3f1" stop-opacity="0"/>
-          </linearGradient>
-        </defs>
-        <path d="${path(47.8, 15.8)}" fill="none" style="stroke:var(--lime)" stroke-opacity=".42" stroke-width="1"/>
-        <path d="${path(0, 15.8)}" fill="none" stroke="url(#fadeW)" stroke-width="1.05"/>
-        <rect x="40.6" y="${cy + 3.6}" width="311.8" height="1.3" fill="url(#lineG)"/>
-        <path d="M187.35 ${cy - 6.7} L201.05 ${cy - 6.7} L194.2 ${cy + 4.4} Z" style="fill:var(--lime)"/>
-      `;
-    })();
-  </script>
+  <div class="bento">
+    <div class="tile wide" style="background:linear-gradient(100deg,var(--places-c) 0%,var(--events-c) 70%,var(--places-d) 100%)">
+      <div class="light" style="left:-40px;top:-80px;width:260px;height:180px;background:var(--products-c);opacity:.6"></div>
+      <div class="t-body head">Done this week</div>
+      <div class="foot"><span class="t-num-l">2</span><span class="t-unit">things</span></div>
+      <svg class="abs" style="right:16px;top:12px;z-index:1" width="88" height="88" id="ring"></svg>
+    </div>
 
-  <!-- bento: 16pt side gutters, 8pt gaps, radius 28 tiles -->
-  <!-- Done this week: places to events gradient, lime ring arc -->
-  <div class="tile abs" style="left:16px;top:356px;width:361px;height:112px;background:linear-gradient(90deg,var(--places-c),var(--events-c));">
-    <div class="t-body abs" style="left:20px;top:16px;color:var(--ink);">Done this week</div>
-    <svg class="abs" style="left:253px;top:12px" width="88" height="88" viewBox="0 0 88 88" id="ring"></svg>
-    <div class="t-num-l abs" style="left:253px;top:34px;width:88px;text-align:center;">2</div>
-    <div class="abs" style="left:20px;bottom:20px;display:flex;align-items:baseline;gap:6px;"><span class="t-num-l">2</span><span class="t-unit">things</span></div>
+    <div class="tile">
+      <div class="light" style="right:-70px;bottom:-80px;background:var(--recipes-c)"></div>
+      <div class="t-body head">Kept</div>
+      <div class="bar"><i style="width:48%"></i></div>
+      <div class="foot"><span class="t-num-l">11</span><span class="t-unit">things</span></div>
+    </div>
+
+    <div class="tile">
+      <div class="light" style="right:-70px;bottom:-80px;background:var(--events-c)"></div>
+      <div class="t-body head">Dropped</div>
+      <div class="bar"><i style="width:26%"></i></div>
+      <div class="foot"><span class="t-num-l">6</span><span class="t-unit">things</span></div>
+    </div>
+
+    <div class="tile">
+      <div class="light" style="right:-70px;bottom:-80px;background:var(--products-c)"></div>
+      <div class="t-body head">Coming up</div>
+      <div class="week" id="week"></div>
+      <div class="foot"><span class="t-num-l">3</span><span class="t-unit">this week</span></div>
+    </div>
+
+    <div class="tile">
+      <div class="light" style="right:-70px;bottom:-80px;background:var(--places-c)"></div>
+      <div class="t-body head">Expiring</div>
+      <div class="t-label dim abs" style="left:20px;top:50px;z-index:1">ENDS FRI</div>
+      <div class="foot"><span class="t-num-l">1</span><span class="t-unit">thing</span></div>
+    </div>
   </div>
 
-  <!-- Kept: recipes light, range bar fading ink-3 to places-c, lime marker -->
-  <div class="tile abs" style="left:16px;top:476px;width:176.5px;height:128px;background:radial-gradient(130% 110% at 100% 100%,var(--recipes-c) 0%,var(--recipes-d) 80%);">
-    <div class="t-body abs" style="left:20px;top:16px;color:var(--ink);">Kept</div>
-    <div class="abs" style="left:20px;top:52px;width:136.5px;height:5px;border-radius:3px;background:linear-gradient(90deg,var(--ink-3),var(--places-c));"></div>
-    <svg class="abs" style="left:114.3px;top:51px" width="10.7" height="8.5" viewBox="0 0 10.7 8.5"><path d="M0 8.5 L5.35 0 L10.7 8.5 Z" style="fill:var(--lime)"/></svg>
-    <div class="abs" style="left:20px;bottom:20px;display:flex;align-items:baseline;gap:6px;"><span class="t-num-l">11</span><span class="t-unit">things</span></div>
-  </div>
-
-  <!-- Dropped: events light, row of dots -->
-  <div class="tile abs" style="left:200.5px;top:476px;width:176.5px;height:128px;background:radial-gradient(130% 110% at 100% 100%,var(--events-c) 0%,var(--events-d) 80%);">
-    <div class="t-body abs" style="left:20px;top:16px;color:var(--ink);">Dropped</div>
-    <svg class="abs" style="left:0;top:0" width="176.5" height="128" viewBox="0 0 176.5 128" id="dots"></svg>
-    <div class="abs" style="left:20px;bottom:20px;display:flex;align-items:baseline;gap:6px;"><span class="t-num-l">6</span><span class="t-unit">things</span></div>
-  </div>
-
-  <!-- Coming up: products light, tick ruler with lime marker -->
-  <div class="tile abs" style="left:16px;top:612px;width:176.5px;height:128px;background:radial-gradient(130% 110% at 100% 100%,var(--products-c) 0%,var(--products-d) 80%);">
-    <div class="t-body abs" style="left:20px;top:16px;color:var(--ink);">Coming up</div>
-    <div id="ticks"></div>
-    <div class="abs" style="left:20px;bottom:20px;display:flex;align-items:baseline;gap:6px;"><span class="t-num-l">3</span><span class="t-unit">this week</span></div>
-  </div>
-
-  <!-- Expiring: places light with a products-c blob -->
-  <div class="tile abs" style="left:200.5px;top:612px;width:176.5px;height:128px;background:var(--places-d);">
-    <div class="light" style="left:73px;top:2px;width:130px;height:120px;background:var(--products-c);"></div>
-    <div class="t-body abs" style="left:20px;top:16px;color:var(--ink);">Expiring</div>
-    <div class="abs" style="left:20px;bottom:20px;display:flex;align-items:baseline;gap:6px;"><span class="t-num-l">1</span><span class="t-unit">thing</span></div>
-  </div>
-
-  <!-- tab bar: Home on -->
   <div class="tabbar" id="tabbar"></div>
-  <script>
-    document.getElementById('tabbar').innerHTML =
-      `<div class="tab on">${icon('home',20)}Home</div>` +
-      `<div class="tab">${icon('bookmark',20)}Saved</div>` +
-      `<div class="tab">${icon('spark',20)}Reveals</div>`;
-  </script>
-
   <div class="home-indicator"></div>
+  <div class="grain"></div>
 </div>
 <script>
-  (function () {
-    // ring gauge in the Done tile: track, lime arc, faint secondary arc (88pt ring)
-    const c = 44, r = 43.4;
-    const arc = (a0, a1, rr) => {
-      const p = a => [c + rr * Math.sin(a * Math.PI / 180), c - rr * Math.cos(a * Math.PI / 180)];
-      const [x0, y0] = p(a0), [x1, y1] = p(a1);
-      return `M ${x0.toFixed(2)} ${y0.toFixed(2)} A ${rr} ${rr} 0 ${a1 - a0 > 180 ? 1 : 0} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`;
-    };
-    document.getElementById('ring').innerHTML = `
-      <circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="1.2"/>
-      <path d="${arc(15.3, 54, 44.4)}" fill="none" stroke="rgba(255,255,255,.22)" stroke-width="1" stroke-linecap="round"/>
-      <path d="${arc(3, 80, r)}" fill="none" style="stroke:var(--lime)" stroke-width="1.6" stroke-linecap="round"/>`;
+  const p = document.getElementById('p');
+  p.insertAdjacentHTML('afterbegin', statusBar(true));
+  document.getElementById('days').innerHTML = `<span class="btn-circle">${icon('cal', 20)}</span>` +
+    ['M', 'T', 'W', 'T', 'F'].map((d, i) => `<span class="chip-circle${i === 2 ? ' on' : ''}">${d}</span>`).join('');
+  document.getElementById('tabbar').innerHTML =
+    `<div class="tab on">${icon('home', 20)}Home</div><div class="tab">${icon('bookmark', 20)}Saved</div><div class="tab">${icon('spark', 20)}Reveals</div>`;
 
-    // dot row in the Dropped tile (x positions scaled from the reference to the 176.5pt tile)
-    const dx = [21.6, 48.1, 68.4, 86.5, 98.9, 117, 125.9, 138.4, 153];
-    document.getElementById('dots').innerHTML = dx.map(x => `<circle cx="${x}" cy="56" r="2" style="fill:var(--ink)"/>`).join('');
+  // Score over the month: a smooth line up to today (under the W chip), then a faint hairline ahead.
+  const today = document.querySelector('.chip-circle.on').getBoundingClientRect();
+  const tx = today.left + today.width / 2;
+  const pts = [[16, 44], [60, 40], [104, 36], [148, 30], [192, 22], [tx, 14]];
+  let d = `M${pts[0][0]} ${pts[0][1]}`;
+  for (let i = 1; i < pts.length; i++) {
+    const [x0, y0] = pts[i - 1], [x1, y1] = pts[i], mx = (x0 + x1) / 2;
+    d += ` C${mx} ${y0} ${mx} ${y1} ${x1} ${y1}`;
+  }
+  document.getElementById('chart').innerHTML = `
+    <defs>
+      <linearGradient id="ln" x1="16" x2="${tx}" y1="0" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#f6ece2" stop-opacity="0"/><stop offset="1" stop-color="#f6ece2"/></linearGradient>
+      <linearGradient id="ar" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#ff8a57" stop-opacity=".28"/><stop offset="1" stop-color="#ff8a57" stop-opacity="0"/></linearGradient>
+      <filter id="gl" x="-200%" y="-200%" width="500%" height="500%"><feGaussianBlur stdDeviation="4"/></filter>
+    </defs>
+    <path d="${d} L${tx} 52 L16 52 Z" fill="url(#ar)"/>
+    <path d="${d}" fill="none" stroke="url(#ln)" stroke-width="1.5"/>
+    <line x1="${tx}" y1="14" x2="377" y2="14" stroke="rgba(255,240,225,.22)" stroke-width="1" stroke-dasharray="2 4"/>
+    <line x1="${tx}" y1="14" x2="${tx}" y2="52" stroke="rgba(255,240,225,.22)" stroke-width="1"/>
+    <circle cx="${tx}" cy="14" r="7" fill="#ff8a57" opacity=".7" filter="url(#gl)"/>
+    <circle cx="${tx}" cy="14" r="4" fill="#f6ece2"/>`;
 
-    // ruler ticks in the Coming up tile, with the lime marker
-    const t = document.getElementById('ticks');
-    let html = '';
-    for (let i = 0; i < 14; i++) html += `<div class="tick" style="left:${(20.5 + i * 8.46).toFixed(2)}px;top:45px"></div>`;
-    html += `<svg class="abs" style="left:137.5px;top:36px" width="9.5" height="9" viewBox="0 0 9.5 9"><path d="M0 0 L9.5 0 L4.75 9 Z" style="fill:var(--lime)"/></svg>`;
-    html += `<div class="abs" style="left:141.6px;top:45px;width:1.2px;height:19px;background:var(--lime);"></div>`;
-    html += `<div class="tick" style="left:150.6px;top:45px"></div>`;
-    t.innerHTML = html;
-  })();
+  // Weekly goal ring: 2 of 5.
+  const c = 44, r = 40, C = 2 * Math.PI * r;
+  document.getElementById('ring').innerHTML = `
+    <circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="2"/>
+    <circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="${C * .4} ${C}" transform="rotate(-90 ${c} ${c})"/>
+    <text x="${c}" y="${c - 2}" text-anchor="middle" font-family="Inter Display, Inter" font-weight="300" font-size="26" fill="#fff">2/5</text>
+    <text x="${c}" y="${c + 16}" text-anchor="middle" font-family="Mono" font-weight="500" font-size="9" letter-spacing="1" fill="rgba(255,255,255,.8)">GOAL</text>`;
+
+  // Coming up: seven days, three with something on.
+  document.getElementById('week').innerHTML = [0, 0, 1, 0, 1, 1, 0].map(o => `<span${o ? ' class="on"' : ''}></span>`).join('');
 </script>
 </body></html>

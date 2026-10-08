@@ -11,11 +11,8 @@
   .shot { position: absolute; left: -10px; top: -10px; }
   .shot svg { display: block; }
   .shade { position: absolute; inset: 0; background: radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--ground) 60%, transparent), transparent 50%); }
-  .glow { position: absolute; inset: 0; pointer-events: none; opacity: .45;
-    background:
-      radial-gradient(ellipse 40% 34% at 50% 12%, color-mix(in srgb, var(--reference-c) 60%, transparent), transparent 70%),
-      radial-gradient(ellipse 26% 44% at 0% 22%, color-mix(in srgb, var(--reference-c) 85%, transparent), transparent 72%),
-      radial-gradient(ellipse 46% 40% at 72% 96%, color-mix(in srgb, var(--places-c) 60%, transparent), transparent 70%); }
+  .glow { position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(180deg, rgba(11,10,9,.35) 0%, transparent 22%, transparent 55%, rgba(11,10,9,.5) 100%); }
 
   /* The folder panel: surface fill, outline (raised tab) set in script from the reference shape. */
   .panel { position: absolute; left: 0; right: 0; bottom: 0; height: 228px; padding: 22px 20px 20px; background: var(--surface);
@@ -38,11 +35,11 @@
         <div class="meta">
           <div class="kind"><i class="dot"></i><span class="t-label">EVENT</span></div>
           <div class="t-title ttl">Mallrat at the Enmore</div>
-          <div class="t-body">Event · Enmore Theatre</div>
+          <div class="t-body">Sun 11 Oct · Doors 7pm</div>
         </div>
         <div class="when">
           <div class="date"><span class="t-num-l">11</span><span class="t-unit">Oct</span></div>
-          <span class="t-body" style="color:var(--ink)">2 screenshots</span>
+          <span class="t-label dim">2 SCREENSHOTS</span>
         </div>
       </div>
     </div>
@@ -50,7 +47,7 @@
 
   <script>
     const phone = document.querySelector('.phone');
-    const header = `<div style="position:absolute;top:62px;left:16px;right:16px;display:flex;align-items:center;gap:14px;z-index:60"><span class="btn-circle">${icon('x',20)}</span><span class="t-nav">Tonight's recap</span><span style="flex:1"></span><span class="t-label dim">1 OF 4</span></div>`;
+    const header = `<div style="position:absolute;top:62px;left:16px;right:16px;display:flex;align-items:center;gap:14px;z-index:60"><span class="btn-circle">${icon('x',20)}</span><span class="t-nav">Tonight's recap</span><span style="flex:1"></span><span class="t-label dim">1 / 4</span></div>`;
     const decide = `<div class="seg" style="position:absolute;left:var(--gutter);right:var(--gutter);bottom:24px;z-index:70"><div class="seg-btn primary">${icon('bookmark',18)}Still want</div><div class="seg-btn">${icon('x',18)}Drop</div><div class="seg-btn">${icon('check',18)}Done</div></div>`;
     phone.insertAdjacentHTML('afterbegin', statusBar(true) + header + decide);
 
@@ -58,7 +55,7 @@
     const inEl = document.querySelector('.in');
     const { width: W, height: H } = inEl.getBoundingClientRect();
     const R = parseFloat(getComputedStyle(inEl).borderTopLeftRadius);
-    document.getElementById('shot').innerHTML = screenshot('event', W + 20, H + 20, { blurX: 7, blurY: 3 });
+    document.getElementById('shot').innerHTML = screenshot('event', W + 20, H - 140, { hero: true, blurX: 14, blurY: 5 });
 
     // Folder outline: the reference tab (328 wide, 228 tall panel), scaled to the measured width.
     const panel = document.getElementById('panel');

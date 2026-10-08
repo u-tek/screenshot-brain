@@ -20,12 +20,12 @@ changed.
 2. **Status bar**: `statusBar(true)` from kit.js, unmodified (no repositioning, no custom font
    size). **Remove any drawn dynamic island / camera pill.** Home indicator: the base
    `.home-indicator`, unmodified.
-3. **Colour**: only the five lights (`--places-*` coral, `--events-*` pink, `--products-*`
-   lavender, `--recipes-*` sage, `--reference-*` cream), the neutrals (`--ground`, `--surface`,
-   `--surface-2`, `--ink*`, `--line`), white, and `--lime` as the one accent. Lime is for done,
-   progress, live markers and the active point only. Replace every other yellow, red, blue,
-   green, orange or teal with the nearest of these. Exception: `screenshot()` imagery keeps its
-   own colours.
+3. **Colour**: one warm palette. Neutrals (`--ground`, `--surface`, `--surface-2`, `--ink*`,
+   `--line`) plus one warm ramp (`--ramp-0` deep ember … `--ramp-7` bone). The five kinds are
+   steps on that ramp (`--events-*` ember, `--places-*` coral, `--products-*` apricot,
+   `--recipes-*` sand, `--reference-*` stone), and `--accent` (warm white) marks done, progress
+   and the live point. No other hue anywhere: no pink, blue, purple, green or lime. Imagery from
+   `screenshot()` is drawn in the same warm range.
 4. **Type**: big numbers `.t-num-xl` / `.t-num-l` (Inter Display Light); screen titles `.t-large`;
    titles beside a back button `.t-nav`; item names `.t-title`; secondary text `.t-body`; every
    small uppercase label `.t-label` (mono); Reveal headlines `.t-story` (serif). No other fonts,
@@ -35,7 +35,7 @@ changed.
      on the right.
    - Deciding on an item (still want / drop / done): `.seg`, with `.seg-btn.primary` for the
      main one.
-   - Actions on one thing (calendar, maps, send, done): `.scenario` with `style="--c: var(--…-c)"`.
+   - Actions on one thing (calendar, maps, send, done): `.scenario` with `style="--c: var(--…-c)"`, all in the item's own kind.
      `.scenario.fill` gets a gradient background in the same light.
    - Round buttons: `.btn-circle` for actions (back, close, settings, search, filter), and
      `.chip-circle` (`.on` = selected) for choosable chips like days.

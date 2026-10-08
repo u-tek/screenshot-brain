@@ -1,61 +1,58 @@
 <!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="base.css"><link rel="stylesheet" href="system.css"><script src="kit.js"></script>
 <style>
-  /* Opened screen: the ground alone, the header at y 62, one hero tile, then the actions. Layout only; materials come from system.css. */
   .hdr { position: absolute; top: 62px; left: var(--gutter); right: var(--gutter); display: flex; align-items: center; gap: 14px; z-index: 60; }
-  .ident { position: absolute; top: 122px; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; text-align: center; }
-  .ident .big { font-size: 52px; margin-top: 8px; white-space: nowrap; }
-  .ident .sub { margin-top: 4px; }
+  .ident { position: absolute; top: 120px; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; text-align: center; }
+  .ident .kind { display: flex; align-items: center; gap: 8px; }
+  .ident .kind i { width: 6px; height: 6px; border-radius: 50%; background: var(--events-c); box-shadow: 0 0 8px var(--events-c); }
+  .ident .t-large { font-size: 44px; margin-top: 12px; }
+  .ident .t-body { margin-top: 6px; }
 
-  .hero { position: absolute; top: 262px; left: var(--gutter); right: var(--gutter); height: 300px; }
-  .hero .light { left: 50%; top: 134px; width: 200px; height: 240px; transform: translate(-50%, -50%); background: var(--events-c); opacity: .5; }
-  .shot { position: absolute; left: 50%; top: 16px; transform: translateX(-50%); width: 132px; height: 236px; border-radius: 18px; overflow: hidden; z-index: 1;
-    box-shadow: 0 16px 34px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.12); }
-  .shot svg { width: 132px; height: 236px; }
-  .stamp { position: absolute; left: 0; right: 0; top: 252px; bottom: 0; display: flex; align-items: center; justify-content: center; z-index: 1; }
+  .hero { position: absolute; top: 236px; left: var(--gutter); right: var(--gutter); height: 370px; }
+  .hero .light { left: 50%; top: 50%; width: 260px; height: 300px; transform: translate(-50%, -50%); background: var(--events-c); opacity: .5; filter: blur(50px); }
+  .shot { position: absolute; left: 50%; top: 22px; transform: translateX(-50%); width: 150px; height: 326px; border-radius: 24px; overflow: hidden; z-index: 1;
+    box-shadow: 0 0 0 1px rgba(255,240,225,.14), 0 24px 48px rgba(0,0,0,.55); }
+  .count { position: absolute; right: 18px; bottom: 16px; z-index: 1; }
 
-  .do { position: absolute; top: 580px; left: 0; right: 0; text-align: center; }
-
-  .actions { position: absolute; top: 620px; left: var(--gutter); right: var(--gutter); display: flex; flex-direction: column; gap: var(--gap); }
-  .actions .pair { display: flex; gap: var(--gap); }
-  .actions .pair > .scenario { flex: 1; }
+  .sect { position: absolute; top: 630px; left: var(--gutter); }
+  .actions { position: absolute; top: 654px; left: var(--gutter); right: var(--gutter); display: flex; flex-direction: column; gap: var(--gap); }
+  .actions .row { display: flex; gap: var(--gap); }
+  .actions .row > .scenario { flex: 1; }
+  .scenario { height: 56px; gap: 10px; }
 </style></head>
 <body>
 <div class="phone" id="screen"></div>
 <script>
-  const s = document.getElementById('screen');
-  s.innerHTML = `
-    <div class="grain"></div>
+  document.getElementById('screen').innerHTML = `
     ${statusBar(true)}
-
     <div class="hdr">
-      <span class="btn-circle">${icon('back',20)}</span>
+      <span class="btn-circle">${icon('back', 20)}</span>
       <span style="flex:1"></span>
-      <span class="btn-circle">${icon('more',20)}</span>
+      <span class="btn-circle">${icon('more', 20)}</span>
     </div>
 
     <div class="ident">
-      <div style="color:var(--events-c);display:flex">${icon('ticket',36)}</div>
-      <div class="t-large big">Mallrat</div>
-      <div class="t-body sub">at the Enmore</div>
+      <div class="kind"><i></i><span class="t-label dim">EVENT · SUN 11 OCT · 7PM</span></div>
+      <div class="t-large">Mallrat</div>
+      <div class="t-body">Enmore Theatre, Newtown</div>
     </div>
 
     <div class="tile hero">
       <div class="light"></div>
-      <div class="shot">${screenshot('event', 132, 236, {sharp: true})}</div>
-      <div class="stamp"><span class="t-label">SUN 11 OCT · 8PM</span></div>
+      <div class="shot">${screenshot('event', 150, 326, { sharp: true })}</div>
+      <span class="t-label dim count">2 SHOTS</span>
     </div>
 
-    <div class="t-nav do">Do it</div>
-
+    <div class="t-label dim sect">DO IT</div>
     <div class="actions">
-      <div class="scenario" style="--c: var(--events-c)">CALENDAR</div>
-      <div class="scenario fill" style="--c: var(--events-c); background: linear-gradient(90deg, var(--events-c), var(--places-c))">MAPS</div>
-      <div class="pair">
-        <div class="scenario" style="--c: var(--products-c)">SEND</div>
-        <div class="scenario" style="--c: var(--lime)">DONE</div>
+      <div class="scenario fill" style="--c: var(--events-c); background: linear-gradient(100deg, var(--places-c), var(--events-c))">${icon('cal', 18)}ADD TO CALENDAR</div>
+      <div class="row">
+        <div class="scenario" style="--c: var(--events-c)">${icon('map', 18)}MAPS</div>
+        <div class="scenario" style="--c: var(--events-c)">${icon('send', 18)}SEND</div>
+        <div class="scenario" style="--c: var(--accent)">${icon('check', 18)}DONE</div>
       </div>
     </div>
 
+    <div class="grain"></div>
     <div class="home-indicator"></div>
   `;
 </script>
