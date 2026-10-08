@@ -54,10 +54,8 @@
   // Places in the Still want list. Each opens as a place, with its own name on the saved page.
   const PLACES = {
     'Ramen Ikkyu': { sub: 'Haymarket, Sydney', meta: '4.7 (1,284) · Japanese · $$', addr: 'Shop 7, 401 Sussex St, Haymarket' },
-    "Bar Totti's": { sub: 'Barangaroo, Sydney', meta: '4.6 (2,310) · Italian · $$$', addr: '10 Barangaroo Ave, Barangaroo' },
+    'Bar Totti’s': { sub: 'Barangaroo, Sydney', meta: '4.6 (2,310) · Italian · $$$', addr: '10 Barangaroo Ave, Barangaroo' },
     'Chaco Bar': { sub: 'Darlinghurst, Sydney', meta: '4.8 (906) · Yakitori · $$', addr: '186–188 Victoria St, Darlinghurst' },
-    'Lune Croissanterie': { title: 'Lune', sub: 'Fitzroy, Melbourne', meta: '4.7 (5,120) · Bakery · $', addr: '119 Rose St, Fitzroy' },
-    'Sunday market': { sub: 'Glebe, Sydney', meta: '4.5 (742) · Market · $', addr: 'Glebe Public School, Glebe Point Rd' },
   };
   function placeItem(name) {
     const p = PLACES[name] || PLACES['Ramen Ikkyu'];
@@ -140,7 +138,7 @@
         const s = $('.ident .t-body'); if (s) s.textContent = item.sub;
         const l = $('.hero .light'); if (l) l.style.background = `var(--${light}-c)`;
         const shot = $('.shot'); if (shot) shot.innerHTML = shotOf(item, shot.offsetWidth, shot.offsetHeight, { sharp: true });
-        const count = $('.count'); if (count) count.textContent = '1 SHOT';
+        const count = $('.count'); if (count) count.textContent = '1 SCREENSHOT';
       }
       const sc = $$('.scenario');
       const fill = sc.find(x => x.classList.contains('fill')), rest = sc.filter(x => !x.classList.contains('fill'));
@@ -165,7 +163,8 @@
       const boxes = $$('.wheel .box');
       titles.forEach((t, i) => {
         const name = text($('.t-title', t));
-        const open = () => go('item', placeItem(name));
+        const data = name === 'Studio Kiri' ? ITEMS.lamp : name === 'Enmore Theatre' ? ITEMS.mallrat : placeItem(name);
+        const open = () => go('item', data);
         tap(t, open);
         if (boxes[i]) tap(boxes[i], open);
       });
@@ -217,9 +216,9 @@
         await card.animate([{ transform: 'scale(.92)', opacity: 0 }, { transform: 'scale(1)', opacity: 1 }], { duration: 420, easing: EASE }).finished;
         busy = false;
       }
-      if (seg[0]) tap(seg[0], () => decide('keep'));
-      if (seg[1]) tap(seg[1], () => decide('drop'));
-      if (seg[2]) tap(seg[2], () => decide('done'));
+      tap(seg.find(b => /Still want/.test(text(b))), () => decide('keep'));
+      tap(seg.find(b => /Drop/.test(text(b))), () => decide('drop'));
+      tap(seg.find(b => /Done/.test(text(b))), () => decide('done'));
 
       // Drag the card: right keeps it, left drops it, up marks it done.
       let sx = 0, sy = 0, dragging = false;
@@ -252,9 +251,9 @@
 
     recaptime() {
       tap($('.btn-circle'), back);
-      const big = $('.big'), unit = $('.unit'), toggle = $('.toggle'), label = $('.foot .t-label');
+      const big = $('.big'), unit = $('.unit'), toggle = $('.toggle');
       let minutes = 21 * 60 + 30, on = true;
-      const fmt = (m) => { const h = Math.floor(m / 60) % 24, mm = m % 60; return [`${((h + 11) % 12) + 1}:${String(mm).padStart(2, '0')}`, h < 12 ? 'am' : 'pm']; };
+      const fmt = (m) => { const h = Math.floor(m / 60) % 24, mm = m % 60; return [`${((h + 11) % 12) + 1}:${String(mm).padStart(2, '0')}`, h < 12 ? 'AM' : 'PM']; };
       const render = () => { const [t, ap] = fmt(minutes); big.textContent = t; unit.textContent = ap; };
       tap(toggle, () => {
         on = !on;
@@ -268,9 +267,9 @@
       const sayDays = () => {
         const sel = days.map(d => d.classList.contains('on'));
         const wk = sel.slice(0, 5).every(Boolean), we = sel.slice(5).every(Boolean), none = !sel.some(Boolean);
-        label.textContent = none ? 'NO NIGHTS' : wk && we ? 'EVERY NIGHT' : wk && !sel[5] && !sel[6] ? 'WEEKNIGHTS' : we && !sel.slice(0, 5).some(Boolean) ? 'WEEKENDS' : `${sel.filter(Boolean).length} NIGHTS A WEEK`;
+        return none ? 'on no nights' : wk && we ? 'every night' : wk && !sel[5] && !sel[6] ? 'on weeknights' : we && !sel.slice(0, 5).some(Boolean) ? 'on weekends' : `${sel.filter(Boolean).length} nights a week`;
       };
-      days.forEach(d => tap(d, () => { d.classList.toggle('on'); sayDays(); }));
+      days.forEach(d => tap(d, () => d.classList.toggle('on')));
       // Drag across the ruler (or the time) to move by quarter hours.
       const ruler = $('#ruler');
       [ruler, big].forEach(el => {
@@ -288,7 +287,7 @@
         el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
       });
       const cta = $('#cta') || $('.cta');
-      tap(cta, () => { const [t, ap] = fmt(minutes); toast(on ? `Recap set for ${t} ${ap}, ${label.textContent.toLowerCase()}` : 'Saved. Nightly recap is off'); setTimeout(back, 900); });
+      tap(cta, () => { const [t, ap] = fmt(minutes); toast(on ? `Recap set for ${t} ${ap.toLowerCase()}, ${sayDays()}` : 'Saved. Nightly recap is off'); setTimeout(back, 900); });
     },
 
     story() {
@@ -298,20 +297,20 @@
     peak() {
       reveal({ next: () => { toast("That's this month's Reveal"); close(); }, prev: () => swap('story') });
       const tabsEl = $$('.t-label').filter(el => ['TIME', 'DAY', 'CATEGORY', 'MONTH', 'SOURCE'].includes(text(el)));
-      const panelLabel = byText('.glass .t-label', 'PEAK'), panelValue = $('.glass .t-num-l');
+      const panelLabel = byText('.glass .t-label', 'PEAK'), panelValue = $('.glass .t-num-l') && $('.glass .t-num-l').parentNode;
       const orb = [$('.orb-disc'), $$('svg.abs')[1]].filter(Boolean);
       const VIEWS = {
-        TIME: ['PEAK · TUESDAYS', '12:40am', [0, 0]],
-        DAY: ['BUSIEST · SUNDAYS', '41 saved', [100, 170]],
-        CATEGORY: ['MOST · PLACES', '61 saved', [40, 220]],
-        MONTH: ['BUSIEST · JULY', '72 saved', [170, 30]],
-        SOURCE: ['MOST FROM · BROWSER', '58%', [96, 120]],
+        TIME: ['PEAK · TUESDAYS', ['12:40', 'am'], [0, 0]],
+        DAY: ['BUSIEST · SUNDAYS', ['41', 'saved'], [100, 170]],
+        CATEGORY: ['MOST · PLACES', ['61', 'saved'], [40, 220]],
+        MONTH: ['BUSIEST · JULY', ['72', 'saved'], [170, 30]],
+        SOURCE: ['MOST FROM · BROWSER', ['58', '%'], [96, 120]],
       };
       tabsEl.forEach(t => tap(t, () => {
         tabsEl.forEach(x => (x.style.color = 'var(--ink-3)')); t.style.color = 'var(--ink)';
         const [l, v, [dx, dy]] = VIEWS[text(t)];
         if (panelLabel) panelLabel.textContent = l;
-        if (panelValue) panelValue.textContent = v;
+        if (panelValue) panelValue.innerHTML = `<span class="t-num-l">${v[0]}</span><span class="t-unit" style="margin-left:4px">${v[1]}</span>`;
         orb.forEach(o => o.animate([{ transform: getComputedStyle(o).transform === 'none' ? 'translate(0,0)' : getComputedStyle(o).transform }, { transform: `translate(${dx}px, ${dy}px)` }], { duration: 700, easing: EASE, fill: 'forwards' }));
       }));
       tap($('#send'), () => toast('Share this card to your story'));
@@ -321,8 +320,8 @@
       const open = () => present('triage');
       ['.card', '#thumb', '.lyrics'].forEach(s => tap($(s), open));
       tap($('#ctl-x'), () => toast('Dropped. Next up: Ramen Ikkyu'));
-      tap($('#ctl-go'), () => toast('Done. Score 7'));
-      tap($('#ctl-arrow'), open);
+      tap($('#ctl-go'), () => toast('Kept. It stays in Still want'));
+      tap($('#ctl-keep'), () => toast('Done. Score 7'));
     },
   };
 
@@ -336,13 +335,13 @@
   function reveal({ next, prev }) {
     const bars = $$('.story-bars span');
     const cur = Math.max(0, bars.findIndex(b => b.classList.contains('on')));
-    bars.forEach((b, i) => { b.style.position = 'relative'; b.style.overflow = 'hidden'; if (i < cur) b.style.background = '#fff'; });
+    bars.forEach((b, i) => { b.style.position = 'relative'; b.style.overflow = 'hidden'; if (i < cur) b.style.background = 'var(--accent)'; });
     const bar = bars[cur];
     let timer;
     if (bar) {
       bar.classList.remove('on');
       const f = document.createElement('i');
-      f.style.cssText = 'position:absolute;left:0;top:0;bottom:0;width:100%;background:#fff;transform-origin:0 50%;transform:scaleX(0)';
+      f.style.cssText = 'position:absolute;left:0;top:0;bottom:0;width:100%;background:var(--accent);transform-origin:0 50%;transform:scaleX(0)';
       bar.appendChild(f);
       const a = f.animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { duration: 7000, easing: 'linear', fill: 'forwards' });
       a.finished.then(() => { timer = setTimeout(next, 150); });

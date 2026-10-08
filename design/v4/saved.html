@@ -6,9 +6,11 @@
   .hdr { position: absolute; top: 62px; left: var(--gutter); right: var(--gutter); display: flex; align-items: center; justify-content: space-between; z-index: 60; }
   .hdr .t-large { flex: 1; text-align: center; }
 
-  /* Tile grid from y 122: 16pt gutters, 8pt gaps. Rows 200 / 200 / 194 end at y 732, above the tab bar (top 764). */
-  .grid { position: absolute; top: 122px; left: var(--gutter); right: var(--gutter); display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 200px 200px 194px; gap: var(--gap); }
+  /* Tile grid from y 122: 16pt gutters, 8pt gaps. Three 200pt rows end at y 738, 24pt above the tab bar (top 762). */
+  .grid { position: absolute; top: 122px; left: var(--gutter); right: var(--gutter); display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 200px 200px 200px; gap: var(--gap); }
   .recipes { grid-column: 1 / span 2; }
+  /* A soft lit rim on every side around the dark core, in the tile's own light. */
+  .grid .tile { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 35%, transparent), inset 0 0 26px 4px color-mix(in srgb, var(--c) 50%, transparent); }
 
   /* One light per tile: a wide ellipse centred on the top edge. Full core colour across the top, then the deep edge, then the surface. */
   .light { left: -60%; right: -60%; top: -100px; height: 200px; background: radial-gradient(ellipse closest-side, var(--c) 0%, var(--c) 40%, var(--d) 75%, transparent 100%); }
@@ -24,11 +26,11 @@
   </div>
 
   <div class="grid">
-    <div class="tile places"><div class="light" style="--c: var(--places-c); --d: var(--places-d)"></div><div class="t-label lbl">PLACES <span class="t-label dim">· 9</span></div></div>
-    <div class="tile events"><div class="light" style="--c: var(--events-c); --d: var(--events-d)"></div><div class="t-label lbl">EVENTS <span class="t-label dim">· 14</span></div></div>
-    <div class="tile reference"><div class="light" style="--c: var(--reference-c); --d: var(--reference-d)"></div><div class="t-label lbl">REFERENCE <span class="t-label dim">· 23</span></div></div>
-    <div class="tile products"><div class="light" style="--c: var(--products-c); --d: var(--products-d)"></div><div class="t-label lbl">PRODUCTS <span class="t-label dim">· 6</span></div></div>
-    <div class="tile recipes"><div class="light" style="--c: var(--recipes-c); --d: var(--recipes-d)"></div><div class="t-label lbl">RECIPES <span class="t-label dim">· 4</span></div></div>
+    <div class="tile places" style="--c: var(--places-c); --d: var(--places-d)"><div class="light"></div><div class="t-label lbl">PLACES <span class="t-label dim">· 9</span></div></div>
+    <div class="tile events" style="--c: var(--events-c); --d: var(--events-d)"><div class="light"></div><div class="t-label lbl">EVENTS <span class="t-label dim">· 14</span></div></div>
+    <div class="tile reference" style="--c: var(--reference-c); --d: var(--reference-d)"><div class="light"></div><div class="t-label lbl">REFERENCE <span class="t-label dim">· 23</span></div></div>
+    <div class="tile products" style="--c: var(--products-c); --d: var(--products-d)"><div class="light"></div><div class="t-label lbl">PRODUCTS <span class="t-label dim">· 6</span></div></div>
+    <div class="tile recipes" style="--c: var(--recipes-c); --d: var(--recipes-d)"><div class="light"></div><div class="t-label lbl">RECIPES <span class="t-label dim">· 4</span></div></div>
   </div>
 
   <div class="tabbar">

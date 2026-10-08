@@ -1,7 +1,7 @@
 <!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="base.css"><link rel="stylesheet" href="system.css"><script src="kit.js"></script>
 <style>
   /* Score card: places gradient glass, same layout as the Your Energy card, built at real pixels. */
-  .score { position: absolute; left: 16px; top: 122px; width: 361px; height: 213px; border-radius: var(--r-card); overflow: hidden;
+  .score { position: absolute; left: 16px; top: 122px; width: 361px; height: 229px; border-radius: var(--r-card); overflow: hidden;
     background: linear-gradient(180deg, color-mix(in srgb, var(--places-d) 88%, transparent) 0%, color-mix(in srgb, var(--places-c) 80%, transparent) 100%);
     box-shadow: inset 0 0 0 1px rgba(255,255,255,.14), inset 0 1px 0 rgba(255,255,255,.22), 0 24px 48px rgba(0,0,0,.3);
     -webkit-backdrop-filter: blur(24px) saturate(140%); backdrop-filter: blur(24px) saturate(140%); }
@@ -9,15 +9,15 @@
   .score .s-sub { left: 30px; top: 36px; }
   .score .s-score { right: 30px; top: 33px; }
   .score .s-bar { left: 30px; right: 30px; top: 98px; height: 26px; border-radius: 13px; background: rgba(255,255,255,.18); overflow: hidden; }
-  .s-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 26.1%; border-radius: 13px; background: #fff; }
-  .score .s-ring { top: 148px; width: 33px; height: 33px; }
-  .score .s-lbl { top: 142px; }
-  .score .s-num { top: 160px; font-size: 30px; }
+  .s-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 26.1%; border-radius: 13px; background: var(--accent); }
+  .score .s-ring { top: 152px; width: 40px; height: 40px; }
+  .score .s-lbl { top: 140px; color: rgba(255,240,225,.86); }
+  .score .s-num { top: 162px; }
   .unit-dim { color: rgba(255,255,255,.62); }
   .score .s-sub { color: rgba(255,255,255,.86); }
 
   /* Timeline card: glass with a folder tab, built at real pixels (361 x 366, corners 34). */
-  .tl { position: absolute; left: 16px; top: 371px; width: 361px; height: 366px; }
+  .tl { position: absolute; left: 16px; top: 387px; width: 361px; height: 366px; }
   .tl-shape { position: absolute; inset: 0; }
   .tl-rim { position: absolute; left: 0; top: 0; }
   .tl-tab { position: absolute; left: 0; right: 0; top: 12px; text-align: center; }
@@ -26,46 +26,45 @@
   .tl-yr { position: absolute; left: 25px; top: 276px; }
 
   /* Month cells: glass, darker for the months that did not get a check. */
-  .cell { position: absolute; width: 49px; height: 80px; border-radius: 16px; }
+  .cell { position: absolute; width: 45px; height: 80px; border-radius: 16px; }
   .cell.dk { background: color-mix(in srgb, var(--ground) 40%, transparent); border-color: rgba(255,255,255,.08); }
   .cell-l { position: absolute; left: 0; right: 0; top: 10px; text-align: center; }
-  .dot { position: absolute; left: 14.5px; top: 46px; width: 20px; height: 20px; border-radius: 50%; background: var(--lime); display: flex; align-items: center; justify-content: center; }
+  .dot { position: absolute; left: 12.5px; top: 46px; width: 20px; height: 20px; border-radius: 50%; background: var(--lime); display: flex; align-items: center; justify-content: center; }
   .dot.dk { background: var(--surface-2); }
-  .xmark { position: absolute; left: 19.5px; top: 51px; }
+  .xmark { position: absolute; left: 17.5px; top: 51px; }
 
   /* The three-way decision row sits at the bottom of the timeline card. */
   .tl .seg { position: absolute; left: 8px; right: 8px; bottom: 8px; backdrop-filter: blur(18px) saturate(1.3); -webkit-backdrop-filter: blur(18px) saturate(1.3); }
-  .tl .seg .primary { flex: 1; }
 </style></head>
 <body>
 <div class="phone">
   <!-- Ground with dim lights: a places glow upper left behind the score, a deep events glow lower down behind the timeline. -->
   <div class="light" style="left:40px;top:150px;width:310px;height:200px;background:var(--places-c);opacity:.3"></div>
-  <div class="light" style="left:120px;top:560px;width:320px;height:320px;background:var(--events-d);opacity:.6"></div>
+  <div class="light" style="left:36px;top:600px;width:320px;height:260px;background:var(--events-d);opacity:.45"></div>
 
   <div class="score">
-    <div class="t-body s-sub">Two more than last week</div>
+    <div class="t-body s-sub">2 more done than last week</div>
     <div class="t-num-l s-score">6<span class="t-unit unit-dim">/23</span></div>
     <div class="s-bar"><div class="s-fill"></div></div>
 
-    <svg class="s-ring" style="left:44px" viewBox="0 0 40 40">
-      <circle cx="20" cy="20" r="16.5" fill="none" style="stroke:rgba(255,255,255,.18)" stroke-width="7"/>
-      <circle cx="20" cy="20" r="16.5" fill="none" style="stroke:var(--lime)" stroke-width="7" stroke-linecap="round" stroke-dasharray="49.6 103.7" transform="rotate(-90 20 20)"/></svg>
-    <div class="t-title s-lbl" style="left:87px">Kept</div>
-    <div class="t-num-l s-num" style="left:87px">11<span class="t-unit unit-dim">/23</span></div>
+    <svg class="s-ring" style="left:30px" viewBox="0 0 40 40">
+      <circle cx="20" cy="20" r="16.5" fill="none" style="stroke:rgba(255,255,255,.18)" stroke-width="4"/>
+      <circle cx="20" cy="20" r="16.5" fill="none" style="stroke:var(--lime)" stroke-width="4" stroke-linecap="round" stroke-dasharray="49.6 103.7" transform="rotate(-90 20 20)"/></svg>
+    <div class="t-body s-lbl" style="left:82px">Kept</div>
+    <div class="t-num-l s-num" style="left:82px">11<span class="t-unit unit-dim">/23</span></div>
 
-    <svg class="s-ring" style="left:195px" viewBox="0 0 40 40">
-      <circle cx="20" cy="20" r="16.5" fill="none" style="stroke:rgba(255,255,255,.18)" stroke-width="7"/>
-      <circle cx="20" cy="20" r="16.5" fill="none" style="stroke:var(--lime)" stroke-width="7" stroke-linecap="round" stroke-dasharray="27.1 103.7" transform="rotate(-90 20 20)"/></svg>
-    <div class="t-title s-lbl" style="left:241px">Done</div>
-    <div class="t-num-l s-num" style="left:241px">6<span class="t-unit unit-dim">/23</span></div>
+    <svg class="s-ring" style="left:180.5px" viewBox="0 0 40 40">
+      <circle cx="20" cy="20" r="16.5" fill="none" style="stroke:rgba(255,255,255,.18)" stroke-width="4"/>
+      <circle cx="20" cy="20" r="16.5" fill="none" style="stroke:var(--lime)" stroke-width="4" stroke-linecap="round" stroke-dasharray="27.1 103.7" transform="rotate(-90 20 20)"/></svg>
+    <div class="t-body s-lbl" style="left:232.5px">Dropped</div>
+    <div class="t-num-l s-num" style="left:232.5px">6<span class="t-unit unit-dim">/23</span></div>
   </div>
 
   <div class="tl">
     <div class="glass tl-shape" style="clip-path:path('M0 72 Q0 38 34 38 L95.5 38 C111.8 38 117.2 0 135.7 0 L225.3 0 C243.8 0 249.2 38 265.5 38 L327 38 Q361 38 361 72 L361 332 Q361 366 327 366 L34 366 Q0 366 0 332 Z')"></div>
-    <svg class="tl-rim" width="361" height="366" viewBox="0 0 361 366"><path d="M0 72 Q0 38 34 38 L95.5 38 C111.8 38 117.2 0 135.7 0 L225.3 0 C243.8 0 249.2 38 265.5 38 L327 38 Q361 38 361 72 L361 332 Q361 366 327 366 L34 366 Q0 366 0 332 Z" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="1"/></svg>
+    <svg class="tl-rim" width="361" height="366" viewBox="0 0 361 366"><path d="M0 72 Q0 38 34 38 L95.5 38 C111.8 38 117.2 0 135.7 0 L225.3 0 C243.8 0 249.2 38 265.5 38 L327 38 Q361 38 361 72 L361 332 Q361 366 327 366 L34 366 Q0 366 0 332 Z" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="1"/></svg>
     <div class="t-label tl-tab">Recaps</div>
-    <div class="tl-head"><span class="t-nav">2026</span><span class="grp"><span class="t-body">First recap</span><span class="t-label">03.02.2026</span></span></div>
+    <div class="tl-head"><span class="t-nav">2026</span><span class="grp"><span class="t-body">First recap</span><span class="t-label">3 FEB</span></span></div>
     <div id="tlCells"></div>
   </div>
 
@@ -86,7 +85,7 @@
 
   // Year 2026: Jan to Dec. ok = check, no = dim x in a dark circle, miss = bare dim x.
   const y26 = [['Jan', ''], ['Feb', 'ok'], ['Mar', 'ok'], ['Apr', 'ok'], ['May', 'no'], ['Jun', 'ok'],
-               ['Jul', 'ok'], ['Aug', 'ok'], ['Sep', 'miss'], ['Oct', 'ok'], ['Nov', ''], ['Dec', '']];
+               ['Jul', 'ok'], ['Aug', 'ok'], ['Sep', 'no'], ['Oct', 'ok'], ['Nov', ''], ['Dec', '']];
 
   const cell = (x, y, label, mark, dark) => {
     let m = '';
@@ -95,7 +94,7 @@
     if (mark === 'miss') m = X_SVG('xmark', 'var(--ink-3)', 10);
     return `<div class="cell glass${dark ? ' dk' : ''}" style="left:${x}px;top:${y}px"><span class="t-label cell-l${dark ? ' dim' : ''}">${label}</span>${m}</div>`;
   };
-  const PITCH = 52.3, X0 = 25;
+  const PITCH = 53.2, X0 = 25;
   let html = '';
   y26.forEach(([l, mk], i) => {
     const col = i % 6, row = Math.floor(i / 6);
@@ -103,11 +102,11 @@
   });
   document.getElementById('tlCells').insertAdjacentHTML('beforeend', html);
 
-  // Decision row: primary Start recap with an arrow, then History and Settings.
+  // Decision row: primary Start recap, then Recap time; both lead with an icon like triage's row.
   document.querySelector('.tl').insertAdjacentHTML('beforeend', `
     <div class="seg">
-      <div class="seg-btn primary">Start recap${icon('arrow', 18)}</div>
-      <div class="seg-btn">Recap time</div>
+      <div class="seg-btn primary">${icon('stack', 18)}Start recap</div>
+      <div class="seg-btn">${icon('cal', 18)}Recap time</div>
     </div>`);
 </script>
 </body></html>

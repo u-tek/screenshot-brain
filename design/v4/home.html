@@ -1,65 +1,66 @@
 <!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="base.css"><link rel="stylesheet" href="system.css"><script src="kit.js"></script>
 <style>
   .abs { position: absolute; white-space: nowrap; }
-  .days { position: absolute; top: 70px; left: var(--gutter); right: var(--gutter); display: flex; justify-content: space-between; }
+  .days { position: absolute; top: 62px; left: var(--gutter); right: var(--gutter); display: flex; justify-content: space-between; }
   .centre { position: absolute; left: 0; right: 0; text-align: center; }
 
-  .bento { position: absolute; top: 360px; left: var(--gutter); right: var(--gutter); display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 112px 128px 128px; gap: var(--gap); }
+  .bento { position: absolute; top: 354px; left: var(--gutter); right: var(--gutter); display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 112px 128px 128px; gap: var(--gap); }
   .bento .wide { grid-column: 1 / span 2; }
   .tile .head { position: absolute; left: 20px; top: 18px; z-index: 1; color: var(--ink); }
   .tile .foot { position: absolute; left: 20px; bottom: 18px; z-index: 1; display: flex; align-items: baseline; gap: 6px; }
-  .tile .light { width: 170px; height: 150px; opacity: .55; }
+  /* One coral corner light on every small tile; the wide tile sets its own. */
+  .bento .tile:not(.wide) .light { width: 170px; height: 150px; opacity: .6; background: var(--places-c); }
 
   /* A proportion of the 23: hairline track, warm-white fill. */
-  .bar { position: absolute; left: 20px; right: 20px; top: 56px; height: 4px; border-radius: 2px; background: rgba(255,240,225,.14); z-index: 1; }
+  .bar { position: absolute; left: 20px; right: 20px; top: 50px; height: 4px; border-radius: 2px; background: rgba(255,240,225,.14); z-index: 1; }
   .bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px; background: var(--accent); }
-  .week { position: absolute; left: 20px; right: 20px; top: 46px; display: flex; justify-content: space-between; z-index: 1; }
-  .week span { width: 3px; height: 14px; border-radius: 1.5px; background: rgba(255,240,225,.18); }
-  .week span.on { height: 22px; margin-top: -8px; background: var(--accent); }
+  .week { position: absolute; left: 20px; right: 20px; top: 50px; display: flex; justify-content: space-between; z-index: 1; }
+  .week span { width: 3px; height: 8px; border-radius: 1.5px; background: rgba(255,240,225,.18); }
+  .week span.on { height: 12px; margin-top: -4px; background: var(--accent); }
 </style></head>
 <body>
 <div class="phone" id="p">
   <div class="days" id="days"></div>
 
-  <div class="t-body centre" style="top:136px">Score</div>
-  <div class="t-num-xl centre" style="top:160px">6</div>
-  <div class="t-body centre" style="top:262px;color:var(--ink-2)">of 23 done</div>
+  <div class="t-body centre" style="top:128px">Score</div>
+  <div class="t-num-xl centre" style="top:152px">6</div>
+  <div class="t-body centre" style="top:254px;color:var(--ink-2)">of 23 done</div>
 
-  <svg class="abs" style="left:0;top:292px" width="393" height="56" id="chart"></svg>
+  <svg class="abs" style="left:0;top:284px" width="393" height="56" id="chart"></svg>
 
   <div class="bento">
-    <div class="tile wide" style="background:linear-gradient(100deg,var(--places-c) 0%,var(--events-c) 70%,var(--places-d) 100%)">
-      <div class="light" style="left:-40px;top:-80px;width:260px;height:180px;background:var(--products-c);opacity:.6"></div>
+    <div class="tile wide" style="background:linear-gradient(180deg,var(--events-d) 0%,var(--ramp-2) 45%,var(--events-c) 100%)">
+      <div class="light" style="right:-30px;bottom:-90px;width:240px;height:150px;background:var(--places-c);opacity:.55"></div>
       <div class="t-body head">Done this week</div>
       <div class="foot"><span class="t-num-l">2</span><span class="t-unit">things</span></div>
       <svg class="abs" style="right:16px;top:12px;z-index:1" width="88" height="88" id="ring"></svg>
     </div>
 
     <div class="tile">
-      <div class="light" style="right:-70px;bottom:-80px;background:var(--recipes-c)"></div>
+      <div class="light" style="right:-70px;bottom:-80px"></div>
       <div class="t-body head">Kept</div>
       <div class="bar"><i style="width:48%"></i></div>
       <div class="foot"><span class="t-num-l">11</span><span class="t-unit">things</span></div>
     </div>
 
     <div class="tile">
-      <div class="light" style="right:-70px;bottom:-80px;background:var(--events-c)"></div>
+      <div class="light" style="right:-70px;bottom:-80px"></div>
       <div class="t-body head">Dropped</div>
       <div class="bar"><i style="width:26%"></i></div>
       <div class="foot"><span class="t-num-l">6</span><span class="t-unit">things</span></div>
     </div>
 
     <div class="tile">
-      <div class="light" style="right:-70px;bottom:-80px;background:var(--products-c)"></div>
+      <div class="light" style="right:-70px;bottom:-80px"></div>
       <div class="t-body head">Coming up</div>
       <div class="week" id="week"></div>
       <div class="foot"><span class="t-num-l">3</span><span class="t-unit">this week</span></div>
     </div>
 
     <div class="tile">
-      <div class="light" style="right:-70px;bottom:-80px;background:var(--places-c)"></div>
+      <div class="light" style="right:-70px;bottom:-80px"></div>
       <div class="t-body head">Expiring</div>
-      <div class="t-label dim abs" style="left:20px;top:50px;z-index:1">ENDS FRI</div>
+      <div class="t-label dim abs" style="left:20px;top:45px;z-index:1">ENDS FRI</div>
       <div class="foot"><span class="t-num-l">1</span><span class="t-unit">thing</span></div>
     </div>
   </div>
@@ -76,7 +77,7 @@
   document.getElementById('tabbar').innerHTML =
     `<div class="tab on">${icon('home', 20)}Home</div><div class="tab">${icon('bookmark', 20)}Saved</div><div class="tab">${icon('spark', 20)}Reveals</div>`;
 
-  // Score over the month: a smooth line up to today (under the W chip), then a faint hairline ahead.
+  // Score over the month: a smooth line up to today (under the W chip), then a faint solid hairline ahead.
   const today = document.querySelector('.chip-circle.on').getBoundingClientRect();
   const tx = today.left + today.width / 2;
   const pts = [[16, 44], [60, 40], [104, 36], [148, 30], [192, 22], [tx, 14]];
@@ -89,12 +90,13 @@
     <defs>
       <linearGradient id="ln" x1="16" x2="${tx}" y1="0" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#f6ece2" stop-opacity="0"/><stop offset="1" stop-color="#f6ece2"/></linearGradient>
       <linearGradient id="ar" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#ff8a57" stop-opacity=".28"/><stop offset="1" stop-color="#ff8a57" stop-opacity="0"/></linearGradient>
+      <linearGradient id="stem" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1="14" y2="52"><stop offset="0" stop-color="#fff0e1" stop-opacity=".22"/><stop offset="1" stop-color="#fff0e1" stop-opacity="0"/></linearGradient>
       <filter id="gl" x="-200%" y="-200%" width="500%" height="500%"><feGaussianBlur stdDeviation="4"/></filter>
     </defs>
     <path d="${d} L${tx} 52 L16 52 Z" fill="url(#ar)"/>
     <path d="${d}" fill="none" stroke="url(#ln)" stroke-width="1.5"/>
-    <line x1="${tx}" y1="14" x2="377" y2="14" stroke="rgba(255,240,225,.22)" stroke-width="1" stroke-dasharray="2 4"/>
-    <line x1="${tx}" y1="14" x2="${tx}" y2="52" stroke="rgba(255,240,225,.22)" stroke-width="1"/>
+    <line x1="${tx}" y1="14" x2="377" y2="14" stroke="rgba(255,240,225,.14)" stroke-width="1"/>
+    <line x1="${tx}" y1="14" x2="${tx}" y2="52" stroke="url(#stem)" stroke-width="1"/>
     <circle cx="${tx}" cy="14" r="7" fill="#ff8a57" opacity=".7" filter="url(#gl)"/>
     <circle cx="${tx}" cy="14" r="4" fill="#f6ece2"/>`;
 
@@ -102,9 +104,9 @@
   const c = 44, r = 40, C = 2 * Math.PI * r;
   document.getElementById('ring').innerHTML = `
     <circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="2"/>
-    <circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="${C * .4} ${C}" transform="rotate(-90 ${c} ${c})"/>
-    <text x="${c}" y="${c - 2}" text-anchor="middle" font-family="Inter Display, Inter" font-weight="300" font-size="26" fill="#fff">2/5</text>
-    <text x="${c}" y="${c + 16}" text-anchor="middle" font-family="Mono" font-weight="500" font-size="9" letter-spacing="1" fill="rgba(255,255,255,.8)">GOAL</text>`;
+    <circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="#f6ece2" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="${C * .4} ${C}" transform="rotate(-90 ${c} ${c})"/>
+    <text x="${c}" y="${c - 2}" text-anchor="middle" font-family="Inter Display, Inter" font-weight="300" font-size="26" fill="#f6ece2">2/5</text>
+    <text x="${c}" y="${c + 16}" text-anchor="middle" font-family="Mono" font-weight="500" font-size="11" letter-spacing=".88" fill="#f6f1ea">GOAL</text>`;
 
   // Coming up: seven days, three with something on.
   document.getElementById('week').innerHTML = [0, 0, 1, 0, 1, 1, 0].map(o => `<span${o ? ' class="on"' : ''}></span>`).join('');

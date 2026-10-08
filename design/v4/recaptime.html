@@ -2,7 +2,7 @@
 <style>
   .abs { position: absolute; white-space: nowrap; line-height: 1; }
   /* One warm surface, a deep well of light in the middle where the time sits. */
-  .card { position: absolute; left: var(--gutter); right: var(--gutter); top: 122px; height: 704px; border-radius: 44px; overflow: hidden;
+  .card { position: absolute; left: var(--gutter); right: var(--gutter); top: 122px; height: 704px; border-radius: var(--r-card); overflow: hidden;
     --card: color-mix(in srgb, var(--ramp-4) 62%, var(--ramp-6)); --deep: var(--ramp-1);
     background: radial-gradient(120% 70% at 50% 100%, color-mix(in srgb, var(--card) 85%, var(--ramp-3)), var(--card) 60%);
     box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 30px 60px rgba(0,0,0,.4); }
@@ -11,7 +11,7 @@
       color-mix(in srgb, var(--ramp-3) 70%, var(--deep)) 64%, color-mix(in srgb, var(--card) 80%, var(--ramp-3)) 84%, var(--card) 100%); filter: blur(6px); }
   .card > * { position: absolute; }
   .label { left: 28px; top: 40px; color: #1d0e08; }
-  .toggle { right: 24px; top: 30px; width: 64px; height: 38px; border-radius: 19px; background: #1d0e08; }
+  .toggle { right: 28px; top: 32px; width: 64px; height: 38px; border-radius: 19px; background: #1d0e08; }
   .toggle i { position: absolute; right: 4px; top: 4px; width: 30px; height: 30px; border-radius: 50%; background: var(--ramp-7); }
   .big { left: 0; right: 0; text-align: center; top: 176px; }
   .unit { left: 0; right: 0; text-align: center; top: 282px; color: rgba(246,236,226,.7); }
@@ -35,11 +35,11 @@
     <div class="well"></div>
     <div class="t-nav label">Nightly recap</div>
     <div class="toggle"><i></i></div>
-    <div class="t-num-xl big" style="font-size:104px">9:30</div>
-    <div class="t-unit unit">pm</div>
+    <div class="t-num-xl big">9:30</div>
+    <div class="t-unit unit">PM</div>
     <div class="ruler" id="ruler"></div>
     <div class="foot">
-      <div><div class="t-label" style="color:#1d0e08">WEEKNIGHTS</div><div class="t-body" style="color:rgba(29,14,8,.7);margin-top:6px">About two minutes</div></div>
+      <div><div class="t-label" style="color:#1d0e08">RECAP LENGTH</div><div class="t-body" style="color:rgba(29,14,8,.7);margin-top:6px">About 2 minutes</div></div>
       <div class="knob"><b></b></div>
     </div>
     <div class="days" id="days"></div>
@@ -51,7 +51,7 @@
 <script>
   const p = document.getElementById('p');
   p.insertAdjacentHTML('afterbegin', statusBar(true) +
-    `<div style="position:absolute;top:62px;left:16px;right:16px;display:flex;align-items:center;gap:14px;z-index:60"><span class="btn-circle">${icon('back', 20)}</span><span class="t-nav">Your recap</span></div>`);
+    `<div style="position:absolute;top:62px;left:16px;right:16px;display:flex;align-items:center;gap:14px;z-index:60"><span class="btn-circle">${icon('back', 20)}</span><span class="t-nav">Recap time</span></div>`);
   document.getElementById('cta').insertAdjacentHTML('beforeend', `<span class="go">${icon('check', 18)}</span>`);
   // Ruler: quarter hours either side of 9:30, the hours taller, fading towards the edges.
   const R = document.getElementById('ruler'), w = 281; let h = '';

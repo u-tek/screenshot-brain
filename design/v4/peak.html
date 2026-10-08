@@ -2,23 +2,23 @@
 <style>
   /* Everything is placed in screen points (393 x 852), measured from the reference phone. */
   .abs { position: absolute; }
-  .orb-disc { position: absolute; left: 86px; top: 292.5px; width: 70px; height: 73px; border-radius: 50%;
-    background: radial-gradient(ellipse 62% 60% at 44% 40%, #fff 0 70%, #f4f1f1 90%, rgba(244,241,241,0) 100%);
-    filter: blur(1.1px); }
+  .orb-disc { position: absolute; left: 85px; top: 293px; width: 72px; height: 72px; border-radius: 50%;
+    background: radial-gradient(circle at 45% 42%, #fff 0 64%, var(--accent) 84%, rgba(246,236,226,0) 100%);
+    filter: blur(1.5px); }
 </style>
 </head><body>
 <div class="phone" id="peak">
 
-  <!-- smoky haze: blurred colour cells in the reference's arrangement, made neutral and pulled down towards --ground -->
+  <!-- smoky haze: blurred colour cells in the reference's arrangement, made warm grey and pulled down towards --ground -->
   <svg class="abs" style="left:0;top:0;z-index:0" width="393" height="852" viewBox="0 0 393 852">
     <defs><filter id="pk-soft" x="-30%" y="-30%" width="160%" height="160%" color-interpolation-filters="sRGB">
       <feGaussianBlur in="SourceGraphic" stdDeviation="18" result="blur"/>
       <feColorMatrix in="blur" type="saturate" values="0" result="grey"/>
-      <!-- out = --ground + .62 * in, per channel: mid greys dim, black lifts to #0b0b0c -->
+      <!-- out = --ground + slope * in, warmer per channel (R .62, G .59, B .55): mid greys land on the warm grey of --ink-2, black lifts to --ground -->
       <feComponentTransfer in="grey">
         <feFuncR type="linear" slope=".62" intercept=".043"/>
-        <feFuncG type="linear" slope=".62" intercept=".043"/>
-        <feFuncB type="linear" slope=".62" intercept=".047"/>
+        <feFuncG type="linear" slope=".59" intercept=".040"/>
+        <feFuncB type="linear" slope=".55" intercept=".036"/>
       </feComponentTransfer>
     </filter></defs>
     <rect width="393" height="852" style="fill:var(--ground)"/>
@@ -188,46 +188,41 @@
     </g>
   </svg>
 
-  <!-- comet trail under the white orb: events pink at the orb, places coral at the tail -->
+  <!-- comet trail under the white orb: events ember at the orb, fading out through places coral at the tail -->
   <svg class="abs" style="left:40px;top:240px;z-index:1;overflow:visible" width="200" height="230" viewBox="0 0 200 230">
     <defs>
-      <linearGradient id="pk-trail-line" gradientUnits="userSpaceOnUse" x1="80" y1="89" x2="130" y2="148">
+      <linearGradient id="pk-trail-line" gradientUnits="userSpaceOnUse" x1="88" y1="98" x2="160" y2="184">
         <stop offset="0" style="stop-color:var(--events-c)"/>
-        <stop offset="1" style="stop-color:var(--places-c)"/>
-      </linearGradient>
-      <radialGradient id="pk-trail" gradientUnits="userSpaceOnUse" cx="136" cy="158" r="56">
-        <stop offset="0" style="stop-color:var(--places-c)" stop-opacity="1"/>
-        <stop offset=".5" style="stop-color:var(--places-c)" stop-opacity=".9"/>
         <stop offset="1" style="stop-color:var(--places-c)" stop-opacity="0"/>
-      </radialGradient>
-      <filter id="pk-trail-blur" x="-60%" y="-60%" width="220%" height="220%" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="9"/></filter>
+      </linearGradient>
+      <filter id="pk-trail-blur" filterUnits="userSpaceOnUse" x="-40" y="-40" width="300" height="320" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="9"/></filter>
     </defs>
     <g filter="url(#pk-trail-blur)">
-      <line x1="80" y1="89" x2="130" y2="148" stroke="url(#pk-trail-line)" stroke-width="88" stroke-linecap="round"/>
-      <circle cx="136" cy="158" r="56" fill="url(#pk-trail)"/>
+      <line x1="88" y1="98" x2="140" y2="160" stroke="url(#pk-trail-line)" stroke-width="88" stroke-linecap="round"/>
     </g>
   </svg>
   <div class="orb-disc" style="z-index:2"></div>
 
   <!-- axes -->
-  <div class="abs" style="left:198.6px;top:201.3px;width:1px;height:437px;background:var(--line);z-index:3"></div>
-  <div class="abs" style="left:16.1px;top:412.8px;width:366px;height:1px;background:var(--line);z-index:3"></div>
+  <div class="abs" style="left:196px;top:201.3px;width:1px;height:437px;background:var(--line);z-index:3"></div>
+  <div class="abs" style="left:16px;top:412.8px;width:361px;height:1px;background:var(--line);z-index:3"></div>
 
   <!-- Reveal chrome: story bars, then the mark and a close button at y = 72 -->
-  <div class="story-bars"><span></span><span></span><span class="on"></span><span></span><span></span><span></span><span></span><span></span></div>
+  <div class="story-bars"><span class="done"></span><span class="done"></span><span class="on"></span><span></span><span></span><span></span><span></span><span></span></div>
   <div class="abs" style="left:var(--gutter);right:var(--gutter);top:72px;display:flex;align-items:center;justify-content:space-between;z-index:60">
     <span class="mark" id="mark"></span>
     <span class="btn-circle" id="close" style="width:36px;height:36px"></span>
   </div>
 
   <!-- title: Reveal headline, two lines at the left -->
-  <div class="t-story abs" style="left:var(--gutter);top:112px;font-size:34px;white-space:nowrap;z-index:4">When you<br>screenshot</div>
+  <div class="t-story s abs" style="left:var(--gutter);top:112px;white-space:nowrap;z-index:4">When you<br>screenshot</div>
+  <div class="t-label dim abs" style="right:var(--gutter);top:132px;z-index:4">3 / 8</div>
 
-  <!-- corner labels -->
-  <div class="t-label abs" style="left:var(--gutter);top:200.7px;z-index:4">MORNING</div>
-  <div class="t-label abs" style="right:var(--gutter);top:200.7px;text-align:right;z-index:4">NIGHT</div>
-  <div class="t-label abs" style="left:var(--gutter);top:639.2px;z-index:4">WEEKDAY</div>
-  <div class="t-label abs" style="right:var(--gutter);top:639.2px;text-align:right;z-index:4">WEEKEND</div>
+  <!-- corner labels: each names its quadrant (top = weekday, bottom = weekend; left = nights, right = mornings) -->
+  <div class="t-label abs" style="left:var(--gutter);top:200.7px;z-index:4">WEEKDAY NIGHTS</div>
+  <div class="t-label abs" style="right:var(--gutter);top:200.7px;text-align:right;z-index:4">WEEKDAY MORNINGS</div>
+  <div class="t-label abs" style="left:var(--gutter);top:639.2px;z-index:4">WEEKEND NIGHTS</div>
+  <div class="t-label abs" style="right:var(--gutter);top:639.2px;text-align:right;z-index:4">WEEKEND MORNINGS</div>
 
   <!-- tabs: TIME is the one on -->
   <div class="abs" style="left:var(--gutter);right:var(--gutter);top:685px;display:flex;justify-content:space-between;z-index:4">
@@ -235,10 +230,10 @@
   </div>
 
   <!-- peak panel: glass, label and time on the left, send on the right -->
-  <div class="glass abs" style="left:var(--gutter);right:var(--gutter);top:712px;display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-radius:20px;z-index:4">
+  <div class="glass abs" style="left:var(--gutter);right:var(--gutter);top:712px;display:flex;align-items:center;justify-content:space-between;padding:16px;border-radius:var(--r-tile);z-index:4">
     <div>
       <div class="t-label">PEAK · TUESDAYS</div>
-      <div class="t-num-l" style="font-size:28px;margin-top:6px">12:40am</div>
+      <div style="margin-top:8px"><span class="t-num-l">12:40</span><span class="t-unit" style="margin-left:4px">am</span></div>
     </div>
     <span class="btn-circle" id="send"></span>
   </div>

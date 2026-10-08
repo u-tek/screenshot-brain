@@ -1,21 +1,22 @@
 <!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="base.css"><link rel="stylesheet" href="system.css"><script src="kit.js"></script>
 <style>
   html, body { background: var(--ground); }
-  .photo { position: absolute; left: 0; top: 0; width: 393px; height: 300px; overflow: hidden; background: var(--ground); }
-  .photo .blur { position: absolute; left: 0; top: 0; width: 393px; height: 300px; }
+  .photo { position: absolute; left: 0; top: 0; width: 393px; height: 340px; overflow: hidden; background: var(--ground);
+    -webkit-mask-image: linear-gradient(180deg, #000 72%, transparent 100%); mask-image: linear-gradient(180deg, #000 72%, transparent 100%); }
+  .photo .blur { position: absolute; left: 0; top: 0; width: 393px; height: 340px; }
   .photo::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, var(--ground) 0%, rgba(11,10,9,.55) 30%, rgba(11,10,9,.15) 60%, rgba(11,10,9,.6) 100%); }
   .photo .b { position: absolute; }
   .handle { position: absolute; left: 178px; top: 304px; z-index: 3; width: 37px; height: 5px; border-radius: 3px; background: rgba(29,14,8,.28); }
   .mark { position: absolute; left: 0; right: 0; top: 66px; transform: translateY(-50%); justify-content: center; white-space: nowrap; }
   .mark svg { display: block; flex: none; }
-  .card { position: absolute; left: 8px; right: 8px; top: 296px; height: 548px; border-radius: 44px; overflow: hidden;
+  .card { position: absolute; left: 16px; right: 16px; top: 296px; height: 530px; border-radius: var(--r-card); overflow: hidden;
     --card: color-mix(in srgb, var(--ramp-4) 62%, var(--ramp-6)); --deep: var(--ramp-1);
     background: var(--card); box-shadow: inset 0 1px 0 rgba(255,255,255,.35); }
-  .card .well { position: absolute; left: 50%; top: 274px; width: 430px; height: 384px; transform: translate(-50%, -50%); border-radius: 50%; filter: blur(8px);
+  .card .well { position: absolute; left: 50%; top: 274px; width: 400px; height: 384px; transform: translate(-50%, -50%); border-radius: 50%; filter: blur(8px);
     background: radial-gradient(closest-side, var(--ground) 0%, var(--ground) 56%, color-mix(in srgb, var(--deep) 70%, var(--ground)) 66%, var(--deep) 76%,
       color-mix(in srgb, var(--ramp-3) 60%, var(--deep)) 88%, var(--card) 100%); }
   .title { position: absolute; top: 334px; color: #1d0e08; left: var(--gutter); right: var(--gutter); text-align: center; white-space: nowrap; }
-  .cta { position: absolute; left: 50%; top: 764px; width: 197px; transform: translateX(-50%); background: #1d0e08; }
+  .cta { position: absolute; left: 50%; top: 748px; width: 197px; transform: translateX(-50%); background: #1d0e08; }
   svg.overlay { position: absolute; left: 0; top: 0; overflow: visible; }
 </style></head>
 <body>
@@ -26,7 +27,7 @@
 
   <div class="card"><div class="well"></div></div>
   <svg class="overlay" width="393" height="852" viewBox="0 0 393 852" id="dial"></svg>
-  <div class="t-nav title">Reading your screenshots<br>on this iPhone</div>
+  <div class="t-nav title">Your screenshots, read<br>only on this iPhone</div>
   <div class="cta"><span>Start reading</span><span class="go" id="go"></span></div>
   <div class="grain"></div>
 </div>
@@ -64,7 +65,7 @@
   const dial = el("g", { transform: "translate(196.5 570) scale(0.29)" });
   const a1 = 84, a2 = 174.4;
   const s1 = P(a1, 262), s2 = P(a2, 262), i1 = P(a1, 196), i2 = P(a2, 196);
-  el("path", { d: `M${s1} A262 262 0 0 1 ${s2} L${i2} A196 196 0 0 0 ${i1} Z`, fill: "#1d0e08" }, dial);
+  el("path", { d: `M${s1} A262 262 0 0 1 ${s2} L${i2} A196 196 0 0 0 ${i1} Z`, fill: "rgba(246,236,226,.07)" }, dial);
   el("circle", { r: "262", fill: "none", stroke: "rgba(246,236,226,.45)", "stroke-width": "4" }, dial);
   for (let k = 0; k < 75; k++) {
     const th = -87.6 + k * 4.8;
@@ -74,8 +75,8 @@
     el("line", { x1, y1, x2, y2, stroke: "#f6ece2", "stroke-width": "6" }, dial);
   }
   const hatch = [[-349.5, 250, -299.5, 200], [-324.5, 280, -245.5, 202], [-271.5, 332, -194.5, 254], [-239.5, 354, -196.5, 310]];
-  hatch.forEach(([x1, y1, x2, y2]) => el("line", { x1, y1, x2, y2, stroke: "#f6ece2", "stroke-width": "6.5" }, dial));
-  el("line", { x1: -301.5, y1: 307, x2: -186.5, y2: 192, style: "stroke: var(--lime)", "stroke-width": "7.5" }, dial);
+  hatch.forEach(([x1, y1, x2, y2]) => el("line", { x1, y1, x2, y2, stroke: "rgba(246,236,226,.4)", "stroke-width": "6.5" }, dial));
+  el("line", { x1: -301.5, y1: 307, x2: -186.5, y2: 192, style: "stroke: var(--accent)", "stroke-width": "6.5" }, dial);
   el("line", { x1: P(a2, 262)[0], y1: P(a2, 262)[1], x2: P(a2, 452)[0], y2: P(a2, 452)[1], stroke: "rgba(255,255,255,.75)", "stroke-width": "2.2", "stroke-dasharray": "7 6" }, dial);
   el("line", { x1: P(a1, 262)[0], y1: P(a1, 262)[1], x2: P(a1, 470)[0], y2: P(a1, 470)[1], stroke: "rgba(255,255,255,.75)", "stroke-width": "2.2", "stroke-dasharray": "7 6" }, dial);
   el("circle", { r: "196", fill: "url(#dg)" }, dial);

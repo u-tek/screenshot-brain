@@ -3,19 +3,19 @@
   html, body { background: var(--ground); }
   /* A shelf of boxes seen from the middle of the screen: real perspective, so boxes above the eye
      show their underside (the screenshot as cover art) and boxes below show their top. */
-  .wheel { position: absolute; left: var(--gutter); top: 0; width: 232px; height: 852px; perspective: 520px; perspective-origin: 116px 452px; }
-  .box { position: absolute; left: 0; width: 232px; height: 34px; transform-style: preserve-3d; }
+  .wheel { position: absolute; left: var(--gutter); top: 0; width: 216px; height: 852px; perspective: 520px; perspective-origin: 108px 452px; }
+  .box { position: absolute; left: 0; width: 216px; height: 34px; transform-style: preserve-3d; }
   .front { position: absolute; inset: 0; border-radius: 3px; overflow: hidden; }
   .front .ln { position: absolute; left: 8px; right: 42px; height: 1px; }
   .front .th { position: absolute; right: 4px; top: 4px; width: 26px; height: 26px; border-radius: 2px; overflow: hidden; }
-  .cover { position: absolute; left: 0; width: 232px; height: 200px; overflow: hidden; backface-visibility: hidden; }
+  .cover { position: absolute; left: 0; width: 216px; height: 200px; overflow: hidden; backface-visibility: hidden; }
   .cover.under { top: 34px; transform-origin: 50% 0; transform: rotateX(-90deg); }
   .cover.over { top: -200px; transform-origin: 50% 100%; transform: rotateX(90deg); }
   .cover .fade { position: absolute; inset: 0; }
-  .glow { position: absolute; left: 8px; width: 216px; height: 50px; border-radius: 50%; filter: blur(22px); }
-  .title { position: absolute; left: 264px; right: var(--gutter); }
-  .title .t-title { font-size: 15px; line-height: 1.2; }
-  .title .t-body { font-size: 13px; margin-top: 3px; }
+  .glow { position: absolute; left: 8px; width: 200px; height: 50px; border-radius: 50%; filter: blur(22px); }
+  .title { position: absolute; left: 248px; right: var(--gutter); }
+  .title .t-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .title .t-body { margin-top: 3px; }
 </style>
 </head><body>
 <div class="phone" id="screen"></div>
@@ -23,11 +23,11 @@
 const S = document.getElementById('screen');
 // Spine colours step down the ramp, like the reference's white, red, deep, orange, grey boxes.
 const ROWS = [
-  { title: 'Ramen Ikkyu', sub: '3 weeks ago', top: 172, face: 'var(--ramp-7)', ink: 'var(--ramp-6)', kind: 'place' },
-  { title: "Bar Totti's", sub: '5 weeks ago', top: 300, face: 'var(--ramp-3)', ink: 'var(--ramp-2)', kind: 'recipe' },
-  { title: 'Chaco Bar', sub: '2 months ago', top: 436, face: 'var(--ramp-2)', ink: 'var(--ramp-1)', kind: 'event' },
-  { title: 'Lune Croissanterie', sub: '2 months ago', top: 580, face: 'var(--ramp-5)', ink: 'var(--ramp-4)', kind: 'product' },
-  { title: 'Sunday market', sub: '3 months ago', top: 720, face: 'var(--reference-c)', ink: 'color-mix(in srgb, var(--reference-c) 80%, #000)', kind: 'place' },
+  { title: 'Ramen Ikkyu', sub: '3 weeks ago', top: 164, face: 'var(--ramp-7)', ink: 'var(--ramp-6)', kind: 'place' },
+  { title: 'Bar Totti’s', sub: '5 weeks ago', top: 300, face: 'var(--ramp-3)', ink: 'var(--ramp-2)', kind: 'recipe' },
+  { title: 'Chaco Bar', sub: '2 months ago', top: 436, face: 'var(--ramp-2)', ink: 'var(--ramp-1)', kind: 'place' },
+  { title: 'Studio Kiri', sub: '2 months ago', top: 572, face: 'var(--ramp-5)', ink: 'var(--ramp-4)', kind: 'product' },
+  { title: 'Enmore Theatre', sub: '3 months ago', top: 708, face: 'var(--reference-c)', ink: 'color-mix(in srgb, var(--reference-c) 80%, #000)', kind: 'event' },
 ];
 const EYE = 452;
 
@@ -40,11 +40,16 @@ ROWS.forEach(r => {
   const above = r.top + 17 < EYE;
   const lines = [8, 13, 18, 23, 28].map(y => `<div class="ln" style="top:${y}px;background:color-mix(in srgb, ${r.ink} 70%, transparent)"></div>`).join('');
   const fade = above
-    ? 'linear-gradient(180deg, rgba(11,10,9,.2) 0%, rgba(11,10,9,.7) 50%, var(--ground) 100%)'
-    : 'linear-gradient(0deg, rgba(11,10,9,.2) 0%, rgba(11,10,9,.7) 50%, var(--ground) 100%)';
-  wheel += `<div class="glow" style="top:${r.top - 6}px;background:${r.face};opacity:.35"></div>`;
+    ? 'linear-gradient(180deg, rgba(11,10,9,0) 0%, rgba(11,10,9,.35) 55%, var(--ground) 100%)'
+    : 'linear-gradient(0deg, rgba(11,10,9,0) 0%, rgba(11,10,9,.35) 55%, var(--ground) 100%)';
+  // Covers are sharp cover art. Undersides start at the spine with the page's top edge, so they are
+  // drawn 80pt taller and lifted 80pt to keep the page's status bar and nav buttons off the box.
+  const cover = above
+    ? `<div style="margin-top:-80px">${screenshot(r.kind, 216, 280, { hero: true, sharp: true })}</div>`
+    : screenshot(r.kind, 216, 200, { hero: true, sharp: true });
+  wheel += `<div class="glow" style="top:${r.top - 6}px;background:${r.face};opacity:${/ramp-6|ramp-7|reference-c/.test(r.face) ? .15 : .35}"></div>`;
   wheel += `<div class="box" style="top:${r.top}px">
-    <div class="cover ${above ? 'under' : 'over'}">${screenshot(r.kind, 232, 200, { hero: true, blurX: 3, blurY: 3 })}
+    <div class="cover ${above ? 'under' : 'over'}">${cover}
       <div class="fade" style="background:${fade}"></div></div>
     <div class="front" style="background:linear-gradient(180deg, color-mix(in srgb, ${r.face} 85%, #fff) 0%, ${r.face} 30%, ${r.face} 80%, color-mix(in srgb, ${r.face} 80%, #000) 100%);
       box-shadow: inset 0 0 0 1px color-mix(in srgb, ${r.ink} 80%, transparent), 0 0 18px color-mix(in srgb, ${r.face} 40%, transparent)">

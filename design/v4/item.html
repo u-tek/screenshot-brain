@@ -4,17 +4,17 @@
   .ident { position: absolute; top: 120px; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; text-align: center; }
   .ident .kind { display: flex; align-items: center; gap: 8px; }
   .ident .kind i { width: 6px; height: 6px; border-radius: 50%; background: var(--events-c); box-shadow: 0 0 8px var(--events-c); }
-  .ident .t-large { font-size: 44px; margin-top: 12px; }
+  .ident .t-large { margin-top: 12px; }
   .ident .t-body { margin-top: 6px; }
 
-  .hero { position: absolute; top: 236px; left: var(--gutter); right: var(--gutter); height: 370px; }
+  .hero { position: absolute; top: 236px; left: var(--gutter); right: var(--gutter); height: 424px; }
   .hero .light { left: 50%; top: 50%; width: 260px; height: 300px; transform: translate(-50%, -50%); background: var(--events-c); opacity: .5; filter: blur(50px); }
-  .shot { position: absolute; left: 50%; top: 22px; transform: translateX(-50%); width: 150px; height: 326px; border-radius: 24px; overflow: hidden; z-index: 1;
+  .shot { position: absolute; left: 50%; top: 49px; transform: translateX(-50%); width: 150px; height: 326px; border-radius: 24px; overflow: hidden; z-index: 1;
     box-shadow: 0 0 0 1px rgba(255,240,225,.14), 0 24px 48px rgba(0,0,0,.55); }
-  .count { position: absolute; right: 18px; bottom: 16px; z-index: 1; }
+  .count { position: absolute; right: 20px; bottom: 20px; z-index: 1; }
 
-  .sect { position: absolute; top: 630px; left: var(--gutter); }
-  .actions { position: absolute; top: 654px; left: var(--gutter); right: var(--gutter); display: flex; flex-direction: column; gap: var(--gap); }
+  .sect { position: absolute; top: 684px; left: var(--gutter); }
+  .actions { position: absolute; top: 708px; left: var(--gutter); right: var(--gutter); display: flex; flex-direction: column; gap: var(--gap); }
   .actions .row { display: flex; gap: var(--gap); }
   .actions .row > .scenario { flex: 1; }
   .scenario { height: 56px; gap: 10px; }
@@ -31,7 +31,7 @@
     </div>
 
     <div class="ident">
-      <div class="kind"><i></i><span class="t-label dim">EVENT · SUN 11 OCT · 7PM</span></div>
+      <div class="kind"><i></i><span class="t-label">EVENT · SUN 11 OCT · 7PM</span></div>
       <div class="t-large">Mallrat</div>
       <div class="t-body">Enmore Theatre, Newtown</div>
     </div>
@@ -39,7 +39,7 @@
     <div class="tile hero">
       <div class="light"></div>
       <div class="shot">${screenshot('event', 150, 326, { sharp: true })}</div>
-      <span class="t-label dim count">2 SHOTS</span>
+      <span class="t-label dim count">2 SCREENSHOTS</span>
     </div>
 
     <div class="t-label dim sect">DO IT</div>

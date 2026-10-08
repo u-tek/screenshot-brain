@@ -65,13 +65,18 @@ function screenshot(kind, w, h, { blurX = 26, blurY = 6, sharp = false, hero = f
   const scenes = {
     event: () => {
       let crowd = "";
+      // crowd: heads 34 +/-20% with a neck gap, sloped shoulders about 2.2x the head, heights +/-6
       for (let i = 0; i < 13; i++) {
-        const x = -20 + i * 33 + rnd() * 14, y = 222 + rnd() * 26, s = 40 + rnd() * 14;
-        crowd += ab(`left:${x}px;top:${y}px;width:${s}px;height:${s * 1.15}px;border-radius:50% 50% 44% 44%;background:#0b0504`);
-        crowd += ab(`left:${x - 18}px;top:${y + s * .85}px;width:${s + 36}px;height:90px;border-radius:40px 40px 0 0;background:#0b0504`);
+        const s = 34 * (0.8 + rnd() * 0.4), x = -14 + i * 33 + rnd() * 10, y = 230 + (rnd() * 12 - 6);
+        crowd += ab(`left:${x}px;top:${y}px;width:${s}px;height:${s * 1.18}px;border-radius:50% 50% 46% 46%;background:#0b0504`);
+        crowd += ab(`left:${x - s * .62}px;top:${y + s * 1.02}px;width:${s * 2.24}px;height:90px;border-radius:${s * .9}px ${s * .9}px 0 0 / ${s * .55}px ${s * .55}px 0 0;background:#0b0504`);
       }
-      crowd += ab(`left:92px;top:176px;width:9px;height:90px;border-radius:5px;background:#0b0504;transform:rotate(-14deg)`);
-      crowd += ab(`left:286px;top:184px;width:9px;height:84px;border-radius:5px;background:#0b0504;transform:rotate(12deg)`);
+      // raised arms: shoulder -> elbow -> hand, the upper arm 11 wide tapering to a 9-wide forearm, the hand a rounded mitten barely wider than the wrist
+      const arm = ([sx, sy, ex, ey, hx, hy]) => {
+        const a = Math.atan2(hy - ey, hx - ex) * 180 / Math.PI + 90;
+        return `<path d="M${sx} ${sy} L${ex} ${ey}" stroke-width="11"/><path d="M${ex} ${ey} L${hx} ${hy}" stroke-width="9"/><ellipse cx="${hx}" cy="${hy}" rx="5.5" ry="7.5" transform="rotate(${a.toFixed(1)} ${hx} ${hy})" stroke="none"/>`;
+      };
+      crowd += `<svg style="position:absolute;left:0;top:0" width="393" height="300" viewBox="0 0 393 300" fill="#0b0504" stroke="#0b0504" stroke-linecap="round" stroke-linejoin="round">${[[64, 278, 46, 240, 64, 200], [126, 274, 138, 242, 128, 208], [270, 274, 258, 244, 270, 210], [314, 278, 334, 242, 320, 200], [358, 282, 346, 252, 362, 222]].map(arm).join("")}</svg>`;
       const beam = (x, r, o) => ab(`left:${x}px;top:96px;width:70px;height:300px;transform-origin:50% 0;transform:rotate(${r}deg);background:linear-gradient(180deg,rgba(255,214,170,${o}),rgba(255,160,100,0));filter:blur(7px)`);
       return `<div style="position:absolute;inset:0;background:#0d0806"></div>
         ${bar("#fff")}
@@ -79,9 +84,12 @@ function screenshot(kind, w, h, { blurX = 26, blurY = 6, sharp = false, hero = f
         <div style="position:absolute;top:100px;left:0;right:0;height:300px;overflow:hidden;background:radial-gradient(70% 80% at 50% 30%,#ffa660 0%,#e8622e 28%,#7a2410 60%,#1a0a06 100%)">
           ${beam(90, 22, .55)}${beam(160, 0, .7)}${beam(230, -22, .55)}
           ${ab("left:120px;top:20px;width:150px;height:150px;border-radius:50%;background:#fff3e0;filter:blur(40px);opacity:.55")}
-          ${ab("left:179px;top:104px;width:32px;height:38px;border-radius:50%;background:#160806")}
-          ${ab("left:164px;top:138px;width:62px;height:130px;border-radius:28px 28px 8px 8px;background:#160806")}
-          ${ab("left:150px;top:130px;width:3px;height:150px;background:#160806;transform:rotate(-6deg)")}
+          <svg style="position:absolute;left:0;top:0" width="393" height="300" viewBox="0 0 393 300" fill="#160806">
+            <circle cx="195" cy="121" r="16"/>
+            <path d="M189 134 L189 144 C182 147 172 149 166 154 C161 159 159 168 160 180 L171 270 L219 270 L230 180 C231 168 229 159 224 154 C218 149 208 147 201 144 L201 134 Z"/>
+            <path d="M146 290 L180.5 141" stroke="#160806" stroke-width="3" stroke-linecap="round"/>
+            <rect x="176.5" y="128" width="8" height="14" rx="4" transform="rotate(13 180.5 135)"/>
+          </svg>
           ${crowd}
         </div>
         <div style="position:absolute;top:420px;left:20px;right:20px;font-family:Inter">
@@ -103,7 +111,7 @@ function screenshot(kind, w, h, { blurX = 26, blurY = 6, sharp = false, hero = f
       let noodles = "";
       for (let i = 0; i < 9; i++) noodles += ab(`left:${78 + i * 9}px;top:${150 + i * 6}px;width:150px;height:110px;border-radius:50%;border:3px solid #f6dba0;border-color:#f6dba0 transparent transparent transparent;transform:rotate(${-30 + i * 8}deg);opacity:.95`);
       let greens = "";
-      for (let i = 0; i < 16; i++) greens += ab(`left:${150 + rnd() * 120}px;top:${110 + rnd() * 90}px;width:9px;height:9px;border-radius:50%;border:2.5px solid #b9bd6b`);
+      for (let i = 0; i < 16; i++) greens += ab(`left:${150 + rnd() * 120}px;top:${110 + rnd() * 90}px;width:9px;height:9px;border-radius:50%;border:2.5px solid #e6cf9a`);
       return `<div style="position:absolute;inset:0;background:#faf6f1"></div>
         <div style="position:absolute;top:0;left:0;right:0;height:380px;overflow:hidden;background:linear-gradient(160deg,#5a3520,#2a160c)">
           ${ab("left:-40px;top:0;width:470px;height:380px;background:repeating-linear-gradient(100deg,rgba(255,220,180,.05) 0 3px,transparent 3px 22px)")}
@@ -184,8 +192,8 @@ function screenshot(kind, w, h, { blurX = 26, blurY = 6, sharp = false, hero = f
           ${ab("left:80px;top:85px;width:230px;height:230px;border-radius:50%;background:#f2ebe1;box-shadow:inset 0 2px 6px rgba(90,50,20,.15)")}
           ${ab("left:100px;top:105px;width:190px;height:190px;border-radius:50%;background:radial-gradient(circle,#e5552c,#b8361a 70%,rgba(184,54,26,0) 72%)")}
           ${pasta}${cheese}
-          ${ab("left:170px;top:160px;width:26px;height:14px;border-radius:50% 0;background:#4a6a2c;transform:rotate(-20deg)")}
-          ${ab("left:214px;top:220px;width:24px;height:13px;border-radius:50% 0;background:#4a6a2c;transform:rotate(30deg)")}
+          ${ab("left:170px;top:160px;width:26px;height:14px;border-radius:50% 0;background:#6b4f24;transform:rotate(-20deg)")}
+          ${ab("left:214px;top:220px;width:24px;height:13px;border-radius:50% 0;background:#6b4f24;transform:rotate(30deg)")}
           ${ab("left:342px;top:60px;width:10px;height:290px;border-radius:5px;background:linear-gradient(90deg,#d9d3cb,#a8a198)")}
           ${bar("#1b1512")}
         </div>
