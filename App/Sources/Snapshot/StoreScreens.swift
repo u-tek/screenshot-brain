@@ -58,8 +58,10 @@ struct StoreScreenView: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let phoneWidth = proxy.size.width * 0.74
-            let scale = phoneWidth / 393
+            // The phone takes whatever height is left after a two-line caption, so the caption is
+            // never covered.
+            let scale = min(proxy.size.width * 0.74 / 393, (proxy.size.height - 200) / 852)
+            let phoneWidth = 393 * scale
             ZStack {
                 LightField(.sweep(.sampleTopScreenshots).shifted(down: 0.18), drifts: false)
                     .ignoresSafeArea()
