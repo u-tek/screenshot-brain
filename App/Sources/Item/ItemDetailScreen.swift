@@ -111,11 +111,11 @@ struct ItemDetailScreen: View {
                         SBLight(kind.core, width: 260, height: 300, opacity: 0.5, blur: 50)
                         AssetImage(item.assetLocalID, maxPixelSize: 1400, allowsNetwork: true)
                             .aspectRatio(9 / 19.5, contentMode: .fit)
-                            .frame(maxHeight: 326)
+                            .frame(maxHeight: 260)
                             .clipShape(RoundedRectangle(cornerRadius: SBRadius.shot, style: .continuous))
                             .overlay(RoundedRectangle(cornerRadius: SBRadius.shot, style: .continuous).strokeBorder(SBColor.warm(0.14), lineWidth: 1))
                             .shadow(color: .black.opacity(0.55), radius: 24, y: 24)
-                            .padding(.vertical, 28)
+                            .padding(.vertical, 22)
                     }
                     .clipShape(RoundedRectangle(cornerRadius: SBRadius.tile, style: .continuous))
 

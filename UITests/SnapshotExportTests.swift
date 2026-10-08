@@ -41,7 +41,7 @@ final class SnapshotExportTests: XCTestCase {
                 if let previous {
                     postNext()
                     // A change of appearance takes longer to settle than a change of screen.
-                    Thread.sleep(forTimeInterval: appearance(of: shot) == appearance(of: previous) ? 0.9 : 2.5)
+                    Thread.sleep(forTimeInterval: appearance(of: shot) == appearance(of: previous) ? 1.8 : 2.5)
                 }
                 previous = shot
                 guard app.state == .runningForeground else {
