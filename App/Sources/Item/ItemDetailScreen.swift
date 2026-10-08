@@ -119,9 +119,10 @@ struct ItemDetailScreen: View {
                     }
                     .clipShape(RoundedRectangle(cornerRadius: SBRadius.tile, style: .continuous))
 
-                    DataRows(rows(item))
-
+                    // What to do comes before the details, so it sits clear of the done button.
                     actions(item)
+
+                    DataRows(rows(item))
                 }
                 .padding(.horizontal, SBSpace.gutter)
                 .padding(.bottom, 120)
