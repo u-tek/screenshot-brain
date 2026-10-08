@@ -322,7 +322,7 @@ final class AppModel: ObservableObject {
                 if shared > 0 {
                     analytics.track(.screenshotsShared, counts: ["screenshots": shared])
                     if step == .photoAccess {
-                        advance(to: .questions)
+                        advanceAfterPhotoAccess()
                     }
                 }
                 if hasPhotoAccess {
@@ -506,7 +506,13 @@ final class AppModel: ObservableObject {
     private func syncNow() async {
         guard let sync, syncsToCloud else { return }
         await sync.sync()
-        if let synced = try? services?.database.onboardingAnswers(), synced.step > answers.step {
+        if var synced = try? services?.database.onboardingAnswers(), synced.step > answers.step {
+            if let resumeStep {
+                // Still asking for photo access on this phone: stay there, and carry on to the
+                // synced step once it's granted.
+                self.resumeStep = max(resumeStep, synced.step)
+                synced.step = .photoAccess
+            }
             answers = synced
         }
     }
