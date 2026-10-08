@@ -3,8 +3,8 @@ import DesignSystem
 import SwiftUI
 import UIKit
 
-/// The 9:16 share card: numbers and words only, never a screenshot. A misty ground, one strong
-/// smear of the user's colours, a huge thin number and a light/bold line.
+/// The 9:16 share card: numbers and words only, never a screenshot. The warm ground, one sweep
+/// of warm light, a huge light number and a two-tone line.
 public struct ShareCardView: View {
     let story: RevealStory
 
@@ -19,9 +19,7 @@ public struct ShareCardView: View {
                 LightField(.sweep(story.palette), grain: 0.06)
                 VStack(alignment: .leading, spacing: 0) {
                     HStack(spacing: 6 * unit) {
-                        FrameCorners()
-                            .stroke(SBColor.ink, style: StrokeStyle(lineWidth: 1.4 * unit, lineCap: .round))
-                            .frame(width: 13 * unit, height: 13 * unit)
+                        SBIconView(.bracket, size: 16 * unit)
                         Text("Screenshot Brain")
                             .font(.system(size: 13 * unit, weight: .semibold))
                     }
@@ -31,12 +29,12 @@ public struct ShareCardView: View {
                         .font(.system(size: 10 * unit, weight: .regular, design: .monospaced))
                         .foregroundStyle(SBColor.inkSecondary)
                     Text(story.total.formatted())
-                        .font(.system(size: 132 * unit, weight: .ultraLight))
+                        .font(.system(size: 132 * unit, weight: .light))
                         .foregroundStyle(SBColor.ink)
                         .lineLimit(1)
                         .minimumScaleFactor(0.5)
                     Text(markup(unit: unit))
-                        .font(.system(size: 26 * unit, weight: .light))
+                        .font(.system(size: 26 * unit, weight: .regular))
                         .foregroundStyle(SBColor.inkLight)
                         .padding(.bottom, 22 * unit)
                     VStack(alignment: .leading, spacing: 4 * unit) {
@@ -56,7 +54,7 @@ public struct ShareCardView: View {
                 .padding(28 * unit)
             }
         }
-        .environment(\.colorScheme, .light)
+        .environment(\.colorScheme, .dark)
         .environment(\.lightIsStill, true)
     }
 
@@ -65,7 +63,7 @@ public struct ShareCardView: View {
         light.foregroundColor = SBColor.inkLight
         var bold = AttributedString("\(story.doneCount) actually done.")
         bold.foregroundColor = SBColor.ink
-        bold.font = Font.system(size: 26 * unit, weight: .semibold)
+        bold.font = Font.system(size: 26 * unit, weight: .regular)
         return light + bold
     }
 

@@ -18,6 +18,8 @@ struct ScreenshotBrainApp: App {
                 }
             }
             .environmentObject(model)
+            .preferredColorScheme(.dark)
+            .dynamicTypeSize(...DynamicTypeSize.accessibility2)
         }
     }
 }

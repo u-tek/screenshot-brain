@@ -23,7 +23,7 @@ public struct GlassLens: View {
                 Circle()
                     .strokeBorder(
                         LinearGradient(
-                            colors: [.white.opacity(0.7), .white.opacity(0.0)],
+                            colors: [SBColor.warm(0.7), SBColor.warm(0)],
                             startPoint: UnitPoint(x: 0.5 + tilt.width * 0.6, y: 0),
                             endPoint: .center
                         ),
@@ -66,7 +66,7 @@ public struct LensOrbit: View {
     }
 }
 
-/// The app's mark: the four corners of a screenshot's frame.
+/// The app's mark: the v4 bracket mark.
 public struct AppMark: View {
     private let size: CGFloat
 
@@ -75,17 +75,7 @@ public struct AppMark: View {
     }
 
     public var body: some View {
-        HStack(spacing: 8) {
-            FrameCorners()
-                .stroke(SBColor.ink, style: StrokeStyle(lineWidth: 1.6, lineCap: .round, lineJoin: .round))
-                .frame(width: size, height: size)
-            Text("Screenshot Brain")
-                .font(.system(size: size, weight: .semibold))
-                .tracking(-0.2)
-                .foregroundStyle(SBColor.ink)
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text("Screenshot Brain"))
+        SBMark(size: size)
     }
 }
 

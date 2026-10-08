@@ -103,9 +103,15 @@ extension LightPalette {
         if last.l < 0.78 {
             labs.append(last.with(lightness: 0.84, chroma: last.chroma * 0.7))
         }
-        let rgbs: [RGB] = labs.map { $0.rgb }
+        // The app has one warm palette: each colour keeps its place in the light (its lightness)
+        // but takes its hue from the warm ramp.
+        let ramp = LightPalette(colors: Self.rampRGB)
+        let rgbs: [RGB] = labs.map { lab in ramp.color(at: min(max((lab.l - 0.18) / 0.77, 0), 1)) }
         self.init(colors: rgbs)
     }
+
+    /// The warm ramp, deep ember to bone (the same values as `SBRamp`).
+    static let rampRGB: [RGB] = [0x1D0E08, 0x4A1C0C, 0x8E3415, 0xE2582B, 0xFF8A57, 0xFFB381, 0xF2D4B6, 0xF6ECE2].map(RGB.init(hex:))
 }
 
 // MARK: - Category light
@@ -113,52 +119,31 @@ extension LightPalette {
 extension LightPalette {
     /// The light used when an item has no colours of its own, or isn't safe to take them from.
     public static func category(_ category: ItemCategory) -> LightPalette {
-        switch category {
-        case .place: ramp(0xFF7A3D, 0xFFC29A, deepLightness: 0.45)
-        case .event: ramp(0xE8458B, 0xFFA3C7, deepLightness: 0.38)
-        case .product: ramp(0x4B3FD1, 0xA9A3FF, deepLightness: 0.30)
-        case .recipe: ramp(0x7FA83A, 0xD4EBA0, deepLightness: 0.42)
-        case .reference: ramp(0x9AA0AA, 0xE4E6EB, deepLightness: 0.55)
-        case .other: ramp(0x8F8BB4, 0xE3E0F0, deepLightness: 0.45)
-        }
+        let kind = SBKind(category)
+        return LightPalette(colors: [RGB(hex: kind.deepHex), RGB(hex: kind.coreHex)])
     }
 
-    /// An item's light: its own colours when it's safe to show, otherwise its category's.
+    /// An item's light. Every kind is a step on the one warm ramp, so an item's light is its
+    /// kind's, whatever colours its screenshot has.
     public static func item(category: ItemCategory, colors: [PaletteColor], isSafeToDisplay: Bool) -> LightPalette {
-        if isSafeToDisplay, let own = LightPalette(extracted: colors) {
-            return own
-        }
-        return .category(category)
-    }
-
-    /// Brief's two-colour category ramp, with a deeper version of the first colour added for body.
-    private static func ramp(_ strong: UInt32, _ pale: UInt32, deepLightness: Double) -> LightPalette {
-        let strongLab = OKLab(RGB(hex: strong))
-        let deep = strongLab.with(lightness: deepLightness, chroma: strongLab.chroma * 0.9).rgb
-        return LightPalette(colors: [deep, RGB(hex: strong), RGB(hex: pale)])
+        .category(category)
     }
 }
 
 // MARK: - Samples
 
 extension LightPalette {
-    /// What extraction yields for a typical set of top screenshots (a product page, a gig poster,
-    /// a sunset bar). Used by the design lab and previews.
+    /// The light for a typical set of top screenshots: the warm ramp. Used by the design lab and
+    /// previews.
     public static let sampleTopScreenshots = LightPalette(
-        colors: [0x24206F, 0x4A3BB8, 0xC34FA0, 0xF57E74, 0xFFB07A].map(RGB.init(hex:)),
-        haze: [RGB(hex: 0xE2D6F5), RGB(hex: 0xF6DCE6)]
+        colors: Array(rampRGB[1...5]),
+        haze: [rampRGB[6], rampRGB[7]]
     )
 
-    public static let sampleSunsetBar = LightPalette(extracted: [
-        PaletteColor(red: 0.95, green: 0.65, blue: 0.25, weight: 0.35),
-        PaletteColor(red: 0.55, green: 0.18, blue: 0.11, weight: 0.20),
-        PaletteColor(red: 0.73, green: 0.65, blue: 0.84, weight: 0.15),
-        PaletteColor(red: 0.20, green: 0.20, blue: 0.20, weight: 0.30),
-    ]) ?? .category(.place)
+    /// The ember ramp.
+    public static let ember = sampleTopScreenshots
 
-    public static let sampleGigPoster = LightPalette(extracted: [
-        PaletteColor(red: 0.84, green: 0.14, blue: 0.43, weight: 0.40),
-        PaletteColor(red: 0.07, green: 0.07, blue: 0.07, weight: 0.40),
-        PaletteColor(red: 0.23, green: 0.70, blue: 0.79, weight: 0.10),
-    ]) ?? .category(.event)
+    public static let sampleSunsetBar = LightPalette.category(.place)
+
+    public static let sampleGigPoster = LightPalette.category(.event)
 }

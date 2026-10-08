@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// ✓: an orange circle with a white check.
+/// ✓: a warm white circle with a dark check.
 public struct DoneMark: View {
     private let size: CGFloat
 
@@ -9,16 +9,15 @@ public struct DoneMark: View {
     }
 
     public var body: some View {
-        Image(systemName: "checkmark")
-            .font(.system(size: size * 0.36, weight: .semibold))
-            .foregroundStyle(.white)
+        SBIconView(.check, size: size * 0.5)
+            .foregroundStyle(SBColor.ground)
             .frame(width: size, height: size)
             .background(Circle().fill(SBColor.accent))
             .accessibilityLabel(Text("Done"))
     }
 }
 
-/// ✕: a frosted circle with a grey cross.
+/// ✕: a dark circle with a dim cross.
 public struct DropMark: View {
     private let size: CGFloat
 
@@ -27,16 +26,15 @@ public struct DropMark: View {
     }
 
     public var body: some View {
-        Image(systemName: "xmark")
-            .font(.system(size: size * 0.3, weight: .regular))
-            .foregroundStyle(SBColor.inkSecondary)
+        SBIconView(.x, size: size * 0.45)
+            .foregroundStyle(SBColor.ink2)
             .frame(width: size, height: size)
-            .sbGlass(in: Circle())
+            .background(Circle().fill(SBColor.surface2))
             .accessibilityLabel(Text("Drop"))
     }
 }
 
-/// "Done X of Y": a huge thin number, the total in Semibold, and a hairline track.
+/// "Done X of Y": a huge light number, the total dimmed, and a progress track.
 public struct ScoreView: View {
     private let done: Int
     private let total: Int
@@ -53,30 +51,29 @@ public struct ScoreView: View {
                     .font(SBFont.number(120))
                     .foregroundStyle(SBColor.ink)
                 Text("of \(total)")
-                    .font(SBFont.body(20, weight: .semibold))
-                    .foregroundStyle(SBColor.ink)
+                    .sbText(.unit, color: SBColor.ink2)
             }
             GeometryReader { proxy in
                 ZStack(alignment: .leading) {
-                    Capsule().fill(SBColor.hairline).frame(height: 1)
+                    Capsule().fill(SBColor.warm(0.14)).frame(height: 4)
                     Capsule()
                         .fill(SBColor.accent)
-                        .frame(width: proxy.size.width * CGFloat(total > 0 ? Double(done) / Double(total) : 0), height: 2)
+                        .frame(width: proxy.size.width * CGFloat(total > 0 ? Double(done) / Double(total) : 0), height: 4)
                 }
             }
-            .frame(height: 2)
+            .frame(height: 4)
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text("Done \(done) of \(total)"))
     }
 }
 
-/// The thin line with a small orange dot: the hour histogram and "Coming up" dates.
+/// The thin line with a small warm white dot: the hour histogram and "Coming up" dates.
 public struct TimelineLine: View {
     private let values: [Double]
     private let highlight: Int
 
-    /// `values` are bar heights 0...1; `highlight` is the index that gets the orange dot.
+    /// `values` are bar heights 0...1; `highlight` is the index that gets the dot.
     public init(values: [Double], highlight: Int) {
         self.values = values
         self.highlight = highlight
@@ -92,7 +89,7 @@ public struct TimelineLine: View {
                             Circle().fill(SBColor.accent).frame(width: 7, height: 7)
                         }
                         Capsule()
-                            .fill(index == highlight ? SBColor.ink : SBColor.inkSecondary.opacity(0.35))
+                            .fill(index == highlight ? SBColor.accent : SBColor.warm(0.25))
                             .frame(width: 1.5, height: max(4, CGFloat(values[index]) * 64))
                     }
                     .frame(maxWidth: .infinity)

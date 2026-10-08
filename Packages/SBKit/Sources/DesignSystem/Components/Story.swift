@@ -44,7 +44,7 @@ public struct CountingNumber: View {
     }
 }
 
-/// Story progress: thin grey segments, the ones already seen in ink.
+/// Story progress: the v4 story bars.
 public struct ProgressSegments: View {
     private let count: Int
     private let current: Int
@@ -55,15 +55,7 @@ public struct ProgressSegments: View {
     }
 
     public var body: some View {
-        HStack(spacing: 4) {
-            ForEach(0..<count, id: \.self) { index in
-                Capsule()
-                    .fill(index <= current ? SBColor.ink : SBColor.ink.opacity(0.15))
-                    .frame(height: 2)
-            }
-        }
-        .accessibilityElement()
-        .accessibilityLabel(Text("Card \(current + 1) of \(count)"))
+        SBStoryBars(count: count, current: current)
     }
 }
 
@@ -80,8 +72,9 @@ public struct DataRows: View {
             ForEach(rows.indices, id: \.self) { index in
                 HStack(spacing: 0) {
                     Text(rows[index].0.uppercased())
+                        .tracking(0.9)
                         .frame(width: 92, alignment: .leading)
-                        .foregroundStyle(SBColor.inkSecondary)
+                        .foregroundStyle(SBColor.ink2)
                     Text(rows[index].1)
                         .foregroundStyle(SBColor.ink)
                 }

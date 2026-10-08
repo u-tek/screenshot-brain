@@ -18,7 +18,7 @@ extension LightComposition {
     }
 }
 
-/// A frosted card: its own light behind glass, 28pt corners.
+/// A tile: a neutral surface with its own light glowing in one corner, 28pt corners.
 public struct FrostedCard<Content: View>: View {
     private let palette: LightPalette
     private let content: Content
@@ -29,14 +29,15 @@ public struct FrostedCard<Content: View>: View {
     }
 
     public var body: some View {
-        let shape = RoundedRectangle(cornerRadius: SBRadius.card, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: SBRadius.tile, style: .continuous)
         content
             .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background {
-                ZStack {
-                    LightField(.bloom(palette), grain: 0.04)
-                    Color.clear.sbGlass(in: shape)
+                ZStack(alignment: .bottomTrailing) {
+                    SBColor.surface
+                    SBLight(Color(palette.color(at: 1)), width: 220, height: 170, opacity: 0.5)
+                        .offset(x: 80, y: 80)
                 }
                 .clipShape(shape)
             }
@@ -102,22 +103,24 @@ public struct FolderTabCard<Content: View>: View {
         let shape = FolderTabShape()
         VStack(alignment: .leading, spacing: 0) {
             Text(tab)
-                .font(SBFont.body(12, weight: .medium))
+                .sbText(.label)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
-                .foregroundStyle(SBColor.ink.opacity(0.8))
                 .padding(.leading, 18)
                 .frame(height: 30)
             Spacer(minLength: 56)
             content
                 .padding(18)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .sbGlass(in: RoundedRectangle(cornerRadius: SBRadius.card - 8, style: .continuous))
+                .background(RoundedRectangle(cornerRadius: SBRadius.tile - 8, style: .continuous).fill(SBColor.surface))
                 .padding(8)
         }
         .background {
-            LightField(.bloom(palette).shifted(down: 0.12), grain: 0.04)
-                .clipShape(shape)
+            ZStack {
+                SBColor.surface2
+                LightField(.bloom(palette).shifted(down: 0.12), ground: false, grain: 0.04)
+            }
+            .clipShape(shape)
         }
         .contentShape(shape)
     }
@@ -148,7 +151,7 @@ extension LightComposition {
     }
 }
 
-/// A frosted tile with its category's light blooming from the top and a small label low down.
+/// A tile with its category's light blooming down from the top edge and the name low down.
 public struct LightTile: View {
     private let title: String
     private let detail: String
@@ -161,24 +164,37 @@ public struct LightTile: View {
     }
 
     public var body: some View {
-        let shape = RoundedRectangle(cornerRadius: 24, style: .continuous)
-        VStack(alignment: .leading, spacing: 2) {
+        let shape = RoundedRectangle(cornerRadius: SBRadius.tile, style: .continuous)
+        let core = Color(palette.color(at: 1)), deep = Color(palette.color(at: 0))
+        VStack(alignment: .leading, spacing: 4) {
             Spacer(minLength: 0)
             Text(title)
-                .font(SBFont.body(15, weight: .semibold))
-                .foregroundStyle(SBColor.ink)
+                .sbText(.title)
             Text(detail)
-                .font(SBFont.mono(11))
-                .foregroundStyle(SBColor.inkSecondary)
+                .sbText(.labelDim)
         }
-        .padding(16)
+        .padding(18)
         .frame(maxWidth: .infinity, minHeight: 150, alignment: .leading)
         .background {
-            LightField(.bloom(palette), grain: 0.04)
-                .clipShape(shape)
+            ZStack {
+                SBColor.surface
+                GeometryReader { proxy in
+                    Ellipse()
+                        .fill(RadialGradient(stops: [
+                            .init(color: core, location: 0),
+                            .init(color: core, location: 0.4),
+                            .init(color: deep, location: 0.75),
+                            .init(color: deep.opacity(0), location: 1),
+                        ], center: .center, startRadius: 0, endRadius: proxy.size.width * 1.1))
+                        .frame(width: proxy.size.width * 2.2, height: 200)
+                        .position(x: proxy.size.width / 2, y: 0)
+                        .blur(radius: 36)
+                }
+            }
+            .clipShape(shape)
         }
         .overlay {
-            shape.strokeBorder(Color.white.opacity(0.5), lineWidth: 0.75)
+            shape.strokeBorder(core.opacity(0.35), lineWidth: 1)
         }
     }
 }

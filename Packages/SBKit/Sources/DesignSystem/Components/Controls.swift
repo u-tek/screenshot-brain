@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The primary action on most screens: a label on the left, a glowing glass orb on the right.
+/// The primary action on most screens: the v4 CTA (a dark capsule, a warm white circle).
 public struct ActionBar: View {
     private let title: String
     private let systemImage: String
@@ -18,7 +18,7 @@ public struct ActionBar: View {
         Button(action: action) {
             ActionBarLabel(title, systemImage: systemImage, palette: palette)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(SBPressStyle())
         .accessibilityLabel(Text(title))
     }
 }
@@ -36,24 +36,13 @@ public struct ActionBarLabel: View {
     }
 
     public var body: some View {
-        HStack(spacing: 12) {
-            Text(title)
-                .font(SBFont.body(16))
-                .foregroundStyle(SBColor.ink)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-            Spacer(minLength: 12)
-            GlassOrb(palette: palette, systemImage: systemImage)
-        }
-        .padding(.leading, 26)
-        .padding(.trailing, 8)
-        .frame(height: 72)
-        .contentShape(Rectangle())
-        .sbGlass(in: RoundedRectangle(cornerRadius: SBRadius.actionBar, style: .continuous))
+        // The v4 CTA: a dark capsule with a warm white circle, centred where it sits.
+        SBCTALabel(title, icon: SBIcon(systemName: systemImage))
+            .frame(maxWidth: .infinity)
     }
 }
 
-/// A capsule of glass with the current light glowing through it, and a small mark.
+/// The CTA's circle on its own.
 public struct GlassOrb: View {
     private let palette: LightPalette
     private let systemImage: String
@@ -64,31 +53,16 @@ public struct GlassOrb: View {
     }
 
     public var body: some View {
-        ZStack {
-            // The light sits behind the glass...
-            LightField(.glow(palette), ground: false, grain: 0)
-                .clipShape(Capsule())
-            // ...the glass frosts it...
-            Color.clear
-                .sbGlass(in: Capsule(), style: .regular)
-            // ...and the mark sits on top.
-            Image(systemName: systemImage)
-                .font(.system(size: 17, weight: .medium))
-                .foregroundStyle(SBColor.ink)
-        }
-        .frame(width: 104, height: 56)
-        .background {
-            // A soft glow of the same light spills onto the bar.
-            LightField(.glow(palette), ground: false, grain: 0)
-                .clipShape(Capsule())
-                .blur(radius: 14)
-                .opacity(0.45)
-        }
-        .accessibilityHidden(true)
+        // The v4 CTA's circle: warm white with the glyph in ground.
+        SBIconView(SBIcon(systemName: systemImage), size: 18)
+            .foregroundStyle(SBColor.ground)
+            .frame(width: 36, height: 36)
+            .background(Circle().fill(SBColor.accent))
+            .accessibilityHidden(true)
     }
 }
 
-/// A frosted pill with small text and an optional ✕.
+/// An outlined chip in mono caps, with an optional ✕.
 public struct Chip: View {
     private let title: String
     private let closable: Bool
@@ -99,23 +73,11 @@ public struct Chip: View {
     }
 
     public var body: some View {
-        HStack(spacing: 6) {
-            Text(title)
-                .font(SBFont.body(12))
-                .lineLimit(1)
-            if closable {
-                Image(systemName: "xmark")
-                    .font(.system(size: 9, weight: .medium))
-            }
-        }
-        .foregroundStyle(SBColor.ink.opacity(0.8))
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
-        .sbGlass(in: Capsule())
+        SBChip(title, icon: closable ? .x : nil)
     }
 }
 
-/// A 44pt frosted circle with a thin-stroke glyph.
+/// A 44pt round button with a thin-stroke glyph.
 public struct GlassIconButton: View {
     private let systemImage: String
     private let label: String
@@ -128,19 +90,11 @@ public struct GlassIconButton: View {
     }
 
     public var body: some View {
-        Button(action: action) {
-            Image(systemName: systemImage)
-                .font(.system(size: 15, weight: .light))
-                .foregroundStyle(SBColor.ink)
-                .frame(width: SBRadius.iconButton, height: SBRadius.iconButton)
-        }
-        .buttonStyle(.plain)
-        .sbGlass(in: Circle())
-        .accessibilityLabel(Text(label))
+        SBCircleButton(SBIcon(systemName: systemImage), label: label, action: action)
     }
 }
 
-/// A frosted chip that can be picked. The picked one carries the screen's single active state.
+/// A pill that can be picked. The picked one is warm white.
 public struct ChoiceChip: View {
     private let title: String
     private let isSelected: Bool
@@ -154,20 +108,15 @@ public struct ChoiceChip: View {
 
     public var body: some View {
         Button(action: action) {
-            HStack(spacing: 8) {
-                if isSelected {
-                    Circle().fill(SBColor.accent).frame(width: 7, height: 7)
-                }
-                Text(title)
-                    .font(SBFont.body(15, weight: isSelected ? .semibold : .regular))
-                    .foregroundStyle(SBColor.ink)
-            }
-            .padding(.horizontal, 18)
-            .padding(.vertical, 12)
-            .sbGlass(in: Capsule())
-            .overlay(Capsule().strokeBorder(SBColor.accent.opacity(isSelected ? 0.6 : 0), lineWidth: 1))
+            Text(title)
+                .font(.system(size: 15))
+                .foregroundStyle(isSelected ? SBColor.ground : SBColor.ink)
+                .padding(.horizontal, 18)
+                .frame(minHeight: 46)
+                .background(SBPillBackground(isPrimary: isSelected))
+                .contentShape(Capsule())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(SBPressStyle())
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }

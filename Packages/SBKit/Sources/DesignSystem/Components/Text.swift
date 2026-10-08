@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Light words with one bold phrase, marked with `**`: "You saved it **for a reason.**"
+/// Two-tone headline: dim words with one bright phrase, marked with `**`: "You saved it **for a reason.**"
 public struct MistHeadline: View {
     private let markup: String
     private let size: CGFloat
@@ -16,8 +16,8 @@ public struct MistHeadline: View {
     }
 
     public var body: some View {
-        Text(MistMarkup.attributed(markup, size: size * scale, light: .light, bold: .semibold, lightColor: SBColor.inkLight))
-            .tracking(-0.01 * size * scale)
+        Text(MistMarkup.attributed(markup, size: size * scale, light: .regular, bold: .regular, lightColor: SBColor.ink2))
+            .tracking(-0.02 * size * scale)
             .multilineTextAlignment(alignment)
             .fixedSize(horizontal: false, vertical: true)
     }
@@ -36,7 +36,7 @@ public struct MistBody: View {
     }
 
     public var body: some View {
-        Text(MistMarkup.attributed(markup, size: size, light: .regular, bold: .semibold, lightColor: SBColor.inkSecondary, scalesWithTextStyle: true))
+        Text(MistMarkup.attributed(markup, size: size, light: .regular, bold: .medium, lightColor: SBColor.ink2, scalesWithTextStyle: true))
             .multilineTextAlignment(alignment)
             .lineSpacing(2)
             .fixedSize(horizontal: false, vertical: true)
