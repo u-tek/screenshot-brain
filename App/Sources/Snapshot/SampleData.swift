@@ -4,7 +4,8 @@ import Store
 
 /// Made-up items for design snapshots and previews. Never shown in the app itself.
 enum SampleData {
-    static let now = Date()
+    /// 9:41, like the status bar in the snapshots.
+    static let now = Calendar.current.date(bySettingHour: 9, minute: 41, second: 0, of: Date()) ?? Date()
 
     static func item(
         _ category: ItemCategory,
@@ -24,13 +25,19 @@ enum SampleData {
             state: state,
             stateChangedAt: now.addingTimeInterval(-daysAgo * 86_400),
             title: title,
-            dueDate: dueIn.map { now.addingTimeInterval($0 * 86_400) },
+            dueDate: dueIn.map { evening(inDays: $0) },
             processedAt: now
         )
     }
 
+    /// 8pm, some days from now.
+    static func evening(inDays days: Double) -> Date {
+        let day = now.addingTimeInterval(days * 86_400)
+        return Calendar.current.date(bySettingHour: 20, minute: 0, second: 0, of: day) ?? day
+    }
+
     static let gig = item(.event, "Mallrat at the Enmore", daysAgo: 12, dueIn: 3, entities: [
-        DetectedEntity(kind: .date, text: "Fri 8pm", date: now.addingTimeInterval(3 * 86_400)),
+        DetectedEntity(kind: .date, text: "8pm", date: evening(inDays: 3)),
         DetectedEntity(kind: .address, text: "118-132 Enmore Rd, Newtown"),
         DetectedEntity(kind: .price, text: "$69.90"),
     ])
