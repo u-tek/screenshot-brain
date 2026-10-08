@@ -73,6 +73,7 @@ targets:
         SBAccountServerHost: $(SB_ACCOUNT_SERVER_HOST)
         SBSupportEmail: $(SB_SUPPORT_EMAIL)
         SBPrivacyPolicyURL: $(SB_PRIVACY_POLICY_URL)
+        SBAllowsLocalAccount: $(SB_ALLOW_LOCAL_ACCOUNT)
     entitlements:
       path: App/ScreenshotBrain.entitlements
       properties:

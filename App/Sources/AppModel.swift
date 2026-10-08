@@ -132,6 +132,9 @@ final class AppModel: ObservableObject {
 
     /// Leaving the app: work out tonight's notification from what's known now.
     func wentToBackground() {
+        if hasPhotoAccess {
+            ScanScheduler.schedule()
+        }
         guard let services, step >= .home else { return }
         let answers = self.answers
         Task { await NightlyRecap.replan(services: services, answers: answers) }
@@ -215,6 +218,19 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// Sideload test builds only: carry on without an account. Progress stays on this iPhone.
+    func continueOnThisPhone() {
+        guard configuration.allowsLocalAccount else { return }
+        let account = Account(userID: "local-\(UUID().uuidString)", givenName: nil, refreshToken: nil, isLocalOnly: true)
+        AccountStore.save(account)
+        self.account = account
+        advance(to: .photoAccess)
+    }
+
+    private var syncsToCloud: Bool {
+        account != nil && account?.isLocalOnly != true
+    }
+
     private func signOutLocally() {
         AccountStore.delete()
         account = nil
@@ -223,7 +239,7 @@ final class AppModel: ObservableObject {
 
     /// Account deletion: iCloud data, the Sign in with Apple token, and everything on the device.
     func deleteAccount() async throws {
-        if let sync {
+        if let sync, syncsToCloud {
             try await sync.deleteEverything()
         }
         if let token = account?.refreshToken {
@@ -454,7 +470,7 @@ final class AppModel: ObservableObject {
     // MARK: Sync
 
     private func scheduleSync() {
-        guard account != nil, sync != nil else { return }
+        guard syncsToCloud, sync != nil else { return }
         syncTask?.cancel()
         syncTask = Task {
             try? await Task.sleep(nanoseconds: 2_000_000_000)
@@ -464,7 +480,7 @@ final class AppModel: ObservableObject {
     }
 
     private func syncNow() async {
-        guard let sync else { return }
+        guard let sync, syncsToCloud else { return }
         await sync.sync()
         if let synced = try? services?.database.onboardingAnswers(), synced.step > answers.step {
             answers = synced

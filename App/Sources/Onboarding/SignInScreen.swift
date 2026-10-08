@@ -5,6 +5,9 @@ import SwiftUI
 /// Sign in with Apple, so progress survives a crash or a new phone.
 struct SignInScreen: View {
     var palette: LightPalette = .sampleTopScreenshots
+    /// Sideload test builds only.
+    var allowsLocal = false
+    var onLocal: () -> Void = {}
     var onResult: (Result<ASAuthorization, Error>) -> Void = { _ in }
     @State private var failed = false
     @Environment(\.colorScheme) private var colorScheme
@@ -40,6 +43,15 @@ struct SignInScreen: View {
             SmallLabel(failed ? "That didn't go through. Give it another go?" : "Just your Apple ID. No email, no password.")
                 .frame(maxWidth: .infinity)
                 .padding(.bottom, 8)
+
+            if allowsLocal {
+                Button(action: onLocal) {
+                    Chip("Test build: continue on this iPhone")
+                }
+                .buttonStyle(.plain)
+                .frame(maxWidth: .infinity)
+                .padding(.bottom, 8)
+            }
         }
         .padding(.horizontal, 24)
         .background {

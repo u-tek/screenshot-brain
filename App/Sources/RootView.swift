@@ -38,9 +38,12 @@ struct RootView: View {
                 model.finishPitch()
             }
         case .signIn:
-            SignInScreen(palette: model.palette) { result in
-                model.handleSignIn(result)
-            }
+            SignInScreen(
+                palette: model.palette,
+                allowsLocal: model.configuration.allowsLocalAccount,
+                onLocal: { model.continueOnThisPhone() },
+                onResult: { result in model.handleSignIn(result) }
+            )
         case .photoAccess:
             PhotoAccessScreen()
         case .questions:

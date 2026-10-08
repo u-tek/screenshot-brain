@@ -25,4 +25,8 @@ SB_PRIVACY_POLICY_URL =
 // The address behind "Say hello" in Settings. Empty: the contact row is hidden.
 SB_SUPPORT_EMAIL =
 
+// YES only for sideload test builds (AltStore): adds "Continue on this iPhone" to sign-in,
+// because free Apple ID signing has no Sign in with Apple. CI sets it for the test IPA.
+SB_ALLOW_LOCAL_ACCOUNT = NO
+
 #include? "Local.xcconfig"

@@ -60,7 +60,7 @@ jobs:
 
       - name: Install tools
         run: |
-          brew install xcodegen
+          brew install xcodegen ldid
           command -v xcbeautify || brew install xcbeautify
 
       - name: Cache Swift packages
@@ -112,6 +112,28 @@ jobs:
           name: ScreenshotBrain-simulator
           path: build/ScreenshotBrain-simulator.zip
           retention-days: 14
+
+      # An IPA for sideloading with AltStore: a release build for devices, unsigned, given its
+      # App Group entitlement. AltStore re-signs it with your Apple ID. This build lets people
+      # skip Sign in with Apple, which free Apple ID signing can't provide.
+      - name: Build the sideload IPA
+        if: github.event_name != 'pull_request'
+        run: |
+          set -o pipefail
+          xcodebuild build -project ScreenshotBrain.xcodeproj -scheme ScreenshotBrain -configuration Release \
+            -destination 'generic/platform=iOS' -derivedDataPath build/Device \
+            -clonedSourcePackagesDirPath "$SPM_DIR" \
+            -skipMacroValidation -skipPackagePluginValidation \
+            CODE_SIGNING_ALLOWED=NO SB_ALLOW_LOCAL_ACCOUNT=YES \
+            | xcbeautify --renderer github-actions
+          scripts/package-ipa.sh build/Device/Build/Products/Release-iphoneos/ScreenshotBrain.app build/ScreenshotBrain.ipa
+
+      - uses: actions/upload-artifact@v4
+        if: github.event_name != 'pull_request'
+        with:
+          name: ScreenshotBrain-sideload-ipa
+          path: build/ScreenshotBrain.ipa
+          retention-days: 30
 
       # Opt-in, because it adds several minutes: run the workflow by hand, or put [snapshots]
       # in the commit message.

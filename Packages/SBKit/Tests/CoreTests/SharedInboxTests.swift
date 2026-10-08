@@ -30,3 +30,18 @@ import Testing
         }
     }
 }
+
+@Suite struct ProvisioningProfileTests {
+    @Test func readsAppGroupsFromTheEmbeddedProfile() {
+        let plist = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <plist version="1.0"><dict><key>Entitlements</key><dict>
+        <key>com.apple.security.application-groups</key><array><string>group.com.example.app.ABCDE12345</string></array>
+        </dict></dict></plist>
+        """
+        // The plist sits inside a signed envelope of binary bytes.
+        let profile = Data([0x30, 0x82, 0x01]) + Data(plist.utf8) + Data([0x00, 0xA0])
+        #expect(ProvisioningProfile.groups(inProfile: profile) == ["group.com.example.app.ABCDE12345"])
+        #expect(ProvisioningProfile.groups(inProfile: Data([0x01, 0x02])).isEmpty)
+    }
+}

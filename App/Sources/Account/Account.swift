@@ -11,6 +11,8 @@ struct Account: Codable, Hashable, Sendable {
     var givenName: String?
     /// From the server's token exchange; needed to revoke the token when the account is deleted.
     var refreshToken: String?
+    /// Sideload test builds only: no Apple ID behind it, so nothing syncs or needs revoking.
+    var isLocalOnly: Bool?
 }
 
 /// Keeps the account in the Keychain.
@@ -62,6 +64,7 @@ enum AccountStore {
 
     /// Whether Apple still considers the user signed in. Revoked or missing credentials sign out.
     static func isStillAuthorised(_ account: Account) async -> Bool {
+        if account.isLocalOnly == true { return true }
         do {
             let state = try await ASAuthorizationAppleIDProvider().credentialState(forUserID: account.userID)
             return state == .authorized

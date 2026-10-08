@@ -16,6 +16,9 @@ public struct AppConfiguration: Sendable, Equatable {
     public var supportEmail: String?
     /// The privacy policy, linked from the paywall and Settings.
     public var privacyPolicyURL: URL?
+    /// Sideload test builds only: lets people continue without Sign in with Apple, which free
+    /// Apple ID signing (AltStore) can't provide. Never set for the App Store.
+    public var allowsLocalAccount: Bool
 
     public init(
         appGroupIdentifier: String?,
@@ -24,7 +27,8 @@ public struct AppConfiguration: Sendable, Equatable {
         accountServerHost: String? = nil,
         revenueCatAPIKey: String? = nil,
         supportEmail: String? = nil,
-        privacyPolicyURL: URL? = nil
+        privacyPolicyURL: URL? = nil,
+        allowsLocalAccount: Bool = false
     ) {
         self.appGroupIdentifier = appGroupIdentifier
         self.cloudKitContainerIdentifier = cloudKitContainerIdentifier
@@ -33,6 +37,7 @@ public struct AppConfiguration: Sendable, Equatable {
         self.revenueCatAPIKey = revenueCatAPIKey
         self.supportEmail = supportEmail
         self.privacyPolicyURL = privacyPolicyURL
+        self.allowsLocalAccount = allowsLocalAccount
     }
 
     public var accountServerURL: URL? {
@@ -52,7 +57,8 @@ public struct AppConfiguration: Sendable, Equatable {
             accountServerHost: value(InfoKey.accountServerHost),
             revenueCatAPIKey: value(InfoKey.revenueCatAPIKey),
             supportEmail: value(InfoKey.supportEmail),
-            privacyPolicyURL: value(InfoKey.privacyPolicyURL).flatMap(URL.init(string:))
+            privacyPolicyURL: value(InfoKey.privacyPolicyURL).flatMap(URL.init(string:)),
+            allowsLocalAccount: value(InfoKey.allowsLocalAccount).map { ["yes", "true", "1"].contains($0.lowercased()) } ?? false
         )
     }
 
@@ -67,5 +73,6 @@ public struct AppConfiguration: Sendable, Equatable {
         static let revenueCatAPIKey = "SBRevenueCatAPIKey"
         static let supportEmail = "SBSupportEmail"
         static let privacyPolicyURL = "SBPrivacyPolicyURL"
+        static let allowsLocalAccount = "SBAllowsLocalAccount"
     }
 }

@@ -25,20 +25,31 @@ final class AppServices: Sendable {
     }
 }
 
+/// Background task identifiers, always taken from Info.plist's list. Sideloading can change the
+/// bundle ID, and registering an identifier the list doesn't contain crashes the app at launch.
+enum BackgroundTaskID {
+    static func permitted(suffix: String) -> String? {
+        (Bundle.main.object(forInfoDictionaryKey: "BGTaskSchedulerPermittedIdentifiers") as? [String])?
+            .first { $0.hasSuffix(suffix) }
+    }
+}
+
 /// Reads new screenshots in the background, so the widget and the recap stay fresh.
 enum ScanScheduler {
-    static var identifier: String {
-        (Bundle.main.bundleIdentifier ?? "ScreenshotBrain") + ".scan"
+    static var identifier: String? {
+        BackgroundTaskID.permitted(suffix: ".scan")
     }
 
     /// Must run before the app finishes launching.
     static func register() {
+        guard let identifier else { return }
         BGTaskScheduler.shared.register(forTaskWithIdentifier: identifier, using: nil) { task in
             handle(task)
         }
     }
 
     static func schedule() {
+        guard let identifier else { return }
         let request = BGProcessingTaskRequest(identifier: identifier)
         request.requiresNetworkConnectivity = false
         request.requiresExternalPower = false

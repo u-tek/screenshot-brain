@@ -8,12 +8,13 @@ import Store
 /// Tonight's notification: worked out from what's new, what's expiring and the user's recap time,
 /// whenever the app goes to the background and again in a background refresh before the recap.
 enum NightlyRecap {
-    static var identifier: String {
-        (Bundle.main.bundleIdentifier ?? "ScreenshotBrain") + ".recap"
+    static var identifier: String? {
+        BackgroundTaskID.permitted(suffix: ".recap")
     }
 
     /// Must run before the app finishes launching.
     static func register() {
+        guard let identifier else { return }
         BGTaskScheduler.shared.register(forTaskWithIdentifier: identifier, using: nil) { task in
             handle(task)
         }
@@ -53,6 +54,7 @@ enum NightlyRecap {
     }
 
     private static func scheduleRefresh(recapAt: Date) {
+        guard let identifier else { return }
         let request = BGAppRefreshTaskRequest(identifier: identifier)
         request.earliestBeginDate = recapAt.addingTimeInterval(-90 * 60)
         do {
