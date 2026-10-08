@@ -153,6 +153,24 @@ jobs:
             echo "Rendering every screen"
           fi
 
+      # A new simulator's first boot spends minutes setting itself up. Boot them one after another
+      # in the background while the app builds, so each is ready by its turn.
+      - name: Boot the simulators
+        run: |
+          phones=("iPhone 16 Pro" "iPhone SE (3rd generation)")
+          if [[ -z "${SB_ONLY_ROUTES:-}" || "$SB_ONLY_ROUTES" == *store.* ]]; then
+            phones+=("iPhone 16 Pro Max")
+          fi
+          mkdir -p build
+          nohup bash -c '
+            for phone in "$@"; do
+              udid=$(scripts/ensure-simulator.sh "$phone")
+              xcrun simctl boot "$udid" || true
+              xcrun simctl bootstatus "$udid" -b > /dev/null || true
+              echo "$phone booted"
+            done
+          ' boot "${phones[@]}" > build/boot.log 2>&1 &
+
       - name: Build the app and its UI tests
         run: |
           set -o pipefail
