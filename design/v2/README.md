@@ -15,3 +15,11 @@ The direction taken from references 01–12 after the first build's mist-and-swo
 Render with headless Chromium (Playwright): `node render.js home triage reveal item home-light widget`
 writes PNGs to `out/`. The mono face is JetBrains Mono (OFL) standing in for SF Mono; Inter stands
 in for SF Pro.
+
+## Round 3: physical
+
+After the second round ("too flat", no dot-matrix): the `*3.html` files. Objects have thickness
+and a lit rim, sit on a lit surface and spill their own light onto it; numerals are glass type,
+embossed and lit from behind; progress is a bead on a glass rail; buttons are raised keys; the
+recap is a pile of cards; "still want" is a stack of lit slabs in perspective; the screenshot is a
+print set under acrylic or standing on its own light. `kit3.css` and `kit3.js` hold the materials.

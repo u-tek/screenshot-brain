@@ -1,0 +1,94 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="kit3.css"><script src="kit.js"></script><script src="kit3.js"></script>
+<style>
+  .header { position: absolute; top: 62px; left: 20px; right: 20px; display: flex; justify-content: space-between; align-items: center; z-index: 5; }
+  .mark { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 600; }
+  /* A glass rail with a lit bead: the score's progress as an object. */
+  .rail { position: absolute; height: 10px; border-radius: 5px;
+    background: linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,.04) 60%, rgba(255,255,255,.12));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 1px 0 #0c0c0f, 0 2px 0 #0a0a0d, 0 8px 16px rgba(0,0,0,.5); }
+  .bead { position: absolute; top: -5px; width: 20px; height: 20px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #fbffd8, #d9ff3d 45%, #8fae00);
+    box-shadow: 0 0 18px rgba(217,255,61,.6), 0 4px 8px rgba(0,0,0,.5); }
+  .card { position: absolute; width: 160px; height: 196px; }
+  .shelf { position: absolute; left: 0; right: 0; top: 632px; height: 240px; }
+  .box { position: absolute; left: 20px; width: 353px; height: 74px; border-radius: 20px; transform: perspective(700px) rotateX(32deg); transform-origin: 50% 100%; }
+</style></head>
+<body><div class="phone" id="p">
+  <div id="status"></div>
+  <div class="header"><div class="mark">${mark}</div><div class="mono">Wed · 08 Oct</div></div>
+
+  <!-- The score: one glass numeral, standing on the surface. -->
+  <div class="glow" style="left:20px;top:150px;width:170px;height:200px;background:radial-gradient(closest-side,#f6e7c4,rgba(217,255,61,.35) 55%,transparent);filter:blur(30px);opacity:.75"></div>
+  <div style="position:absolute;top:84px;left:14px" id="six"></div>
+  <div style="position:absolute;top:150px;left:162px">
+    <div style="font-size:30px;font-weight:300;letter-spacing:-.6px;line-height:1.05">of 23<br><span class="semi">done</span></div>
+    <div class="mono" style="margin-top:14px;display:flex;align-items:center;gap:8px"><span style="width:7px;height:7px;border-radius:50%;background:var(--lime);box-shadow:0 0 8px var(--lime)"></span>+2 this week</div>
+  </div>
+  <div class="rail" style="top:316px;left:22px;width:349px"><div class="bead" style="left:calc(26% - 10px)"></div></div>
+  <div class="mono dim" style="position:absolute;top:338px;left:22px">Drops never count against you</div>
+
+  <!-- Tonight's recap: an actual pile of seven cards, the top one lit. -->
+  <div class="pool" style="left:10px;top:520px;width:190px;height:70px;background:var(--event-core)"></div>
+  <div class="slab card" style="left:28px;top:384px;transform:rotate(-8deg)"></div>
+  <div class="slab card" style="left:24px;top:378px;transform:rotate(5deg)"></div>
+  <div class="slab card" style="left:22px;top:372px;transform:rotate(-1.5deg)">
+    <div class="face">
+      <div class="glow" style="width:240px;height:200px;left:-40px;top:70px;background:radial-gradient(closest-side,var(--event-core),var(--event-deep) 62%,transparent)"></div>
+      <div class="glow" style="width:110px;height:80px;left:30px;top:130px;background:radial-gradient(closest-side,#ffd3e4,transparent);filter:blur(16px)"></div>
+    </div>
+    <div style="position:relative;z-index:2;padding:16px;height:100%;display:flex;flex-direction:column">
+      <span class="mono">Tonight</span>
+      <div style="font-size:44px;font-weight:600;letter-spacing:-1.5px;margin-top:8px;line-height:1">7</div>
+      <div style="font-size:15px;font-weight:300;margin-top:2px">waiting for you</div>
+      <div style="flex:1"></div>
+      <div style="display:flex;justify-content:flex-end"><span class="key white" style="width:42px;height:42px">${arrow}</span></div>
+    </div>
+  </div>
+
+  <!-- Next up: a folder with thickness, its screenshot's light in the top half. -->
+  <div class="pool" style="left:200px;top:540px;width:180px;height:60px;background:var(--event-core);opacity:.35"></div>
+  <div class="slab" id="next" style="left:204px;top:370px;width:168px;height:200px">
+    <div class="face" id="nextface"><div id="shot" style="position:absolute;inset:0 0 auto 0;height:122px"></div>
+      <div style="position:absolute;left:0;right:0;top:100px;height:40px;background:linear-gradient(180deg,rgba(24,24,28,0),#18181c)"></div></div>
+    <div class="mono" style="position:absolute;top:9px;left:14px;z-index:3;color:#fff">Next up</div>
+    <div style="position:absolute;left:14px;right:12px;bottom:14px;z-index:3">
+      <span class="mono" style="color:var(--ink)">Sun 11 · 3 days</span>
+      <div style="font-size:15px;font-weight:600;margin-top:5px;line-height:1.2">Mallrat at the Enmore</div>
+    </div>
+  </div>
+
+  <div style="position:absolute;top:604px;left:22px;right:22px;display:flex;justify-content:space-between;z-index:5"><span class="mono">Still want</span><span class="mono dim">21 things</span></div>
+  <!-- Still want: a stack of lit slabs, one per kind of thing, receding into the surface. -->
+  <div class="shelf" id="shelf"></div>
+
+  <div class="glass" style="position:absolute;left:50%;transform:translateX(-50%);bottom:24px;width:290px;height:64px;border-radius:32px;display:flex;align-items:center;justify-content:space-around;padding:0 6px;z-index:60">
+    <span class="key dark" style="width:92px;height:52px;flex-direction:column;gap:3px;font-size:10px">${stack}Saved</span>
+    <span style="display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;color:var(--ink-2);position:relative">${cal}Recap<span style="position:absolute;top:-2px;right:-6px;width:7px;height:7px;border-radius:50%;background:var(--event-core);box-shadow:0 0 8px var(--event-core)"></span></span>
+    <span style="display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;color:var(--ink-2)">${sliders}Settings</span>
+  </div>
+  <div class="grain"></div>
+  <div class="home-indicator"></div>
+</div>
+<script>
+  const P = document.getElementById("p");
+  P.innerHTML = P.innerHTML.replace("${mark}", icon("bracket", 18) + "<span>Screenshot Brain</span>")
+    .replace("${arrow}", icon("arrow", 18, "#0b0b0d")).replace("${stack}", icon("stack", 18)).replace("${cal}", icon("cal", 18)).replace("${sliders}", icon("sliders", 18));
+  document.getElementById("status").outerHTML = statusBar(true);
+  document.getElementById("six").innerHTML = glassType("6", { size: 210, width: 150, height: 210, tint: "#f2dfbd", depth: 9 });
+  document.getElementById("shot").innerHTML = screenshot("event", 168, 122, { blurX: 18, blurY: 6 });
+  document.getElementById("nextface").style.clipPath = `path('${folderPath(168, 200, { tab: 0.55, tabH: 0, r: 26 })}')`;
+
+  const kinds = [["Places", "9", "place"], ["Products", "6", "product"], ["Recipes", "4", "recipe"], ["Events", "2", "event"]];
+  document.getElementById("shelf").innerHTML = kinds.map(([name, n, k], i) => `
+    <div class="slab box" style="top:${i * 62}px;z-index:${10 + i}">
+      <div class="face">
+        <div class="glow" style="width:260px;height:170px;left:-80px;top:-40px;background:radial-gradient(closest-side,var(--${k}-core),var(--${k}-deep) 62%,transparent);filter:blur(24px)"></div>
+        <div class="glow" style="width:120px;height:60px;left:-10px;top:10px;background:radial-gradient(closest-side,rgba(255,255,255,.55),transparent);filter:blur(18px)"></div>
+      </div>
+      <div style="position:relative;z-index:2;height:100%;display:flex;align-items:center;justify-content:space-between;padding:0 22px">
+        <span style="font-size:18px;font-weight:500;letter-spacing:-.3px">${name}</span>
+        <span style="font-size:28px;font-weight:300;letter-spacing:-1px;color:var(--ink)">${n}</span>
+      </div>
+    </div>`).join("");
+</script></body></html>

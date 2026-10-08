@@ -1,0 +1,51 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="kit3.css"><script src="kit.js"></script><script src="kit3.js"></script>
+<style>
+  .rows { display: grid; grid-template-columns: 74px 1fr; row-gap: 9px; margin-top: 18px; }
+  .rows .v { font-family: "Mono", monospace; font-size: 12px; color: var(--ink); letter-spacing: .02em; }
+</style></head>
+<body><div class="phone" id="p" style="background:#12050b">
+  <div id="glow" style="position:absolute;inset:-60px -60px 300px -60px"></div>
+  <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(8,8,10,0) 0%,rgba(8,8,10,.1) 35%,rgba(8,8,10,.92) 62%,#08080a 75%)"></div>
+  <div class="grain" style="opacity:.2"></div>
+  <div id="status"></div>
+
+  <div style="position:absolute;top:60px;left:16px;right:16px;display:flex;justify-content:space-between;z-index:5">
+    <span class="key dark" style="width:44px;height:44px">${back}</span><span class="key dark" style="width:44px;height:44px">${more}</span>
+  </div>
+  <div class="pool" style="left:90px;top:330px;width:220px;height:70px;background:var(--event-core);opacity:.7"></div>
+  <div style="position:absolute;top:92px;left:50%;width:156px;height:290px;transform:translateX(-50%) perspective(800px) rotateX(9deg) rotateY(-14deg) rotateZ(2deg);
+    filter:drop-shadow(1px 1px 0 #3a1024) drop-shadow(1px 1px 0 #2a0b19) drop-shadow(1px 1px 0 #1f0812) drop-shadow(1px 1px 0 #18060e) drop-shadow(10px 26px 26px rgba(0,0,0,.6))">
+    <div id="sharp" style="position:absolute;inset:0;border-radius:20px;overflow:hidden"></div>
+    <div style="position:absolute;inset:0;border-radius:20px;box-shadow:inset 0 1px 0 rgba(255,255,255,.5),inset 0 0 0 1px rgba(255,255,255,.12);background:linear-gradient(120deg,rgba(255,255,255,0) 35%,rgba(255,255,255,.16) 45%,rgba(255,255,255,0) 58%)"></div>
+  </div>
+
+  <div class="glass" id="panel" style="position:absolute;left:10px;right:10px;top:412px;bottom:10px;border-radius:30px;padding:46px 22px 20px;background:linear-gradient(170deg,rgba(255,255,255,.14),rgba(26,10,18,.6) 30%,rgba(14,10,14,.82))">
+    <div class="mono" style="position:absolute;top:9px;left:22px;color:var(--ink);display:flex;gap:8px;align-items:center"><span style="width:6px;height:6px;border-radius:3px;background:var(--event-core);box-shadow:0 0 8px var(--event-core)"></span>Event</div>
+    <div style="font-size:30px;font-weight:300;letter-spacing:-.6px;line-height:1.1">Mallrat at the Enmore<br>is <span class="semi">Sunday.</span></div>
+    <div class="rows">
+      <span class="mono dim">Saved</span><span class="v">Fri 26 Sep · 9:41am</span>
+      <span class="mono dim">When</span><span class="v">Sun 11 Oct · 8:00pm</span>
+      <span class="mono dim">Where</span><span class="v">118–132 Enmore Rd, Newtown</span>
+      <span class="mono dim">Price</span><span class="v">$69.90</span>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:20px">
+      <span class="key dark" style="height:38px;padding:0 15px;font-size:13px">${cal} Calendar</span>
+      <span class="key dark" style="height:38px;padding:0 15px;font-size:13px">${map} Maps</span>
+      <span class="key dark" style="height:38px;padding:0 15px;font-size:13px">${send} Send</span>
+    </div>
+    <div style="position:absolute;left:12px;right:12px;bottom:12px;display:flex;gap:8px">
+      <span class="key white" style="flex:1;height:58px;justify-content:space-between;padding:0 9px 0 22px;font-size:16px">Mark it done<span class="key lime" style="width:40px;height:40px">${check}</span></span>
+    </div>
+  </div>
+  <div class="home-indicator"></div>
+</div>
+<script>
+  const P = document.getElementById("p");
+  P.innerHTML = P.innerHTML.replace("${back}", icon("back", 20)).replace("${more}", icon("more", 20))
+    .replace("${cal}", icon("cal", 15)).replace("${map}", icon("map", 15)).replace("${send}", icon("send", 15)).replace("${check}", icon("check", 20, "#0b0b0d"));
+  document.getElementById("status").outerHTML = statusBar(true);
+  document.getElementById("glow").innerHTML = screenshot("event", 513, 612, { blurX: 52, blurY: 26 });
+  document.getElementById("sharp").innerHTML = screenshot("event", 156, 290, { sharp: true });
+  folderClip(document.getElementById("panel"), { tab: 0.36, tabH: 30, r: 30 });
+</script></body></html>

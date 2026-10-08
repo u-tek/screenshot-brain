@@ -1,0 +1,59 @@
+/* v3: physical. Objects with thickness, rim light and their own glow, sitting on a lit surface. */
+@font-face { font-family: "Mono"; src: url("mono.woff2") format("woff2"); font-weight: 100 800; }
+
+:root {
+  --ink: #f4f3f1; --ink-2: rgba(244,243,241,.64); --ink-3: rgba(244,243,241,.4);
+  --lime: #d9ff3d;
+  --event-core: #ff3f8e; --event-deep: #5c0a33;
+  --place-core: #ff7a3d; --place-deep: #5a1606;
+  --product-core: #4b6bff; --product-deep: #0e1555;
+  --recipe-core: #8fd9a8; --recipe-deep: #163d2b;
+  --ref-core: #f2dfbd; --ref-deep: #4d3f2a;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: #000; }
+body { font-family: "Inter", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+
+/* A studio: a dark sweep lit from above, so objects have something to sit on and light to fall on. */
+.phone { position: relative; width: 393px; height: 852px; overflow: hidden; color: var(--ink);
+  background: radial-gradient(120% 70% at 50% -10%, #2a2a2f 0%, #141417 45%, #08080a 80%); }
+.grain { position: absolute; inset: 0; pointer-events: none; z-index: 80; opacity: .22; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1.5 -0.25'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
+
+.status { position: absolute; top: 0; left: 0; right: 0; height: 54px; display: flex; align-items: center; justify-content: space-between; padding: 14px 32px 0 40px; z-index: 70; font-weight: 600; font-size: 16px; }
+.status .icons { display: flex; gap: 6px; align-items: center; }
+.mono { font-family: "Mono", ui-monospace, monospace; font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-2); font-weight: 500; }
+.mono.dim { color: var(--ink-3); }
+.semi { font-weight: 600; }
+
+/* Acrylic slab: a frosted face, a lit top rim, a darker edge you can see (its thickness),
+   a soft contact shadow, and its own light spilling onto the surface below. */
+.slab { position: absolute; border-radius: 26px; isolation: isolate;
+  background: linear-gradient(160deg, rgba(255,255,255,.10), rgba(255,255,255,.02) 40%, rgba(0,0,0,.18)), #18181c;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.28),
+    inset 0 -1px 0 rgba(0,0,0,.5),
+    inset 1px 0 0 rgba(255,255,255,.06),
+    0 1px 0 #0f0f12, 0 2px 0 #0e0e11, 0 3px 0 #0d0d10, 0 4px 0 #0c0c0f, 0 5px 0 #0b0b0e, 0 6px 0 #0a0a0d,
+    0 18px 30px -8px rgba(0,0,0,.7), 0 40px 60px -20px rgba(0,0,0,.6); }
+.slab .face { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; }
+/* Light printed into the slab, glowing from inside. */
+.glow { position: absolute; border-radius: 50%; filter: blur(30px); pointer-events: none; }
+/* The same light pooling on the surface under the object. */
+.pool { position: absolute; border-radius: 50%; filter: blur(34px); pointer-events: none; opacity: .55; }
+
+/* Glass: frosted, borrowing what's behind it, with a bright rim and a sheen. */
+.glass { background: linear-gradient(170deg, rgba(255,255,255,.16), rgba(255,255,255,.04) 45%, rgba(255,255,255,.08));
+  -webkit-backdrop-filter: blur(22px) saturate(160%); backdrop-filter: blur(22px) saturate(160%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.45), inset 0 -1px 0 rgba(255,255,255,.08), inset 0 0 0 1px rgba(255,255,255,.08), 0 12px 30px rgba(0,0,0,.35); }
+
+/* Keys: raised, pressable. */
+.key { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-weight: 500; border-radius: 999px; }
+.key.white { color: #0b0b0d; background: linear-gradient(180deg, #ffffff, #e6e6e9);
+  box-shadow: inset 0 1px 0 #fff, inset 0 -2px 0 rgba(0,0,0,.12), 0 1px 0 #bdbdc2, 0 2px 0 #b4b4b9, 0 3px 0 #aaaab0, 0 10px 22px rgba(0,0,0,.45); }
+.key.lime { color: #0b0b0d; background: radial-gradient(circle at 35% 30%, #f4ffb0, #d9ff3d 45%, #a9cc12);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.8), inset 0 -3px 6px rgba(80,100,0,.35), 0 2px 0 #8aa60c, 0 3px 0 #7f990a, 0 12px 28px rgba(190,240,30,.35); }
+.key.dark { color: var(--ink); background: linear-gradient(180deg, #2a2a30, #19191d);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.22), inset 0 -2px 0 rgba(0,0,0,.4), 0 1px 0 #0d0d10, 0 2px 0 #0b0b0e, 0 3px 0 #09090c, 0 10px 22px rgba(0,0,0,.5); }
+
+.home-indicator { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); width: 134px; height: 5px; border-radius: 3px; background: var(--ink); opacity: .9; z-index: 75; }
