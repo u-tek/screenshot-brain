@@ -1,70 +1,72 @@
 #!/usr/bin/env bash
-# Exports every route in scripts/snapshot-routes.txt on iPhone 16 Pro and iPhone SE, in light and dark,
-# into design/. Run after `xcodebuild build-for-testing` into $DERIVED_DATA (default build/DerivedData).
+# Exports design snapshots on one simulator. Run after `xcodebuild build-for-testing` into
+# $DERIVED_DATA (default build/DerivedData).
 #
-# Routes named lab.<name> are design-lab exports and go to design/lab/<name>-<appearance>.png
-# (iPhone 16 Pro only). Routes named store.<n> are App Store screenshots, exported on the 6.9"
-# phone into design/appstore/. Every other route is an app screen and goes to
-# design/screens/<device>/.
+#   scripts/export-snapshots.sh "iPhone 16 Pro" [output-dir]
+#
+# Routes come from scripts/snapshot-routes.txt, or only those in $SB_ONLY_ROUTES (comma-separated)
+# when it's set. Which routes go where:
+#   lab.<name>   design-lab pages: iPhone 16 Pro only, into design/lab/<name>-<appearance>.png
+#   store.<n>    App Store screenshots: iPhone 16 Pro Max only, light, into design/appstore/6.9-<n>-light.png
+#   anything else  app screens on iPhone 16 Pro and iPhone SE, into design/screens/<device>/
+#
+# The output directory (default build/design-out) mirrors the repo, so copying it over the repo
+# root updates design/. One launch of the app covers every screen (see SnapshotExportTests).
 set -euo pipefail
 cd "$(dirname "$0")/.."
-failed=0
-shopt -s nullglob
 
+device="$1"
+out_root="${2:-build/design-out}"
 derived_data="${DERIVED_DATA:-build/DerivedData}"
-all_routes=$(grep -vE '^[[:space:]]*(#|$)' scripts/snapshot-routes.txt)
-screen_routes=$(echo "$all_routes" | grep -vE '^(lab|store)\.' | paste -sd, -)
-lab_routes=$(echo "$all_routes" | grep -E '^lab\.' | paste -sd, -)
-store_routes=$(echo "$all_routes" | grep -E '^store\.' | paste -sd, -)
-devices=("iPhone 16 Pro" "iPhone SE (3rd generation)" "iPhone 16 Pro Max")
+slug=$(echo "$device" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/-+$//')
 
-for device in "${devices[@]}"; do
-  udid=$(scripts/ensure-simulator.sh "$device")
-  slug=$(echo "$device" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/-+$//')
-  out="$PWD/build/snapshots/$slug"
-  rm -rf "$out"
-  mkdir -p "$out"
+all=$(grep -vE '^[[:space:]]*(#|$)' scripts/snapshot-routes.txt)
+if [[ -n "${SB_ONLY_ROUTES:-}" ]]; then
+  wanted=$(echo "$SB_ONLY_ROUTES" | tr ',' '\n' | sed 's/^ *//; s/ *$//')
+  all=$(echo "$all" | grep -Fxf <(echo "$wanted") || true)
+fi
 
-  xcrun simctl boot "$udid" 2>/dev/null || true
-  xcrun simctl bootstatus "$udid" -b
-  xcrun simctl status_bar "$udid" override --time "9:41" --dataNetwork wifi --wifiMode active --wifiBars 3 \
-    --cellularMode active --cellularBars 4 --batteryState discharging --batteryLevel 100
+case "$slug" in
+  iphone-16-pro) routes=$(echo "$all" | grep -vE '^store\.' || true); appearances="light,dark" ;;
+  iphone-16-pro-max) routes=$(echo "$all" | grep -E '^store\.' || true); appearances="light" ;;
+  *) routes=$(echo "$all" | grep -vE '^(lab|store)\.' || true); appearances="light,dark" ;;
+esac
+routes=$(echo "$routes" | paste -sd, -)
+if [[ -z "$routes" ]]; then
+  echo "No routes for $device"
+  exit 0
+fi
 
-  # Design-lab pages are only exported once, on the large phone; store screenshots only at 6.9",
-  # in light (the App Store shows them on white).
-  routes="$screen_routes"
-  appearances="light,dark"
-  if [[ "$slug" == "iphone-16-pro" ]]; then routes="$screen_routes,$lab_routes"; fi
-  if [[ "$slug" == "iphone-16-pro-max" ]]; then routes="$store_routes"; appearances="light"; fi
+udid=$(scripts/ensure-simulator.sh "$device")
+raw="$PWD/build/snapshots/$slug"
+rm -rf "$raw"
+mkdir -p "$raw"
 
-  # Keep going if a screen crashes: the others still export, and the run fails at the end.
-  if ! TEST_RUNNER_SB_SNAPSHOT_ROUTES="$routes" TEST_RUNNER_SB_SNAPSHOT_DIR="$out" \
-    TEST_RUNNER_SB_SNAPSHOT_APPEARANCES="$appearances" \
-    xcodebuild test-without-building -project ScreenshotBrain.xcodeproj -scheme ScreenshotBrain \
-      -destination "platform=iOS Simulator,id=$udid" -derivedDataPath "$derived_data" \
-      -only-testing:ScreenshotBrainUITests/SnapshotExportTests \
-      | xcbeautify; then
-    failed=1
-  fi
-  echo "Exported on $device:"
-  ls "$out"
-  if [[ -f "$out/failures.txt" ]]; then
-    echo "::error::Screens that didn't render on $device: $(paste -sd, "$out/failures.txt")"
-  fi
+xcrun simctl boot "$udid" 2>/dev/null || true
+xcrun simctl bootstatus "$udid" -b
+xcrun simctl status_bar "$udid" override --time "9:41" --dataNetwork wifi --wifiMode active --wifiBars 3 \
+  --cellularMode active --cellularBars 4 --batteryState discharging --batteryLevel 100
 
-  mkdir -p design/lab design/appstore "design/screens/$slug"
-  for file in "$out"/*.png; do
-    base=$(basename "$file")
-    if [[ "$base" == store.* ]]; then
-      cp "$file" "design/appstore/6.9-${base#store.}"
-    elif [[ "$base" == lab.* ]]; then
-      if [[ "$slug" == "iphone-16-pro" ]]; then
-        cp "$file" "design/lab/${base#lab.}"
-      fi
-    else
-      cp "$file" "design/screens/$slug/$base"
-    fi
-  done
+status=0
+TEST_RUNNER_SB_SNAPSHOT_ROUTES="$routes" TEST_RUNNER_SB_SNAPSHOT_DIR="$raw" \
+  TEST_RUNNER_SB_SNAPSHOT_APPEARANCES="$appearances" \
+  xcodebuild test-without-building -project ScreenshotBrain.xcodeproj -scheme ScreenshotBrain \
+    -destination "platform=iOS Simulator,id=$udid" -derivedDataPath "$derived_data" \
+    -only-testing:ScreenshotBrainUITests/SnapshotExportTests \
+    | xcbeautify || status=$?
+
+if [[ -f "$raw/failures.txt" ]]; then
+  echo "::error::Screens that didn't render on $device: $(paste -sd, "$raw/failures.txt")"
+fi
+
+shopt -s nullglob
+for file in "$raw"/*.png; do
+  base=$(basename "$file")
+  case "$base" in
+    store.*) mkdir -p "$out_root/design/appstore"; cp "$file" "$out_root/design/appstore/6.9-${base#store.}" ;;
+    lab.*) mkdir -p "$out_root/design/lab"; cp "$file" "$out_root/design/lab/${base#lab.}" ;;
+    *) mkdir -p "$out_root/design/screens/$slug"; cp "$file" "$out_root/design/screens/$slug/$base" ;;
+  esac
 done
-
-exit "$failed"
+echo "Exported $(ls "$raw"/*.png | wc -l | tr -d ' ') screens on $device"
+exit "$status"

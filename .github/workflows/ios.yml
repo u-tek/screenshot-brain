@@ -19,6 +19,10 @@ concurrency:
   group: ios-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  SPM_DIR: ${{ github.workspace }}/.spm
+
+# Four independent jobs, side by side: nothing waits on the screenshots.
 jobs:
   # The Sign in with Apple token endpoint in /server. Cheap, so it runs on Linux.
   server:
@@ -37,38 +41,10 @@ jobs:
   build-and-test:
     name: Build and test
     runs-on: macos-26
-    timeout-minutes: 45
-    permissions:
-      contents: write
-    env:
-      SPM_DIR: ${{ github.workspace }}/.spm
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
-
-      - name: Select the newest stable Xcode
-        run: |
-          xcode=$(ls -d /Applications/Xcode_*.app | python3 -c '
-          import re, sys
-          apps = [line.strip() for line in sys.stdin if not re.search(r"beta|_rc|release.candidate", line, re.I)]
-          key = lambda path: [int(part) for part in re.findall(r"\d+", path.rsplit("/", 1)[-1])]
-          print(max(apps, key=key))
-          ')
-          echo "Using $xcode"
-          sudo xcode-select -s "$xcode/Contents/Developer"
-          xcodebuild -version
-          xcrun simctl list runtimes
-
-      - name: Install tools
-        run: |
-          brew install xcodegen ldid
-          command -v xcbeautify || brew install xcbeautify
-
-      - name: Cache Swift packages
-        uses: actions/cache@v4
-        with:
-          path: .spm
-          key: spm-${{ runner.os }}-${{ hashFiles('Packages/SBKit/Package.swift') }}
-          restore-keys: spm-${{ runner.os }}-
+      - uses: ./.github/actions/setup
 
       - name: Pick a simulator
         run: |
@@ -113,52 +89,6 @@ jobs:
           path: build/ScreenshotBrain-simulator.zip
           retention-days: 14
 
-      # An IPA for sideloading with AltStore: a release build for devices, unsigned, given its
-      # App Group entitlement. AltStore re-signs it with your Apple ID. This build lets people
-      # skip Sign in with Apple, which free Apple ID signing can't provide.
-      - name: Build the sideload IPA
-        if: github.event_name != 'pull_request'
-        run: |
-          set -o pipefail
-          xcodebuild build -project ScreenshotBrain.xcodeproj -scheme ScreenshotBrain -configuration Release \
-            -destination 'generic/platform=iOS' -derivedDataPath build/Device \
-            -clonedSourcePackagesDirPath "$SPM_DIR" \
-            -skipMacroValidation -skipPackagePluginValidation \
-            CODE_SIGNING_ALLOWED=NO SB_ALLOW_LOCAL_ACCOUNT=YES \
-            | xcbeautify --renderer github-actions
-          scripts/package-ipa.sh build/Device/Build/Products/Release-iphoneos/ScreenshotBrain.app build/ScreenshotBrain.ipa
-
-      - uses: actions/upload-artifact@v4
-        if: github.event_name != 'pull_request'
-        with:
-          name: ScreenshotBrain-sideload-ipa
-          path: build/ScreenshotBrain.ipa
-          retention-days: 30
-
-      # Opt-in, because it adds several minutes: run the workflow by hand, or put [snapshots]
-      # in the commit message.
-      - name: Export design snapshots
-        id: snapshots
-        if: >-
-          (github.event_name == 'workflow_dispatch' && inputs.snapshots) ||
-          (github.event_name == 'push' && contains(github.event.head_commit.message, '[snapshots]'))
-        run: scripts/export-snapshots.sh
-
-      # Commits whatever exported, even when some screens failed (the job still fails).
-      - name: Commit design snapshots
-        if: ${{ !cancelled() && (steps.snapshots.outcome == 'success' || steps.snapshots.outcome == 'failure') }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add design/lab design/screens design/appstore
-          if git diff --cached --quiet; then
-            echo "Snapshots unchanged"
-            exit 0
-          fi
-          git commit -m "Update design snapshots [skip ci]"
-          git pull --rebase origin "$GITHUB_REF_NAME"
-          git push origin HEAD:"$GITHUB_REF_NAME"
-
       - name: Upload test results
         if: failure()
         uses: actions/upload-artifact@v4
@@ -166,3 +96,101 @@ jobs:
           name: test-results
           path: build/*.xcresult
           if-no-files-found: ignore
+
+  # An IPA for sideloading with AltStore: a release build for devices, unsigned, given its App
+  # Group entitlement. AltStore re-signs it with your Apple ID. This build lets people skip Sign
+  # in with Apple, which free Apple ID signing can't provide.
+  ipa:
+    name: Sideload IPA
+    if: github.event_name != 'pull_request'
+    runs-on: macos-26
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+      - name: Build
+        run: |
+          set -o pipefail
+          xcodegen generate
+          xcodebuild build -project ScreenshotBrain.xcodeproj -scheme ScreenshotBrain -configuration Release \
+            -destination 'generic/platform=iOS' -derivedDataPath build/Device \
+            -clonedSourcePackagesDirPath "$SPM_DIR" \
+            -skipMacroValidation -skipPackagePluginValidation \
+            CODE_SIGNING_ALLOWED=NO SB_ALLOW_LOCAL_ACCOUNT=YES \
+            | xcbeautify --renderer github-actions
+          scripts/package-ipa.sh build/Device/Build/Products/Release-iphoneos/ScreenshotBrain.app build/ScreenshotBrain.ipa
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ScreenshotBrain-sideload-ipa
+          path: build/ScreenshotBrain.ipa
+          retention-days: 30
+
+  # Opt-in: run the workflow by hand, or put [snapshots] in the commit message to render every
+  # screen, or [snapshots: home,item] for just those. One app launch per phone covers them all.
+  snapshots:
+    name: Design snapshots
+    if: >-
+      (github.event_name == 'workflow_dispatch' && inputs.snapshots) ||
+      (github.event_name == 'push' && contains(github.event.head_commit.message, '[snapshots'))
+    runs-on: macos-26
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    env:
+      COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+
+      - name: Which screens
+        run: |
+          if [[ "$COMMIT_MESSAGE" =~ \[snapshots:[[:space:]]*([^]]+)\] ]]; then
+            echo "SB_ONLY_ROUTES=${BASH_REMATCH[1]}" >> "$GITHUB_ENV"
+            echo "Rendering only: ${BASH_REMATCH[1]}"
+          else
+            echo "Rendering every screen"
+          fi
+
+      - name: Build the app and its UI tests
+        run: |
+          set -o pipefail
+          xcodegen generate
+          xcodebuild build-for-testing -project ScreenshotBrain.xcodeproj -scheme ScreenshotBrain \
+            -destination 'generic/platform=iOS Simulator' -derivedDataPath build/DerivedData \
+            -clonedSourcePackagesDirPath "$SPM_DIR" \
+            -skipMacroValidation -skipPackagePluginValidation \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcbeautify --renderer github-actions
+
+      # Each phone runs even if another failed, so one bad screen never hides the rest.
+      - name: iPhone 16 Pro
+        id: pro
+        continue-on-error: true
+        run: scripts/export-snapshots.sh "iPhone 16 Pro"
+      - name: iPhone SE
+        id: se
+        continue-on-error: true
+        run: scripts/export-snapshots.sh "iPhone SE (3rd generation)"
+      - name: iPhone 16 Pro Max (App Store)
+        id: store
+        continue-on-error: true
+        run: scripts/export-snapshots.sh "iPhone 16 Pro Max"
+
+      - name: Commit design snapshots
+        run: |
+          [[ -d build/design-out/design ]] || { echo "Nothing exported"; exit 0; }
+          cp -R build/design-out/design .
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add design/lab design/screens design/appstore
+          if git diff --cached --quiet; then
+            echo "Snapshots unchanged"
+          else
+            git commit -m "Update design snapshots [skip ci]"
+            git pull --rebase origin "$GITHUB_REF_NAME"
+            git push origin HEAD:"$GITHUB_REF_NAME"
+          fi
+
+      - name: Fail if a screen didn't render
+        if: steps.pro.outcome == 'failure' || steps.se.outcome == 'failure' || steps.store.outcome == 'failure'
+        run: exit 1

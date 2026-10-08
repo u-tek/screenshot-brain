@@ -5,10 +5,12 @@ import Store
 import SwiftUI
 import Triage
 
-/// Opens one screen in a fixed state for the UI snapshot exporter (`UITests/SnapshotExportTests`).
+/// Shows screens in a fixed state for the UI snapshot exporter (`UITests/SnapshotExportTests`).
 ///
-/// Launch arguments: `-SBSnapshot <route> -SBAppearance light|dark`. Arguments in this form land in
-/// the `UserDefaults` argument domain, so they never persist.
+/// Launch argument: `-SBSnapshots welcome@light,welcome@dark,home@light,...`. The app shows the
+/// first, then steps to the next each time the exporter posts the `next` Darwin notification, so
+/// one launch covers every screen. Arguments in this form land in the `UserDefaults` argument
+/// domain, so they never persist.
 struct SnapshotMode: Sendable {
     enum Appearance: String, Sendable {
         case light
@@ -22,14 +24,25 @@ struct SnapshotMode: Sendable {
         }
     }
 
-    let route: String
-    let appearance: Appearance
+    struct Shot: Sendable {
+        let route: String
+        let appearance: Appearance
+    }
+
+    /// Posted by the exporter after each capture.
+    static let nextNotification = "com.screenshotbrain.snapshot.next"
+
+    let shots: [Shot]
 
     static let current: SnapshotMode? = {
-        let defaults = UserDefaults.standard
-        guard let route = defaults.string(forKey: "SBSnapshot"), !route.isEmpty else { return nil }
-        let appearance = defaults.string(forKey: "SBAppearance").flatMap(Appearance.init(rawValue:)) ?? .light
-        return SnapshotMode(route: route, appearance: appearance)
+        guard let list = UserDefaults.standard.string(forKey: "SBSnapshots"), !list.isEmpty else { return nil }
+        let shots = list.split(separator: ",").compactMap { token -> Shot? in
+            let parts = token.split(separator: "@", maxSplits: 1).map(String.init)
+            guard let route = parts.first, !route.isEmpty else { return nil }
+            let appearance = parts.count > 1 ? Appearance(rawValue: parts[1]) ?? .light : .light
+            return Shot(route: route, appearance: appearance)
+        }
+        return shots.isEmpty ? nil : SnapshotMode(shots: shots)
     }()
 }
 
@@ -113,19 +126,59 @@ enum SnapshotGallery {
 
 struct SnapshotHost: View {
     let mode: SnapshotMode
+    @StateObject private var stepper = SnapshotStepper()
 
     var body: some View {
+        let shot = mode.shots[min(stepper.index, mode.shots.count - 1)]
         Group {
-            if let view = SnapshotGallery.view(for: mode.route) {
+            if let view = SnapshotGallery.view(for: shot.route) {
                 view
             } else {
-                Text("Unknown snapshot route \(mode.route)")
+                Text("Unknown snapshot route \(shot.route)")
             }
         }
-        .preferredColorScheme(mode.appearance.colorScheme)
+        // A fresh screen for every shot: no state carries over from the last one.
+        .id(stepper.index)
+        .preferredColorScheme(shot.appearance.colorScheme)
         .environment(\.lightIsStill, true)
         .onAppear {
             UIView.setAnimationsEnabled(false)
         }
     }
+}
+
+/// Steps to the next shot when the exporter says so (a Darwin notification, which crosses from
+/// the test runner's process into the app's inside the simulator).
+@MainActor
+final class SnapshotStepper: ObservableObject {
+    @Published private(set) var index = 0
+
+    init() {
+        let center = CFNotificationCenterGetDarwinNotifyCenter()
+        CFNotificationCenterAddObserver(
+            center,
+            Unmanaged.passUnretained(self).toOpaque(),
+            snapshotStepperNext,
+            SnapshotMode.nextNotification as CFString,
+            nil,
+            .deliverImmediately
+        )
+    }
+
+    fileprivate func advance() {
+        index += 1
+    }
+}
+
+/// The Darwin notification callback: a plain function, so it can be a C function pointer.
+private func snapshotStepperNext(
+    _ center: CFNotificationCenter?,
+    _ observer: UnsafeMutableRawPointer?,
+    _ name: CFNotificationName?,
+    _ object: UnsafeRawPointer?,
+    _ userInfo: CFDictionary?
+) {
+    guard let observer else { return }
+    let stepper = Unmanaged<SnapshotStepper>.fromOpaque(observer).takeUnretainedValue()
+    Task { @MainActor in stepper.advance() }
 }

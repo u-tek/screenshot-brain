@@ -1,0 +1,30 @@
+name: Set up Xcode and tools
+description: Selects the newest stable Xcode, installs XcodeGen, xcbeautify and ldid, and restores the Swift package cache.
+runs:
+  using: composite
+  steps:
+    - name: Select the newest stable Xcode
+      shell: bash
+      run: |
+        xcode=$(ls -d /Applications/Xcode_*.app | python3 -c '
+        import re, sys
+        apps = [line.strip() for line in sys.stdin if not re.search(r"beta|_rc|release.candidate", line, re.I)]
+        key = lambda path: [int(part) for part in re.findall(r"\d+", path.rsplit("/", 1)[-1])]
+        print(max(apps, key=key))
+        ')
+        echo "Using $xcode"
+        sudo xcode-select -s "$xcode/Contents/Developer"
+        xcodebuild -version
+
+    - name: Install tools
+      shell: bash
+      run: |
+        brew install xcodegen ldid
+        command -v xcbeautify || brew install xcbeautify
+
+    - name: Cache Swift packages
+      uses: actions/cache@v4
+      with:
+        path: .spm
+        key: spm-${{ runner.os }}-${{ hashFiles('Packages/SBKit/Package.swift') }}
+        restore-keys: spm-${{ runner.os }}-
