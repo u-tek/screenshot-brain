@@ -13,6 +13,8 @@ public struct TriageDeck: View {
     private let label: String
     private let onFinish: () -> Void
     @State private var drag: CGSize = .zero
+    /// True while a decided card flies off, so a second tap can't decide the card behind it unseen.
+    @State private var isCommitting = false
     @State private var pulse = 0.0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -153,7 +155,7 @@ public struct TriageDeck: View {
     }
 
     private func commit(_ decision: TriageDecision) {
-        guard !model.isFinished else { return }
+        guard !model.isFinished, !isCommitting else { return }
         switch decision {
         case .keep: Haptics.keep()
         case .done: Haptics.done()
@@ -170,6 +172,7 @@ public struct TriageDeck: View {
             withAnimation(.easeInOut(duration: 0.2)) { model.decide(decision) }
             return
         }
+        isCommitting = true
         withAnimation(SBMotion.fling) { drag = exit }
         if decision == .done {
             withAnimation(.easeOut(duration: 0.18)) { pulse = 1 }
@@ -183,6 +186,7 @@ public struct TriageDeck: View {
                 model.decide(decision)
                 drag = .zero
             }
+            isCommitting = false
         }
     }
 

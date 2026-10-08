@@ -76,6 +76,8 @@ public final class PurchaseService: ObservableObject {
     }
 
     public func restore() async throws -> Bool {
+        // Without a RevenueCat key (the sideload build), Purchases.shared would trap.
+        guard isAvailable else { return isPremium }
         let info = try await Purchases.shared.restorePurchases()
         apply(info)
         return isPremium

@@ -24,12 +24,13 @@ struct HomeScreen: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 34) {
                 header
+                // Shown even before anything's kept: new screenshots waiting is the way in.
+                if home.recapCount > 0 {
+                    RecapPrompt(count: home.recapCount, palette: palette, action: onRecap)
+                }
                 if home.isEmpty && home.query.isEmpty {
                     EmptyHome()
                 } else {
-                    if home.recapCount > 0 {
-                        RecapPrompt(count: home.recapCount, palette: palette, action: onRecap)
-                    }
                     if !home.comingUp.isEmpty {
                         ComingUpSection(items: home.comingUp)
                     }

@@ -69,14 +69,17 @@ enum ScanScheduler {
             return
         }
         let work = Task {
-            do {
-                try services.pipeline.discover()
-                try await services.pipeline.readPending(includeBackfill: true)
-                await WidgetRefresher.refresh(services: services)
-                box.task.setTaskCompleted(success: true)
-            } catch {
-                box.task.setTaskCompleted(success: false)
+            let succeeded = await SharedAccess.hold("Background scan") { () async -> Bool in
+                do {
+                    try services.pipeline.discover()
+                    try await services.pipeline.readPending(includeBackfill: true)
+                    await WidgetRefresher.refresh(services: services)
+                    return true
+                } catch {
+                    return false
+                }
             }
+            box.task.setTaskCompleted(success: succeeded)
         }
         task.expirationHandler = {
             work.cancel()

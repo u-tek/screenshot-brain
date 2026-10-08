@@ -97,13 +97,16 @@ public final class ScanPipeline: Sendable {
 
     // MARK: Discovery
 
-    /// Records screenshots from the last two months (or since the last scan). Fast: metadata only.
+    /// Records screenshots from the last two months that aren't recorded yet. Fast: metadata
+    /// only. Always looks at the whole window, not just since the last scan, because screenshots
+    /// can arrive late with older dates (iCloud Photos filling in on a new phone).
     /// Returns how many were new.
     @discardableResult
     public func discover(now: Date = Date()) throws -> Int {
         let state = try database.scanState()
-        let since = state.lastScanAt.map { $0.addingTimeInterval(-3_600) } ?? now.addingTimeInterval(-Self.lookback)
-        let found = library.discover(since: since)
+        let since = now.addingTimeInterval(-Self.lookback)
+        let known = try database.knownAssetIDs(createdAfter: since)
+        let found = library.discover(since: since, skipping: known)
         let inserted = try database.recordDiscovered(found, now: now)
         var updated = state
         updated.lastScanAt = now
@@ -159,7 +162,10 @@ public final class ScanPipeline: Sendable {
         var item = original
         item.updatedAt = now
 
-        let loaded = await measure(.load, timer) { await self.library.loadImage(localIdentifier: item.assetLocalID) }
+        // Cloud-only screenshots are skipped on the first pass and downloaded on the backfill pass.
+        let loaded = await measure(.load, timer) {
+            await self.library.loadImage(localIdentifier: item.assetLocalID, allowsNetwork: original.needsBackfill)
+        }
         let image: CGImage
         switch loaded {
         case .cloudOnly:

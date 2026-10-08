@@ -14,6 +14,7 @@ struct ItemDetailScreen: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     @State private var item: ScreenshotItem?
+    @State private var isMissing = false
     @State private var showsEventEditor = false
     @State private var sendItems: [Any]?
     @State private var note: String?
@@ -26,11 +27,14 @@ struct ItemDetailScreen: View {
         ZStack {
             if let item {
                 content(item)
+            } else if isMissing {
+                missing
             }
         }
         .toolbar(.hidden, for: .navigationBar)
         .task {
             item = preview ?? (try? model.services?.database.item(id: itemID))
+            isMissing = item == nil
         }
         .sheet(isPresented: $showsEventEditor) {
             if let item, let draft = EventDraft(item: item) {
@@ -52,6 +56,21 @@ struct ItemDetailScreen: View {
                 .presentationDetents([.medium, .large])
             }
         }
+    }
+
+    /// A link to something that's been deleted since: say so, with a way back.
+    private var missing: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            GlassIconButton("chevron.left", label: "Back") { dismiss() }
+            Spacer()
+            MistHeadline("This one's **gone.**", size: 30, alignment: .leading)
+            MistBody("It may have been deleted, here or in Photos.", alignment: .leading)
+            Spacer()
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(LightField(.sweep(model.palette)).ignoresSafeArea())
     }
 
     private func content(_ item: ScreenshotItem) -> some View {

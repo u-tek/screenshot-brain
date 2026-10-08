@@ -41,6 +41,10 @@ struct SettingsScreen: View {
                                 .buttonStyle(.plain)
                         }
                         Button("Restore purchases") {
+                            guard model.purchases.isAvailable else {
+                                restoreMessage = "Purchases aren't set up in this build."
+                                return
+                            }
                             Task {
                                 let restored = (try? await model.purchases.restore()) ?? false
                                 restoreMessage = restored ? "Restored." : "Nothing to restore on this Apple ID."
@@ -64,7 +68,9 @@ struct SettingsScreen: View {
                     }
 
                     section("Account") {
-                        if let name = model.account?.givenName {
+                        if model.account?.isLocalOnly == true {
+                            SmallLabel("Test build: kept on this iPhone only")
+                        } else if let name = model.account?.givenName {
                             SmallLabel("Signed in with Apple as \(name)")
                         } else {
                             SmallLabel("Signed in with Apple")
@@ -137,7 +143,7 @@ struct SettingsScreen: View {
 
     private var recapTime: Binding<Date> {
         Binding {
-            let minutes = model.answers.recapMinutes ?? 21 * 60
+            let minutes = NightlyRecap.recapMinutes(model.answers)
             return Calendar.current.date(bySettingHour: minutes / 60, minute: minutes % 60, second: 0, of: Date()) ?? Date()
         } set: { date in
             let parts = Calendar.current.dateComponents([.hour, .minute], from: date)

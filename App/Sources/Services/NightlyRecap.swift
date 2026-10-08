@@ -28,6 +28,11 @@ enum NightlyRecap {
         scheduleRefresh(recapAt: NotificationPlanner.nextRecap(after: now, minutes: context.recapMinutes))
     }
 
+    /// When the recap goes out: the time set in Settings, else the wind-down answer, else 9:30pm.
+    static func recapMinutes(_ answers: OnboardingAnswers?) -> Int {
+        answers?.recapMinutes ?? answers?.windDownMinutes ?? 21 * 60 + 30
+    }
+
     static func makeContext(services: AppServices, answers: OnboardingAnswers?, now: Date) -> NotificationContext {
         let database = services.database
         let lastRecap = (try? database.scanState())?.lastRecapAt ?? .distantPast
@@ -36,7 +41,7 @@ enum NightlyRecap {
         let week = (try? database.weekStats(now: now)) ?? (saved: 0, done: 0)
         return NotificationContext(
             now: now,
-            recapMinutes: answers?.recapMinutes ?? answers?.windDownMinutes ?? 21 * 60 + 30,
+            recapMinutes: recapMinutes(answers),
             newItems: new,
             datedItems: dated,
             weekSaved: week.saved,
@@ -71,15 +76,17 @@ enum NightlyRecap {
             return
         }
         let work = Task {
-            // A refresh gets about 30 seconds: find what's new and read the newest of it.
-            let access = ScreenshotLibrary.currentAccess()
-            if access == .full || access == .limited {
-                _ = try? services.pipeline.discover()
-                try? await services.pipeline.readPending(limit: 24)
+            await SharedAccess.hold("Recap refresh") {
+                // A refresh gets about 30 seconds: find what's new and read the newest of it.
+                let access = ScreenshotLibrary.currentAccess()
+                if access == .full || access == .limited {
+                    _ = try? services.pipeline.discover()
+                    try? await services.pipeline.readPending(limit: 24)
+                }
+                let answers = try? services.database.onboardingAnswers()
+                await replan(services: services, answers: answers)
+                await WidgetRefresher.refresh(services: services)
             }
-            let answers = try? services.database.onboardingAnswers()
-            await replan(services: services, answers: answers)
-            await WidgetRefresher.refresh(services: services)
             box.task.setTaskCompleted(success: true)
         }
         task.expirationHandler = {

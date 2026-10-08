@@ -25,32 +25,16 @@ struct SignInScreen: View {
             MistBody("Your guesses, your score and what you've ticked off follow you to a new phone. **Your screenshots never leave this one.**", alignment: .leading)
                 .padding(.bottom, 28)
 
-            SignInWithAppleButton(.signIn) { request in
-                request.requestedScopes = [.fullName]
-            } onCompletion: { result in
-                if case .failure(let error) = result, (error as? ASAuthorizationError)?.code != .canceled {
-                    failed = true
-                }
-                onResult(result)
-            }
-            .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
-            // The button doesn't restyle itself when the appearance changes; rebuild it.
-            .id(colorScheme)
-            .frame(height: 58)
-            .clipShape(Capsule())
-            .padding(.bottom, 14)
-
-            SmallLabel(failed ? "That didn't go through. Give it another go?" : "Just your Apple ID. No email, no password.")
-                .frame(maxWidth: .infinity)
-                .padding(.bottom, 8)
-
             if allowsLocal {
-                Button(action: onLocal) {
-                    Chip("Test build: continue on this iPhone")
-                }
-                .buttonStyle(.plain)
-                .frame(maxWidth: .infinity)
-                .padding(.bottom, 8)
+                // Sideload builds can't use Sign in with Apple (AltStore's free signing has no
+                // entitlement for it), so continuing on this phone is the way in.
+                ActionBar("Continue on this iPhone", palette: palette, action: onLocal)
+                    .padding(.bottom, 14)
+                SmallLabel("Test build: your progress stays on this iPhone.")
+                    .frame(maxWidth: .infinity)
+                    .padding(.bottom, 8)
+            } else {
+                signInWithApple
             }
         }
         .padding(.horizontal, 24)
@@ -67,5 +51,27 @@ struct SignInScreen: View {
             }
             .ignoresSafeArea()
         }
+    }
+
+    @ViewBuilder
+    private var signInWithApple: some View {
+        SignInWithAppleButton(.signIn) { request in
+            request.requestedScopes = [.fullName]
+        } onCompletion: { result in
+            if case .failure(let error) = result, (error as? ASAuthorizationError)?.code != .canceled {
+                failed = true
+            }
+            onResult(result)
+        }
+        .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
+        // The button doesn't restyle itself when the appearance changes; rebuild it.
+        .id(colorScheme)
+        .frame(height: 58)
+        .clipShape(Capsule())
+        .padding(.bottom, 14)
+
+        SmallLabel(failed ? "That didn't go through. Give it another go?" : "Just your Apple ID. No email, no password.")
+            .frame(maxWidth: .infinity)
+            .padding(.bottom, 8)
     }
 }

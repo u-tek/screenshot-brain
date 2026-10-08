@@ -48,6 +48,17 @@ private typealias Col = ScreenshotItem.Columns
 extension AppDatabase {
     /// Records screenshots found in the library. Known assets are left alone. Returns how many were new.
     @discardableResult
+    /// Local identifiers already recorded for screenshots created after `date`.
+    public func knownAssetIDs(createdAfter date: Date) throws -> Set<String> {
+        try reader.read { db in
+            try ScreenshotItem
+                .select(Col.assetLocalID)
+                .filter(Col.createdAt > date)
+                .asRequest(of: String.self)
+                .fetchSet(db)
+        }
+    }
+
     public func recordDiscovered(_ screenshots: [DiscoveredScreenshot], now: Date = Date()) throws -> Int {
         try writer.write { db in
             var inserted = 0

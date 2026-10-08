@@ -46,8 +46,9 @@ public struct ScreenshotLibrary: Sendable {
 
     // MARK: Discovery
 
-    /// Screenshots created after `since`, newest first. Metadata only, so it's fast.
-    public func discover(since: Date?) -> [DiscoveredScreenshot] {
+    /// Screenshots created after `since`, newest first, leaving out the local identifiers in
+    /// `known`. Metadata only, so it's fast.
+    public func discover(since: Date?, skipping known: Set<String> = []) -> [DiscoveredScreenshot] {
         let options = PHFetchOptions()
         var predicates = [NSPredicate(format: "(mediaSubtypes & %d) != 0", Int32(PHAssetMediaSubtype.photoScreenshot.rawValue))]
         if let since {
@@ -60,6 +61,7 @@ public struct ScreenshotLibrary: Sendable {
         var screenshots: [DiscoveredScreenshot] = []
         screenshots.reserveCapacity(result.count)
         result.enumerateObjects { asset, _, _ in
+            guard !known.contains(asset.localIdentifier) else { return }
             screenshots.append(DiscoveredScreenshot(
                 assetLocalID: asset.localIdentifier,
                 cloudID: nil,
@@ -88,14 +90,14 @@ public struct ScreenshotLibrary: Sendable {
     // MARK: Images
 
     /// Loads a screenshot downscaled by `scale` (about half resolution reads text reliably and is
-    /// much faster). Never downloads from iCloud.
-    public func loadImage(localIdentifier: String, scale: Double = 0.5) async -> LoadResult {
+    /// much faster). Downloads from iCloud only when `allowsNetwork` (the backfill pass).
+    public func loadImage(localIdentifier: String, scale: Double = 0.5, allowsNetwork: Bool = false) async -> LoadResult {
         guard let asset = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil).firstObject else {
             return .missing
         }
         let maxPixelSize = max(Int(Double(max(asset.pixelWidth, asset.pixelHeight)) * scale), 320)
         let options = PHImageRequestOptions()
-        options.isNetworkAccessAllowed = false
+        options.isNetworkAccessAllowed = allowsNetwork
         options.deliveryMode = .highQualityFormat
         options.version = .current
 

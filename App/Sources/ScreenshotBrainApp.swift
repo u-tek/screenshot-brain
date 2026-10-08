@@ -35,10 +35,10 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         let center = NotificationCenter.default
         lifecycleObservers = [
             center.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { _ in
-                AppDatabase.suspendSharedAccess()
+                MainActor.assumeIsolated { SharedAccess.enteredBackground() }
             },
             center.addObserver(forName: UIApplication.willEnterForegroundNotification, object: nil, queue: .main) { _ in
-                AppDatabase.resumeSharedAccess()
+                MainActor.assumeIsolated { SharedAccess.enteredForeground() }
             },
         ]
         return true

@@ -137,7 +137,11 @@ final class AppModel: ObservableObject {
         }
         guard let services, step >= .home else { return }
         let answers = self.answers
-        Task { await NightlyRecap.replan(services: services, answers: answers) }
+        Task {
+            await SharedAccess.hold("Plan tonight's recap") {
+                await NightlyRecap.replan(services: services, answers: answers)
+            }
+        }
     }
 
     /// The notifications pre-prompt: iOS's prompt, then on.
@@ -379,12 +383,11 @@ final class AppModel: ObservableObject {
 
     // MARK: Links
 
-    /// A link from the widget. Onboarding finishes first; links wait until Home.
+    /// A link from the widget or a notification. Onboarding finishes first: the link waits, and
+    /// Home follows it when it appears.
     func open(_ url: URL) {
         guard let link = AppLink(url: url) else { return }
-        if link == .paywall || step >= .home {
-            pendingLink = link
-        }
+        pendingLink = link
     }
 
     // MARK: Premium
