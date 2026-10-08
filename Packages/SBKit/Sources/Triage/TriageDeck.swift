@@ -304,6 +304,8 @@ struct TriageCardView: View {
         .padding(.top, 22 + 28)
         .padding(.bottom, 20)
         .frame(maxWidth: .infinity, minHeight: 228, alignment: .topLeading)
+        // Its own height, not the card's: the screenshot has the rest.
+        .fixedSize(horizontal: false, vertical: true)
         .background(SBFolderPanelShape().fill(SBColor.surface))
     }
 

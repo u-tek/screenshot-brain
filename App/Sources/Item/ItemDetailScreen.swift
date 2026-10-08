@@ -135,7 +135,15 @@ struct ItemDetailScreen: View {
                 primaryAction(item)
             }
             .padding(.horizontal, 12)
+            .padding(.top, 36)
             .padding(.bottom, 8)
+            // The page scrolls under a fade to the ground, so the done button never sits on the
+            // actions.
+            .background(
+                LinearGradient(colors: [SBColor.ground.opacity(0), SBColor.ground.opacity(0.92), SBColor.ground], startPoint: .top, endPoint: .bottom)
+                    .ignoresSafeArea(edges: .bottom)
+                    .allowsHitTesting(false)
+            )
         }
         .sbScreen()
     }
