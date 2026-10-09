@@ -33,6 +33,8 @@ import Testing
         #expect(SensitiveTextDetector.findings(in: "Wi-Fi password: coffee123").contains(.password))
         #expect(SensitiveTextDetector.findings(in: "Your verification code is 482913").contains(.oneTimeCode))
         #expect(!SensitiveTextDetector.findings(in: "Verify your email").contains(.oneTimeCode))
+        #expect(SensitiveTextDetector.findings(in: "OTP: 4821").contains(.oneTimeCode))
+        #expect(!SensitiveTextDetector.findings(in: "Mushroom hotpot\nServes 4, 1200 kcal").contains(.oneTimeCode))
     }
 
     @Test func ordinaryTextIsNotSensitive() {

@@ -274,11 +274,11 @@ extension AppDatabase {
         }
     }
 
-    /// Dated intentions in the next `days`, soonest first.
+    /// Dated intentions in the next `days`, soonest first. Near-duplicates show once.
     public func comingUp(now: Date, days: Int = 7) throws -> [ScreenshotItem] {
         let start = now.addingTimeInterval(-12 * 3_600)
         let end = now.addingTimeInterval(Double(days) * 86_400)
-        return try reader.read { db in
+        let items = try reader.read { db in
             try ScreenshotItem
                 .filter(Col.processedAt != nil)
                 .filter(Col.isNSFWFlagged == false)
@@ -288,9 +288,11 @@ extension AppDatabase {
                 .order(Col.dueDate.asc)
                 .fetchAll(db)
         }
+        return Self.oneOfEachGroup(items)
     }
 
-    /// Kept intentions, grouped by category, oldest untouched first.
+    /// Kept intentions, grouped by category, oldest untouched first. Near-duplicates count once,
+    /// as they do in the score.
     public func stillWant() throws -> [ItemCategory: [ScreenshotItem]] {
         let items = try reader.read { db in
             try ScreenshotItem
@@ -299,7 +301,7 @@ extension AppDatabase {
                 .fetchAll(db)
         }
         let sorted = items.sorted { ($0.stateChangedAt ?? $0.createdAt) < ($1.stateChangedAt ?? $1.createdAt) }
-        return Dictionary(grouping: sorted, by: \.category)
+        return Dictionary(grouping: Self.oneOfEachGroup(sorted), by: \.category)
     }
 
     /// Reference search across the text read from screenshots.
@@ -388,6 +390,12 @@ extension AppDatabase {
             cards.append(TriageCard(item: item, groupSize: 1))
         }
         return cards
+    }
+
+    /// The first item of each group of near-duplicates, in order.
+    static func oneOfEachGroup(_ items: [ScreenshotItem]) -> [ScreenshotItem] {
+        var seen: Set<String> = []
+        return items.filter { seen.insert($0.groupID ?? $0.id).inserted }
     }
 
     static func widgetOrder(_ a: ScreenshotItem, _ b: ScreenshotItem) -> Bool {

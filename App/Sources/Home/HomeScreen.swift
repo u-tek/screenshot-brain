@@ -149,7 +149,7 @@ struct KeptScreen: View {
                     if home.score.total > 0 {
                         score
                     }
-                    if home.isEmpty && home.query.isEmpty {
+                    if home.isEmpty && !home.isSearching {
                         EmptyHome()
                     } else {
                         if !home.comingUp.isEmpty {
@@ -273,7 +273,16 @@ private struct ComingUpColumn: View {
 
     private var relative: String {
         guard let due = item.dueDate else { return "" }
-        return due.formatted(.relative(presentation: .named)).uppercased()
+        guard !item.dueDateHasTime else {
+            return due.formatted(.relative(presentation: .named)).uppercased()
+        }
+        // A day with no time: count days, not hours to a noon nobody wrote.
+        let calendar = Calendar.current
+        let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: Date()), to: calendar.startOfDay(for: due)).day ?? 0
+        if days == 0 { return "ALL DAY" }
+        let formatter = RelativeDateTimeFormatter()
+        formatter.dateTimeStyle = .named
+        return formatter.localizedString(from: DateComponents(day: days)).uppercased()
     }
 }
 
@@ -340,7 +349,7 @@ private struct SearchSection: View {
             .frame(height: 52)
             .sbGlass(in: Capsule())
 
-            if !home.query.isEmpty {
+            if home.isSearching {
                 if home.results.isEmpty {
                     Text("Nothing matches that yet.")
                         .sbText(.body)

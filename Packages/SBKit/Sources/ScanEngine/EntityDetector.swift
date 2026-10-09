@@ -42,7 +42,7 @@ public struct EntityDetector: Sendable {
     // MARK: Prices
 
     static let pricePattern =
-        #"(?:(?:A|NZ|US|C)?\$|€|£|¥|₹)\s?\d{1,3}(?:[,\s]\d{3})*(?:\.\d{2})?|\b\d{1,3}(?:[.,\s]\d{3})*(?:[.,]\d{2})?\s?(?:€|\b(?:kr|AUD|USD|EUR|GBP|NZD|CAD)\b)|\b(?:AUD|USD|EUR|GBP|NZD|CAD)\s?\d{1,3}(?:[,\s]\d{3})*(?:\.\d{2})?"#
+        #"(?:(?:CA|A|NZ|US|C)?\$|€|£|¥|₹)\s?\d{1,3}(?:[.,\s]\d{3})*(?:[.,]\d{2})?|\b\d{1,3}(?:[.,\s]\d{3})*(?:[.,]\d{2})?\s?(?:€|\b(?:kr|AUD|USD|EUR|GBP|NZD|CAD)\b)|\b(?:AUD|USD|EUR|GBP|NZD|CAD)\s?\d{1,3}(?:[,\s]\d{3})*(?:\.\d{2})?"#
 
     private func prices(in text: String) -> [DetectedEntity] {
         matches(of: Self.pricePattern, in: text).map { matched in
@@ -52,14 +52,16 @@ public struct EntityDetector: Sendable {
 
     static func amount(in price: String) -> Decimal? {
         let digits = price.filter { $0.isNumber || $0 == "." || $0 == "," }
-        // Treat a trailing ",dd" as decimals (European style); otherwise commas group thousands.
-        let normalised: String
-        if let comma = digits.lastIndex(of: ","), digits.distance(from: comma, to: digits.endIndex) == 3, !digits.contains(".") {
-            normalised = digits.replacingCharacters(in: comma...comma, with: ".")
-        } else {
-            normalised = digits.replacingOccurrences(of: ",", with: "")
+        // The last separator before exactly two digits marks the decimals, either way round
+        // ("1,299.00", "1.299,00", "12,50"); every other separator groups thousands.
+        var whole = digits
+        var decimals = ""
+        if let separator = digits.lastIndex(where: { $0 == "." || $0 == "," }), digits.distance(from: separator, to: digits.endIndex) == 3 {
+            whole = String(digits[..<separator])
+            decimals = String(digits[digits.index(after: separator)...])
         }
-        return Decimal(string: normalised)
+        whole.removeAll { $0 == "." || $0 == "," }
+        return Decimal(string: decimals.isEmpty ? whole : "\(whole).\(decimals)")
     }
 
     static func currency(in price: String) -> String? {
@@ -67,6 +69,7 @@ public struct EntityDetector: Sendable {
         for code in ["AUD", "NZD", "USD", "CAD", "EUR", "GBP"] where upper.contains(code) {
             return code
         }
+        if price.contains("CA$") || price.contains("C$") { return "CAD" }
         if price.contains("A$") { return "AUD" }
         if price.contains("NZ$") { return "NZD" }
         if price.contains("US$") { return "USD" }
@@ -79,8 +82,8 @@ public struct EntityDetector: Sendable {
 
     // MARK: Ratings and reviews
 
-    static let ratingPattern = #"(?:★|⭐){3,5}|\b[1-5][.,]\d\s*(?:★|⭐|stars?\b|out of 5|/\s?5)"#
-    static let reviewCountPattern = #"\b\d{1,3}(?:[,.]\d{3})*(?:\.\d)?[kK]?\+?\s*(?:reviews?|ratings?|Google reviews)\b"#
+    static let ratingPattern = #"(?i)(?:★|⭐){3,5}|\b[1-5][.,]\d\s*(?:★|⭐|stars?\b|out of 5|/\s?5)"#
+    static let reviewCountPattern = #"(?i)\b\d{1,3}(?:[,.]\d{3})*(?:\.\d)?[kK]?\+?\s*(?:reviews?|ratings?|Google reviews)\b"#
 
     private func matches(of pattern: String, in text: String) -> [String] {
         guard let regex = try? NSRegularExpression(pattern: pattern) else { return [] }

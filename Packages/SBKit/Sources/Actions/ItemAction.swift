@@ -53,7 +53,8 @@ public enum ItemAction: String, CaseIterable, Sendable, Identifiable {
         if item.category == .place || item.entities.contains(where: { $0.kind == .address }) {
             actions.append(.maps)
         }
-        if item.category == .product || (ShopLink.detectedURL(for: item) != nil && item.category != .event) {
+        // Somewhere to go: the link read from it, or a search for its name.
+        if ShopLink.url(for: item) != nil, item.category == .product || (ShopLink.detectedURL(for: item) != nil && item.category != .event) {
             actions.append(.shop)
         }
         if item.category == .recipe, !Ingredients.lines(in: item.extractedText ?? "").isEmpty {

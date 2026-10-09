@@ -86,6 +86,22 @@ import Testing
         #expect(try database.score() == Score(done: 2, total: 4))
     }
 
+    @Test func keptNearDuplicatesShowOnce() throws {
+        let group = ItemGroup(createdAt: Fixture.date(days: 0), itemCount: 2, updatedAt: Fixture.date(days: 0))
+        try database.writer.write { db in try group.insert(db) }
+        for _ in 0..<2 {
+            var item = Fixture.item(groupID: group.id, state: .stillWant)
+            item.dueDate = Fixture.date(days: 2)
+            item.processedAt = Fixture.date(days: 0)
+            try database.save(item)
+        }
+        try database.save(Fixture.item(state: .stillWant))
+
+        #expect(try database.score() == Score(done: 0, total: 2))
+        #expect(try database.stillWant()[.event]?.count == 2)
+        #expect(try database.comingUp(now: Fixture.date(days: 0)).count == 1)
+    }
+
     @Test func onboardingResumesFromTheSavedStep() throws {
         #expect(try database.onboardingAnswers() == nil)
 

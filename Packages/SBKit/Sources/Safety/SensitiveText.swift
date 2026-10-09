@@ -87,7 +87,11 @@ public enum SensitiveTextDetector {
         let lowered = text.lowercased()
         let phrases = ["verification code", "one-time", "one time code", "otp", "security code",
                        "your code is", "login code", "sign-in code", "authentication code", "2fa"]
-        guard phrases.contains(where: { lowered.contains($0) }) else { return false }
+        // Whole words: "otp" is in "hotpot".
+        let named = phrases.contains { phrase in
+            lowered.range(of: "\\b" + NSRegularExpression.escapedPattern(for: phrase) + "\\b", options: .regularExpression) != nil
+        }
+        guard named else { return false }
         return !matches(of: #"\b\d{4,8}\b"#, in: text).isEmpty
     }
 

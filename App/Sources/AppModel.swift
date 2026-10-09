@@ -140,6 +140,8 @@ final class AppModel: ObservableObject {
             ScanScheduler.schedule()
         }
         guard let services, step >= .home else { return }
+        // A sort left without "Finish later" still decided things: the widget shouldn't offer them.
+        itemsChanged()
         let answers = self.answers
         Task {
             await SharedAccess.hold("Plan tonight's recap") {
@@ -269,6 +271,8 @@ final class AppModel: ObservableObject {
         account = nil
         answers = OnboardingAnswers()
         story = nil
+        // The deleted screenshots' colours go too.
+        palette = .sampleTopScreenshots
     }
 
     // MARK: Photos and the scan

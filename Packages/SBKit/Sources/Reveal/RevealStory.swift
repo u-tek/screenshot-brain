@@ -264,6 +264,19 @@ public enum CategoryWords {
         }
     }
 
+    /// "1 place", "3 places".
+    public static func count(_ count: Int, _ category: ItemCategory) -> String {
+        guard count == 1 else { return "\(count.formatted()) \(plural(category))" }
+        switch category {
+        case .place: return "1 place"
+        case .event: return "1 event"
+        case .product: return "1 thing to buy"
+        case .recipe: return "1 recipe"
+        case .reference: return "1 receipt or chat"
+        case .other: return "1 random thing"
+        }
+    }
+
     public static func meantTo(_ category: ItemCategory) -> String {
         switch category {
         case .place: "you meant to go"

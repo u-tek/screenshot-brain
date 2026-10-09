@@ -38,12 +38,18 @@ extension AppDatabase {
     }
 
     /// Decides an item and every near-duplicate grouped with it. Returns them as they were, so
-    /// the decision can be undone.
+    /// the decision can be undone. A near-duplicate with sensitive text (parked as reference) or
+    /// flagged for nudity stays where it is.
     @discardableResult
     public func decide(_ state: ItemState, forItem id: String, at date: Date = Date()) throws -> [ScreenshotItem] {
         try writer.write { db in
             guard let item = try ScreenshotItem.fetchOne(db, key: id) else { return [] }
-            let members = try item.groupID.map { try ScreenshotItem.filter(ScreenshotItem.Columns.groupID == $0).fetchAll(db) } ?? [item]
+            let members = try item.groupID.map { groupID in
+                try ScreenshotItem
+                    .filter(ScreenshotItem.Columns.groupID == groupID)
+                    .fetchAll(db)
+                    .filter { $0.id == item.id || (!$0.hasSensitiveText && !$0.isNSFWFlagged) }
+            } ?? [item]
             for var member in members {
                 member.state = state
                 member.stateChangedAt = date
@@ -54,14 +60,15 @@ extension AppDatabase {
         }
     }
 
-    /// Undoes a decision: puts each item back in the state it was in.
+    /// Undoes a decision: puts each item back in the state it was in. Only the state: anything
+    /// else that changed since (the widget showing it, say) stays.
     public func undoDecision(restoring previous: [ScreenshotItem], at date: Date = Date()) throws {
         try writer.write { db in
             for var item in previous {
                 // Stamped now, so the undo also wins on other devices.
                 item.stateChangedAt = date
                 item.updatedAt = date
-                try item.update(db)
+                try item.update(db, columns: [ScreenshotItem.Columns.state, .stateChangedAt, .updatedAt])
             }
         }
     }

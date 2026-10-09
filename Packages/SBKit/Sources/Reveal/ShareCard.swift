@@ -59,7 +59,7 @@ public struct ShareCardView: View {
     }
 
     private func markup(unit: CGFloat) -> AttributedString {
-        var light = AttributedString("screenshots. ")
+        var light = AttributedString(story.total == 1 ? "screenshot. " : "screenshots. ")
         light.foregroundColor = SBColor.inkLight
         var bold = AttributedString("\(story.doneCount) actually done.")
         bold.foregroundColor = SBColor.ink

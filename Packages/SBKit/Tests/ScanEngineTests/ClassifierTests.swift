@@ -155,12 +155,25 @@ enum Fixtures {
 
     @Test func readsEuropeanPrices() {
         #expect(EntityDetector.amount(in: "12,50 €") == Decimal(string: "12.50"))
+        #expect(EntityDetector.amount(in: "1.299,00 €") == 1299)
+        let entities = EntityDetector().entities(in: "Jetzt €12,50 statt €1.299,00")
+        let amounts = entities.filter { $0.kind == .price }.compactMap(\.amount)
+        #expect(amounts == [Decimal(string: "12.50")!, 1299])
+    }
+
+    @Test func readsCanadianDollars() {
+        let price = EntityDetector().entities(in: "CA$1,299").first { $0.kind == .price }
+        #expect(price?.text == "CA$1,299")
+        #expect(price?.currencyCode == "CAD")
     }
 
     @Test func readsRatingsAndReviews() {
         let entities = EntityDetector().entities(in: "4.6 ★★★★★ (1,284 reviews)")
         #expect(entities.contains { $0.kind == .rating })
         #expect(entities.contains { $0.kind == .reviewCount })
+        let shouted = EntityDetector().entities(in: "4.5 Stars · 1,284 Google Reviews")
+        #expect(shouted.contains { $0.kind == .rating })
+        #expect(shouted.contains { $0.kind == .reviewCount })
     }
 
     @Test func distinguishesDaysFromTimes() {

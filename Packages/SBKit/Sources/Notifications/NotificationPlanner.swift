@@ -214,7 +214,8 @@ public enum NotificationCopy {
         let line: String
         switch item.category {
         case .event:
-            if let due = item.dueDate {
+            // A gig that's been and gone isn't "Saturday".
+            if let due = item.dueDate, due > now {
                 line = "\(name(item)) is \(day(due, from: now, calendar: calendar)). Still going?"
             } else {
                 line = "\(name(item)). Going?"

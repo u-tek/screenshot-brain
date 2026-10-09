@@ -301,6 +301,7 @@ struct ItemDetailScreen: View {
 
     private func flash(_ text: String) {
         withAnimation(SBMotion.snappy) { note = text }
+        UIAccessibility.post(notification: .announcement, argument: text)
         Task {
             try? await Task.sleep(nanoseconds: 2_500_000_000)
             withAnimation(SBMotion.settle) {

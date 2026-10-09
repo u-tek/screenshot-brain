@@ -79,7 +79,11 @@ public struct PaywallView: View {
                         ForEach(plans) { plan in
                             PlanCard(plan: plan, isSelected: plan.kind == selected.kind, palette: palette) {
                                 Haptics.selection()
-                                withAnimation(SBMotion.snappy) { selection = plan.kind }
+                                withAnimation(SBMotion.snappy) {
+                                    selection = plan.kind
+                                    // Back to the plan's terms: they're always on screen.
+                                    message = nil
+                                }
                             }
                         }
                     }
@@ -122,6 +126,12 @@ public struct PaywallView: View {
             message = "Purchases aren't set up in this build."
             return
         }
+        // The prices on screen are placeholders until the App Store's arrive.
+        guard !purchases.plans.isEmpty else {
+            message = "Still getting prices from the App Store. Try again in a moment."
+            Task { await purchases.loadPlans() }
+            return
+        }
         isBusy = true
         Task {
             defer { isBusy = false }
@@ -131,7 +141,7 @@ public struct PaywallView: View {
                     onPurchased()
                 }
             } catch {
-                message = "That didn't go through. Nothing was charged."
+                message = "That didn't go through. Try again in a moment."
             }
         }
     }
@@ -144,11 +154,15 @@ public struct PaywallView: View {
         isBusy = true
         Task {
             defer { isBusy = false }
-            if (try? await purchases.restore()) == true {
-                Haptics.success()
-                onPurchased()
-            } else {
-                message = "Nothing to restore on this Apple ID."
+            do {
+                if try await purchases.restore() {
+                    Haptics.success()
+                    onPurchased()
+                } else {
+                    message = "Nothing to restore on this Apple ID."
+                }
+            } catch {
+                message = "Couldn't reach the App Store. Try again in a moment."
             }
         }
     }

@@ -116,7 +116,8 @@ public enum WidgetPlanner {
         now: Date,
         calendar: Calendar = .current
     ) -> (entries: [WidgetEntryPlan], reloadAt: Date) {
-        let tomorrow = calendar.startOfDay(for: now).addingTimeInterval(86_400)
+        // Next midnight by the calendar: on a daylight-saving day it's 23 or 25 hours away.
+        let tomorrow = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now)) ?? now.addingTimeInterval(86_400)
         guard access == .unlocked else {
             return ([WidgetEntryPlan(date: now, card: .locked, score: score)], now.addingTimeInterval(6 * 3_600))
         }

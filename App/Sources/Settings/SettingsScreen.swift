@@ -50,8 +50,12 @@ struct SettingsScreen: View {
                                 return
                             }
                             Task {
-                                let restored = (try? await model.purchases.restore()) ?? false
-                                restoreMessage = restored ? "Restored." : "Nothing to restore on this Apple ID."
+                                do {
+                                    let restored = try await model.purchases.restore()
+                                    restoreMessage = restored ? "Restored." : "Nothing to restore on this Apple ID."
+                                } catch {
+                                    restoreMessage = "Couldn't reach the App Store. Try again in a moment."
+                                }
                             }
                         }
                         .font(SBFont.body(16))

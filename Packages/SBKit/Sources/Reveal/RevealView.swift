@@ -206,7 +206,7 @@ private struct TotalCard: View {
     }
 
     private func verdict(guess: Int) -> String {
-        let ratio = Double(story.total) / Double(max(guess, 1))
+        let ratio = guess == story.total ? 1 : Double(story.total) / Double(max(guess, 1))
         switch ratio {
         case 0.85...1.15: return "You guessed \(guess). **Scary close.**"
         case 1.5...: return "You guessed \(guess). **Not even close.**"
@@ -276,7 +276,7 @@ private struct CategoriesCard: View {
                 SBLabel("What you save")
                 MistHeadline(headline, size: 32, alignment: .leading)
                 if story.unsureCount > 0 {
-                    MistBody("\(story.unsureCount) we weren't sure about. **They're in triage.**", alignment: .leading)
+                    MistBody(story.unsureCount == 1 ? "1 we weren't sure about. **It's in triage.**" : "\(story.unsureCount) we weren't sure about. **They're in triage.**", alignment: .leading)
                 }
             }
         } bottom: {
@@ -335,7 +335,7 @@ private struct TopCategoryCard: View {
                         .sbText(.story)
                         .lineLimit(1)
                         .minimumScaleFactor(0.5)
-                    MistHeadline("**\(story.topCategoryCount) \(CategoryWords.plural(top))** \(CategoryWords.meantTo(top)).", size: 32, alignment: .leading)
+                    MistHeadline("**\(CategoryWords.count(story.topCategoryCount, top))** \(CategoryWords.meantTo(top)).", size: 32, alignment: .leading)
                 }
             }
         } bottom: {

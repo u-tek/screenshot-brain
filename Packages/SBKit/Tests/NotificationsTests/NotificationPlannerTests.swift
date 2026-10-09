@@ -52,6 +52,12 @@ import Testing
         #expect(calendar.component(.minute, from: plan.fireAt) == 30)
     }
 
+    @Test func aGigThatHasBeenIsNotGivenADay() throws {
+        let lastMonth = start.addingTimeInterval(-30 * 86_400)
+        let plan = try #require(NotificationPlanner.plan(context(now: start, new: [NotableItem(id: "a", title: nil, category: .event, dueDate: lastMonth)]), calendar: calendar))
+        #expect(plan.body == "That gig you saved. Going?")
+    }
+
     @Test func recapNamesSomethingItHasNotNamedBefore() throws {
         var history = NotificationHistory()
         history.nudgedItemIDs = ["a"]

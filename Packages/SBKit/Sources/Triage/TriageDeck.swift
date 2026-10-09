@@ -70,6 +70,8 @@ public struct TriageDeck: View {
                         Haptics.selection()
                         withAnimation(SBMotion.snappy) { model.undo() }
                     }
+                    // Mid-fling, the card's decision hasn't landed yet: undo would take the one before.
+                    .disabled(isCommitting)
                     .transition(.opacity)
                 }
                 if !model.isFinished {

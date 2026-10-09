@@ -35,6 +35,11 @@ final class HomeModel: ObservableObject {
         score.total == 0 && comingUp.isEmpty && shelves.isEmpty
     }
 
+    /// Something is typed in the search box, not just spaces.
+    var isSearching: Bool {
+        !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
     func reload(now: Date = Date()) {
         guard let database else { return }
         score = (try? database.score()) ?? score
@@ -46,6 +51,8 @@ final class HomeModel: ObservableObject {
             .sorted { $0.items.count == $1.items.count ? $0.category.rawValue < $1.category.rawValue : $0.items.count > $1.items.count }
         droppedCount = (try? database.dropped().count) ?? 0
         toSort = (try? database.triageDeck(limit: .max).count) ?? 0
+        // What was found may have been decided or deleted since.
+        scheduleSearch()
     }
 
     /// A Home with things on it, for design snapshots.
