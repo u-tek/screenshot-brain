@@ -61,6 +61,15 @@ import Testing
     func dayPeriodFromHour(hour: Int, expected: DayPeriod) {
         #expect(DayPeriod(hour: hour) == expected)
     }
+
+    @Test func datesKnowWhetherTheyNamedATime() {
+        #expect(DetectedEntity(kind: .date, text: "Sat 14 Oct 8pm").namesATime)
+        #expect(DetectedEntity(kind: .date, text: "19:30").namesATime)
+        #expect(DetectedEntity(kind: .date, text: "Fri, 7.30 p.m.").namesATime)
+        #expect(!DetectedEntity(kind: .date, text: "Sat 14 Oct").namesATime)
+        #expect(!DetectedEntity(kind: .date, text: "14/10/2026").namesATime)
+        #expect(!DetectedEntity(kind: .address, text: "8pm Lane").namesATime)
+    }
 }
 
 private final class Recorder: @unchecked Sendable {

@@ -96,14 +96,24 @@ public struct EventDraft: Hashable, Sendable {
     public var end: Date
     public var location: String?
     public var url: URL?
+    /// The screenshot named a day but no time.
+    public var isAllDay: Bool
 
     /// Nil when there's no date to put in a calendar.
-    public init?(item: ScreenshotItem) {
+    public init?(item: ScreenshotItem, calendar: Calendar = .current) {
         let dated = item.entities.first { $0.kind == .date && $0.date != nil }
         guard let start = item.dueDate ?? dated?.date else { return nil }
         self.title = item.title ?? "Something you saved"
-        self.start = start
-        self.end = start.addingTimeInterval(dated?.duration ?? Self.defaultDuration)
+        let isAllDay = item.dueDate != nil ? !item.dueDateHasTime : dated?.namesATime == false
+        self.isAllDay = isAllDay
+        if isAllDay {
+            let day = calendar.startOfDay(for: start)
+            self.start = day
+            self.end = day
+        } else {
+            self.start = start
+            self.end = start.addingTimeInterval(dated?.duration ?? Self.defaultDuration)
+        }
         self.location = item.entities.first { $0.kind == .address }?.text
         self.url = ShopLink.detectedURL(for: item)
     }

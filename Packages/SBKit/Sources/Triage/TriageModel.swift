@@ -92,6 +92,11 @@ extension TriageModel {
     /// Cards for previews and design snapshots: no images, just each category's light.
     public static func sampleCards() -> [TriageCard] {
         let now = Date()
+        // 8pm, some days from now, like a gig.
+        func evening(inDays days: Double) -> Date {
+            let day = now.addingTimeInterval(days * 86_400)
+            return Calendar.current.date(bySettingHour: 20, minute: 0, second: 0, of: day) ?? day
+        }
         func card(_ category: ItemCategory, _ title: String, daysAgo: Double, due: Double? = nil, group: Int = 1) -> TriageCard {
             let item = ScreenshotItem(
                 assetLocalID: "sample-\(title)",
@@ -100,12 +105,12 @@ extension TriageModel {
                 confidence: 0.9,
                 isSafeToDisplay: false,
                 title: title,
-                dueDate: due.map { now.addingTimeInterval($0 * 86_400) }
+                dueDate: due.map(evening(inDays:))
             )
             return TriageCard(item: item, groupSize: group)
         }
         return [
-            card(.event, "Mallrat · Enmore Theatre", daysAgo: 12, due: 3, group: 2),
+            card(.event, "Mallrat at the Enmore", daysAgo: 12, due: 3, group: 2),
             card(.place, "Ramen Ikkyu", daysAgo: 23),
             card(.product, "Salomon XT-6", daysAgo: 4),
             card(.recipe, "Crispy chilli noodles", daysAgo: 40),

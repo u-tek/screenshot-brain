@@ -120,6 +120,16 @@ public struct DetectedEntity: Codable, Hashable, Sendable {
     }
 }
 
+extension DetectedEntity {
+    /// True when a detected date says a time of day ("8pm", "19:30", "noon"). A day on its own
+    /// ("Sat 14 Oct") comes back from the data detector at noon, a time nobody wrote.
+    public var namesATime: Bool {
+        guard kind == .date else { return false }
+        let pattern = #"\d:\d{2}|\d\s?(?:[ap]m\b|[ap]\.m\.)|\bnoon\b|\bmidnight\b"#
+        return text.range(of: pattern, options: [.regularExpression, .caseInsensitive]) != nil
+    }
+}
+
 /// One dominant colour of a screenshot, in sRGB with components in 0...1.
 /// An item's palette becomes its light: the soft colour that glows behind its glass.
 public struct PaletteColor: Codable, Hashable, Sendable {

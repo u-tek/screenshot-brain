@@ -23,6 +23,7 @@ public struct EventEditor: UIViewControllerRepresentable {
         event.title = draft.title
         event.startDate = draft.start
         event.endDate = draft.end
+        event.isAllDay = draft.isAllDay
         event.location = draft.location
         event.url = draft.url
         let controller = EKEventEditViewController()

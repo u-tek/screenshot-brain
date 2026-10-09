@@ -70,4 +70,19 @@ import Testing
         let draft = EventDraft(item: item(.event, dueDate: start))
         #expect(draft?.end == start.addingTimeInterval(EventDraft.defaultDuration))
     }
+
+    @Test func aDayWithoutATimeIsAnAllDayEvent() throws {
+        let calendar = Calendar(identifier: .gregorian)
+        let noon = try #require(calendar.date(from: DateComponents(year: 2026, month: 10, day: 17, hour: 12)))
+        let sale = item(.event, entities: [DetectedEntity(kind: .date, text: "Sat 17 Oct", date: noon)], dueDate: noon)
+        #expect(!sale.dueDateHasTime)
+        let draft = try #require(EventDraft(item: sale, calendar: calendar))
+        #expect(draft.isAllDay)
+        #expect(draft.start == calendar.startOfDay(for: noon))
+
+        let eight = noon.addingTimeInterval(8 * 3_600)
+        let gig = item(.event, entities: [DetectedEntity(kind: .date, text: "Sat 17 Oct 8pm", date: eight)], dueDate: eight)
+        #expect(gig.dueDateHasTime)
+        #expect(EventDraft(item: gig, calendar: calendar)?.isAllDay == false)
+    }
 }

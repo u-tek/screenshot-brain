@@ -154,7 +154,7 @@ struct ItemDetailScreen: View {
     private func rows(_ item: ScreenshotItem) -> [(String, String)] {
         var rows: [(String, String)] = [("Saved", item.createdAt.formatted(date: .abbreviated, time: .shortened))]
         if let due = item.dueDate {
-            rows.append(("When", due.formatted(date: .abbreviated, time: .shortened)))
+            rows.append(("When", due.formatted(date: .abbreviated, time: item.dueDateHasTime ? .shortened : .omitted)))
         }
         if let address = item.entities.first(where: { $0.kind == .address })?.text {
             rows.append(("Where", address))

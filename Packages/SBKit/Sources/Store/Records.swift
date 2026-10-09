@@ -103,6 +103,17 @@ public struct ScreenshotItem: Codable, Hashable, Identifiable, Sendable {
     public var isVisibleInApp: Bool {
         !isNSFWFlagged
     }
+
+    /// Whether the screenshot said what time the due date is. A day on its own is shown, and goes
+    /// in a calendar, as a day.
+    public var dueDateHasTime: Bool {
+        guard let due = dueDate else { return false }
+        let sources = entities.filter { entity in
+            entity.kind == .date && entity.date.map { abs($0.timeIntervalSince(due)) < 1 } == true
+        }
+        // A due date that wasn't read from an entity (a sample) keeps its time.
+        return sources.isEmpty || sources.contains(where: \.namesATime)
+    }
 }
 
 extension ScreenshotItem: FetchableRecord, PersistableRecord {

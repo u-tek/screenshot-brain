@@ -24,6 +24,8 @@ public struct TriageDeck: View {
 
     /// How far a card must travel (or be flung) to count.
     private static let threshold: CGFloat = 110
+    /// How far each card behind peeks out above the one in front.
+    private static let peek: CGFloat = 14
 
     public init(model: TriageModel, label: String = "Recap", onFinish: @escaping () -> Void) {
         self.model = model
@@ -84,16 +86,18 @@ public struct TriageDeck: View {
                 layer(card, depth: depth)
             }
         }
+        // Room above the top card for the cards behind it to peek out, clear of the header.
+        .padding(.top, Self.peek * 2)
     }
 
     /// A card at `depth` in the stack: 0 is the top card, the one being dragged.
     private func layer(_ card: TriageCard, depth: Int) -> some View {
         let isTop = depth == 0
         let scale: CGFloat = 1 - CGFloat(depth) * 0.05
-        let lift: CGFloat = CGFloat(depth) * -14
+        let lift: CGFloat = CGFloat(depth) * -Self.peek
         let offset: CGSize = isTop ? drag : .zero
         let tilt: Double = isTop && !reduceMotion ? Double(drag.width / 22) : 0
-        return TriageCardView(card: card, direction: isTop ? direction : nil, strength: isTop ? strength : 0)
+        return TriageCardView(card: card, direction: isTop ? direction : nil, strength: isTop ? strength : 0, showsGroup: isTop)
             .scaleEffect(scale, anchor: .top)
             .offset(y: lift)
             .opacity(depth == 2 ? 0.6 : 1)
@@ -217,13 +221,15 @@ struct TriageCardView: View {
     let card: TriageCard
     var direction: TriageDecision?
     var strength: Double = 0
+    /// Only the top card shows its group's stack: behind it, the deck already does.
+    var showsGroup = true
 
     var body: some View {
         let item = card.item
         let shape = RoundedRectangle(cornerRadius: SBRadius.objectCard, style: .continuous)
         let kind = SBKind(item.category)
         ZStack {
-            if card.groupSize > 1 {
+            if showsGroup, card.groupSize > 1 {
                 StackEdge(shape: shape, depth: 2)
                 StackEdge(shape: shape, depth: 1)
             }
@@ -300,7 +306,9 @@ struct TriageCardView: View {
         var parts: [String] = []
         if let due = item.dueDate {
             parts.append(due.formatted(.dateTime.weekday(.wide)))
-            parts.append(due.formatted(.dateTime.hour().minute()))
+            if item.dueDateHasTime {
+                parts.append(due.formatted(.dateTime.hour().minute()))
+            }
         } else {
             parts.append("Saved \(item.createdAt.formatted(.relative(presentation: .named)))")
         }
