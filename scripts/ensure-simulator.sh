@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # Prints the UDID of an iPhone simulator with exactly this name on the newest iOS runtime,
-# creating the simulator if it doesn't exist yet.
+# creating the simulator if it doesn't exist yet. The name defaults to the phone's.
 #
-#   scripts/ensure-simulator.sh "iPhone SE (3rd generation)"
+#   scripts/ensure-simulator.sh "iPhone SE (3rd generation)" ["Snapshots iPhone SE (3rd generation)"]
 set -euo pipefail
 
-python3 - "$1" <<'PY'
+python3 - "$1" "${2:-$1}" <<'PY'
 import json, subprocess, sys
 
-name = sys.argv[1]
+phone, name = sys.argv[1], sys.argv[2]
 
 def simctl(*args):
     return subprocess.run(["xcrun", "simctl", *args], check=True, capture_output=True, text=True).stdout
@@ -26,11 +26,11 @@ for device in json.loads(simctl("list", "devices", "available", "-j"))["devices"
         print(device["udid"])
         sys.exit(0)
 
-device_type = next((t for t in json.loads(simctl("list", "devicetypes", "-j"))["devicetypes"] if t["name"] == name), None)
+device_type = next((t for t in json.loads(simctl("list", "devicetypes", "-j"))["devicetypes"] if t["name"] == phone), None)
 if device_type is None:
-    sys.exit(f"No simulator device type named {name!r}")
+    sys.exit(f"No simulator device type named {phone!r}")
 supported = {t["identifier"] for t in runtime.get("supportedDeviceTypes", [])}
 if supported and device_type["identifier"] not in supported:
-    sys.exit(f"{name} isn't supported by {runtime['name']}")
+    sys.exit(f"{phone} isn't supported by {runtime['name']}")
 print(simctl("create", name, device_type["identifier"], runtime["identifier"]).strip())
 PY

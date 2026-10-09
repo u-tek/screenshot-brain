@@ -45,13 +45,16 @@ if [[ -z "$routes" ]]; then
   exit 0
 fi
 
-udid=$(scripts/ensure-simulator.sh "$device")
+# The same simulator scripts/snapshot-simulator.sh may already be booting.
+udid=$(scripts/ensure-simulator.sh "$device" "Snapshots $device")
 raw="$PWD/build/snapshots/$slug"
 rm -rf "$raw"
 mkdir -p "$raw"
 
+echo "$(date +%T) Waiting for $device to boot" >> build/simulator.log
 xcrun simctl boot "$udid" 2>/dev/null || true
 xcrun simctl bootstatus "$udid" -b
+echo "$(date +%T) $device ready" >> build/simulator.log
 # Deny photo access up front: the system prompt must never cover a screen.
 bundle_id=$(sed -nE 's/^SB_BUNDLE_ID *= *//p' Config/Shared.xcconfig)
 xcrun simctl privacy "$udid" revoke photos "$bundle_id" || true
@@ -71,4 +74,5 @@ if [[ -f "$raw/failures.txt" ]]; then
 fi
 
 echo "Exported $(find "$raw" -name '*.png' | wc -l | tr -d ' ') screens on $device"
+echo "$(date +%T) Exported on $device" >> build/simulator.log
 exit "$status"

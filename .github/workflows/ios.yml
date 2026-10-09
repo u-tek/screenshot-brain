@@ -13,6 +13,10 @@ on:
         description: Export design snapshots and commit them to the branch
         type: boolean
         default: true
+      screens:
+        description: "Only these screens, comma-separated (e.g. home,item): a quick check on the iPhone 16 Pro. Empty for all."
+        type: string
+        default: ""
 
 # macOS minutes are expensive: a newer push cancels the run it supersedes.
 concurrency:
@@ -139,20 +143,39 @@ jobs:
       contents: write
     env:
       COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+      SCREENS: ${{ inputs.screens }}
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup
 
-      # Only the subject line counts, so a commit body can mention the syntax.
+      # Only the subject line counts, so a commit body can mention the syntax. A manual run names
+      # them in its screens box instead.
       - name: Which screens
         run: |
           subject="${COMMIT_MESSAGE%%$'\n'*}"
-          if [[ "$subject" =~ \[snapshots:[[:space:]]*([^]]+)\] ]]; then
+          if [[ -n "${SCREENS// /}" ]]; then
+            echo "SB_ONLY_ROUTES=$SCREENS" >> "$GITHUB_ENV"
+            echo "Rendering only: $SCREENS"
+          elif [[ "$subject" =~ \[snapshots:[[:space:]]*([^]]+)\] ]]; then
             echo "SB_ONLY_ROUTES=${BASH_REMATCH[1]}" >> "$GITHUB_ENV"
             echo "Rendering only: ${BASH_REMATCH[1]}"
           else
             echo "Rendering every screen"
           fi
+
+      # A new simulator's first boot spends minutes setting itself up. Keep a booted-once copy of
+      # the iPhone 16 Pro between runs (one per runner image, Xcode and iOS version), and start
+      # it booting while the app builds.
+      - name: Simulator cache key
+        run: echo "SIM_CACHE_KEY=$(scripts/snapshot-simulator.sh key 'iPhone 16 Pro')" >> "$GITHUB_ENV"
+      - name: Restore the simulator
+        id: simcache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/sb-simulator
+          key: ${{ env.SIM_CACHE_KEY }}
+      - name: Start the simulator
+        run: scripts/snapshot-simulator.sh start "iPhone 16 Pro"
 
       - name: Build the app and its UI tests
         run: |
@@ -219,6 +242,20 @@ jobs:
             [[ $wait -gt 0 ]] && sleep "$wait"
           done
           exit 1
+
+      # After the commit, so saving the simulator never delays the screenshots.
+      - name: Simulator timings
+        if: always()
+        run: cat build/simulator.log 2>/dev/null || true
+      - name: Keep the simulator for next time
+        id: keepsim
+        if: always() && steps.simcache.outputs.cache-hit != 'true' && steps.pro.outcome == 'success'
+        run: scripts/snapshot-simulator.sh save "iPhone 16 Pro"
+      - uses: actions/cache/save@v4
+        if: always() && steps.keepsim.outcome == 'success'
+        with:
+          path: ~/sb-simulator
+          key: ${{ env.SIM_CACHE_KEY }}
 
       - name: Fail if a screen didn't render
         if: always() && (steps.pro.outcome == 'failure' || steps.se.outcome == 'failure' || steps.store.outcome == 'failure')
