@@ -247,16 +247,16 @@ private struct ComingUpColumn: View {
     var body: some View {
         FolderTabCard(tab: dayText, palette: palette) {
             VStack(alignment: .leading, spacing: 4) {
+                // Two lines, wrapping rather than cut short: the card grows to fit.
                 Text(item.title ?? "Something you saved")
                     .sbText(.title)
                     .lineLimit(2)
-                    .minimumScaleFactor(0.85)
+                    .fixedSize(horizontal: false, vertical: true)
                 Text(relative)
                     .sbText(.labelDim)
             }
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 180)
         .accessibilityElement(children: .combine)
     }
 
