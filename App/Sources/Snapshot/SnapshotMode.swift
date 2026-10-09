@@ -84,7 +84,7 @@ enum SnapshotGallery {
                     .padding(24)
             })
         case "triage":
-            return AnyView(TriageDeck(model: TriageModel(cards: TriageModel.sampleCards(), database: nil), label: "Your first recap", onFinish: {}))
+            return AnyView(TriageDeck(model: TriageModel(cards: TriageModel.sampleCards(), database: nil), label: "Sort", onFinish: {}))
         case "score":
             return AnyView(ScoreMoment(palette: palette, score: Score(done: 2, total: 19), guessedOutOfTen: 3))
         case "home":
