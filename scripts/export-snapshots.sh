@@ -61,11 +61,15 @@ xcrun simctl privacy "$udid" revoke photos "$bundle_id" || true
 xcrun simctl status_bar "$udid" override --time "9:41" --dataNetwork wifi --wifiMode active --wifiBars 3 \
   --cellularMode active --cellularBars 4 --batteryState discharging --batteryLevel 100
 
+# Use the package checkouts the build used ($SPM_DIR in CI), instead of fetching them again.
+packages=(-skipPackageUpdates)
+[[ -n "${SPM_DIR:-}" ]] && packages+=(-clonedSourcePackagesDirPath "$SPM_DIR")
+
 status=0
 TEST_RUNNER_SB_SNAPSHOT_ROUTES="$routes" TEST_RUNNER_SB_SNAPSHOT_DIR="$raw" \
   TEST_RUNNER_SB_SNAPSHOT_APPEARANCES="$appearances" \
   xcodebuild test-without-building -project ScreenshotBrain.xcodeproj -scheme ScreenshotBrain \
-    -destination "platform=iOS Simulator,id=$udid" -derivedDataPath "$derived_data" \
+    -destination "platform=iOS Simulator,id=$udid" -derivedDataPath "$derived_data" "${packages[@]}" \
     -only-testing:ScreenshotBrainUITests/SnapshotExportTests \
     | xcbeautify || status=$?
 
