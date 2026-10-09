@@ -124,7 +124,7 @@ struct MainScreen: View {
 
     /// Deletes the dropped screenshots from Photos behind iOS's one confirmation, then calls
     /// `then` so whatever showed the count can refresh it.
-    private func deleteDropped(then: @escaping () -> Void = {}) {
+    private func deleteDropped(then: @escaping @MainActor () -> Void = {}) {
         Task {
             do {
                 let deleted = try await model.deleteDropped()
@@ -150,7 +150,7 @@ struct SortSession: View {
     @State private var isBatchOver = false
     @State private var left = 0
     @State private var dropped = 0
-    var onDeleteDropped: (@escaping () -> Void) -> Void = { _ in }
+    var onDeleteDropped: (@escaping @MainActor () -> Void) -> Void = { _ in }
     var onClose: () -> Void = {}
 
     var body: some View {

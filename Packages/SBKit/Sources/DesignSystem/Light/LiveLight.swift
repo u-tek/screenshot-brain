@@ -12,15 +12,15 @@ public struct SBAmbience: Equatable, Sendable {
     public var lean: CGSize
     /// 0...1: how far the light has dimmed (towards a drop).
     public var dim: Double
-    /// 0...1: a brief warm-white flash (a thing marked done).
-    public var flash: Double
+    /// Counts up by one for each brief warm-white flash (a thing marked done).
+    public var flashes: Int
 
-    public init(energy: Double = 0.35, tint: RGB = SBRamp.rgb[3], lean: CGSize = .zero, dim: Double = 0, flash: Double = 0) {
+    public init(energy: Double = 0.35, tint: RGB = SBRamp.rgb[3], lean: CGSize = .zero, dim: Double = 0, flashes: Int = 0) {
         self.energy = energy
         self.tint = tint
         self.lean = lean
         self.dim = dim
-        self.flash = flash
+        self.flashes = flashes
     }
 
     /// A settled screen: settings, an empty pile.
@@ -42,6 +42,7 @@ public struct SBLiveBackground: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.lightIsStill) private var lightIsStill
     @State private var isVisible = false
+    @State private var light = LightEasing()
 
     public init(_ ambience: SBAmbience = .standard) {
         self.ambience = ambience
@@ -53,20 +54,10 @@ public struct SBLiveBackground: View {
 
     public var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 30, paused: isStill || !isVisible)) { context in
-            LiveLightCanvas(
-                time: isStill ? 0 : context.date.timeIntervalSinceReferenceDate,
-                energy: ambience.energy,
-                tint: ambience.tint,
-                lean: ambience.lean,
-                dim: ambience.dim,
-                flash: ambience.flash
-            )
+            let now = context.date.timeIntervalSinceReferenceDate
+            let frame = light.frame(toward: ambience, at: now, still: isStill)
+            LiveLightCanvas(time: isStill ? 0 : now, frame: frame)
         }
-        // Settings change over most of a second, so the light swells and fades rather than jumps,
-        // and trails a drag a little, like light following the thumb.
-        .animation(.easeInOut(duration: 0.9), value: ambience.energy)
-        .animation(.easeInOut(duration: 0.9), value: ambience.tint)
-        .animation(.easeOut(duration: 0.35), value: ambience.dim)
         .overlay(GrainOverlay(amount: 0.12))
         .onAppear { isVisible = true }
         .onDisappear { isVisible = false }
@@ -76,42 +67,70 @@ public struct SBLiveBackground: View {
     }
 }
 
-/// Four soft glows on the warm ground, each on its own slow orbit, mixed like light (screen
-/// blending). Drawn as radial gradients on one canvas: no blur, so it stays cheap on old phones.
-private struct LiveLightCanvas: View, Animatable {
-    var time: Double
+/// One frame's light settings, after easing.
+private struct LightFrame: Sendable {
     var energy: Double
     var tint: RGB
     var lean: CGSize
     var dim: Double
     var flash: Double
+}
 
-    // Everything but the clock eases: ((energy, dim), (flash, lean x)), ((lean y, red), (green, blue)).
-    var animatableData: AnimatablePair<
-        AnimatablePair<AnimatablePair<Double, Double>, AnimatablePair<Double, Double>>,
-        AnimatablePair<AnimatablePair<Double, Double>, AnimatablePair<Double, Double>>
-    > {
-        get {
-            AnimatablePair(
-                AnimatablePair(AnimatablePair(energy, dim), AnimatablePair(flash, Double(lean.width))),
-                AnimatablePair(AnimatablePair(Double(lean.height), tint.red), AnimatablePair(tint.green, tint.blue))
-            )
+/// Eases the light towards each new setting, frame by frame, so it swells, fades and changes
+/// colour over most of a second, and trails a drag a little, like light following a thumb.
+/// Only ever used from its view's body.
+private final class LightEasing {
+    private var current: LightFrame?
+    private var lastTime: Double?
+    private var flashes = 0
+    private var flashStart = -Double.infinity
+
+    func frame(toward target: SBAmbience, at time: Double, still: Bool) -> LightFrame {
+        if target.flashes != flashes {
+            flashes = target.flashes
+            flashStart = time
         }
-        set {
-            energy = newValue.first.first.first
-            dim = newValue.first.first.second
-            flash = newValue.first.second.first
-            lean = CGSize(width: newValue.first.second.second, height: newValue.second.first.first)
-            tint = RGB(red: newValue.second.first.second, green: newValue.second.second.first, blue: newValue.second.second.second)
+        let goal = LightFrame(energy: target.energy, tint: target.tint, lean: target.lean, dim: target.dim, flash: 0)
+        guard !still, var frame = current, let last = lastTime else {
+            current = goal
+            lastTime = time
+            return goal
         }
+        let step = min(max(time - last, 0), 0.25)
+        let slow = 1 - exp(-step / 0.45)
+        let quick = 1 - exp(-step / 0.12)
+        frame.energy += (goal.energy - frame.energy) * slow
+        frame.dim += (goal.dim - frame.dim) * quick
+        frame.tint = RGB(
+            red: frame.tint.red + (goal.tint.red - frame.tint.red) * slow,
+            green: frame.tint.green + (goal.tint.green - frame.tint.green) * slow,
+            blue: frame.tint.blue + (goal.tint.blue - frame.tint.blue) * slow
+        )
+        frame.lean = CGSize(
+            width: frame.lean.width + (goal.lean.width - frame.lean.width) * quick,
+            height: frame.lean.height + (goal.lean.height - frame.lean.height) * quick
+        )
+        // A flash peaks at once and fades over about a second.
+        let sinceFlash = time - flashStart
+        frame.flash = sinceFlash >= 0 && sinceFlash < 2 ? exp(-sinceFlash * 2.5) : 0
+        current = frame
+        lastTime = time
+        return frame
     }
+}
+
+/// Four soft glows on the warm ground, each on its own slow orbit, mixed like light (screen
+/// blending). Drawn as radial gradients on one canvas: no blur, so it stays cheap on old phones.
+private struct LiveLightCanvas: View {
+    let time: Double
+    let frame: LightFrame
 
     var body: some View {
         // Plain values only inside the canvas, which may draw off the main actor.
         let glows = liveGlows
         let ground = SBColor.ground
         let white = SBColor.accent
-        let energy = self.energy, tint = self.tint, lean = self.lean, dim = self.dim, flash = self.flash
+        let energy = frame.energy, tint = frame.tint, lean = frame.lean, dim = frame.dim, flash = frame.flash
         let t = time * (0.45 + energy * 0.9)
         return Canvas { context, size in
             context.fill(Path(CGRect(origin: .zero, size: size)), with: .color(ground))

@@ -15,8 +15,9 @@ public struct TriageDeck: View {
     @State private var drag: CGSize = .zero
     /// True while a decided card flies off, so a second tap can't decide the card behind it unseen.
     @State private var isCommitting = false
-    @State private var pulse = 0.0
-    /// The top card's colour, eased from card to card.
+    /// Counts the done flashes, for the light.
+    @State private var flashes = 0
+    /// The top card's colour (the light eases between cards).
     @State private var tint: RGB = SBRamp.rgb[3]
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.sbBottomClearance) private var bottomClearance
@@ -53,7 +54,7 @@ public struct TriageDeck: View {
         }
         .onAppear { tint = Self.tint(for: model.current) }
         .onChange(of: model.current?.id) { _ in
-            withAnimation(.easeInOut(duration: 0.9)) { tint = Self.tint(for: model.current) }
+            tint = Self.tint(for: model.current)
         }
     }
 
@@ -158,14 +159,11 @@ public struct TriageDeck: View {
             withAnimation(.easeInOut(duration: 0.2)) { model.decide(decision) }
             return
         }
-        // The light settles back to the middle as the card flies, rather than jumping after it.
-        withAnimation(SBMotion.fling) {
-            isCommitting = true
-            drag = exit
-        }
+        // The light eases back to the middle as the card flies.
+        isCommitting = true
+        withAnimation(SBMotion.fling) { drag = exit }
         if decision == .done {
-            withAnimation(.easeOut(duration: 0.18)) { pulse = 1 }
-            withAnimation(.easeIn(duration: 0.7).delay(0.18)) { pulse = 0 }
+            flashes += 1
         }
         Task { @MainActor in
             try? await Task.sleep(nanoseconds: 220_000_000)
@@ -204,7 +202,7 @@ public struct TriageDeck: View {
             height: max(-1, min(1, drag.height / 360))
         )
         let swell = direction == .keep || direction == .done ? strength : 0
-        return SBAmbience(energy: 0.45 + swell * 0.45, tint: tint, lean: lean, dim: fade, flash: pulse)
+        return SBAmbience(energy: 0.45 + swell * 0.45, tint: tint, lean: lean, dim: fade, flashes: flashes)
     }
 
     private static func tint(for card: TriageCard?) -> RGB {
