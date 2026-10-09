@@ -722,6 +722,8 @@ public struct SBRampCard<Content: View>: View {
                 .clipShape(shape)
             }
             .shadow(color: .black.opacity(0.4), radius: 30, y: 30)
+            // A lit object: the same in light mode as in the dark.
+            .environment(\.colorScheme, .dark)
     }
 }
 

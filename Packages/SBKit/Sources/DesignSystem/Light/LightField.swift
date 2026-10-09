@@ -26,6 +26,11 @@ public struct LightField: View {
         drifts && !reduceMotion && !lightIsStill
     }
 
+    /// The composition in this appearance's colours: light mode takes the north star's.
+    private var shown: LightComposition {
+        colorScheme == .dark ? composition : composition.inLightMode()
+    }
+
     public var body: some View {
         GeometryReader { proxy in
             TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !isDrifting)) { context in
@@ -48,7 +53,7 @@ public struct LightField: View {
             if showsGround {
                 LinearGradient(colors: [SBColor.mistTop, SBColor.mistBottom], startPoint: .top, endPoint: .bottom)
             }
-            MorphingLightLayer(composition: composition.morphed(phase: phase, amount: 0.035), size: size, night: colorScheme == .dark)
+            MorphingLightLayer(composition: shown.morphed(phase: phase, amount: 0.035), size: size, night: colorScheme == .dark)
         }
         .frame(width: size.width, height: size.height)
         .clipped()
@@ -64,7 +69,7 @@ public struct LightField: View {
             if showsGround {
                 LinearGradient(colors: [SBColor.mistTop, SBColor.mistBottom], startPoint: .top, endPoint: .bottom)
             }
-            ForEach(Array(composition.forms.enumerated()), id: \.offset) { index, form in
+            ForEach(Array(shown.forms.enumerated()), id: \.offset) { index, form in
                 let phase = time / SBMotion.driftPeriod * 2 * .pi + Double(index) * 1.7
                 LightFormView(form: form, size: size, night: colorScheme == .dark)
                     // Each form is filled and blurred once, in linear colour, on a canvas a

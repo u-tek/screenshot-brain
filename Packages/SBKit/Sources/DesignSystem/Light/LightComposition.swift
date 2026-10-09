@@ -232,3 +232,17 @@ extension LightComposition {
         })
     }
 }
+
+// MARK: - Light mode
+
+extension LightComposition {
+    /// The same shapes in light mode's colours: the north star's indigo-to-salmon light, and its
+    /// lavender haze for the haze forms (the ones that fade at night).
+    public func inLightMode() -> LightComposition {
+        LightComposition(forms: forms.map { form in
+            var form = form
+            form.palette = form.nightOpacity < 1 ? LightPalette(colors: LightPalette.northStar.haze) : .northStar
+            return form
+        })
+    }
+}

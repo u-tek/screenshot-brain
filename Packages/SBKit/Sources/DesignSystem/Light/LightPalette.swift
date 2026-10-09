@@ -143,6 +143,13 @@ extension LightPalette {
     /// The ember ramp.
     public static let ember = sampleTopScreenshots
 
+    /// Light mode's light, from the north star: deep indigo through violet and rose to salmon,
+    /// over a lavender and blush haze.
+    public static let northStar = LightPalette(
+        colors: [0x24206F, 0x4A3BB8, 0xC34FA0, 0xF57E74, 0xFFB07A].map(RGB.init(hex:)),
+        haze: [RGB(hex: 0xE2D6F5), RGB(hex: 0xF6DCE6)]
+    )
+
     public static let sampleSunsetBar = LightPalette.category(.place)
 
     public static let sampleGigPoster = LightPalette.category(.event)

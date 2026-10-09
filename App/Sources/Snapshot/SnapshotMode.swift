@@ -141,8 +141,7 @@ struct SnapshotHost: View {
         }
         // A fresh screen for every shot: no state carries over from the last one.
         .id(stepper.index)
-        // The app is dark-only.
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(shot.appearance.colorScheme)
         .environment(\.lightIsStill, !SnapshotMode.showsMotion)
         .onAppear {
             if !SnapshotMode.showsMotion {

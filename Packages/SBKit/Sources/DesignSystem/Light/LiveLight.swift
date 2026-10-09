@@ -42,6 +42,7 @@ public struct SBLiveBackground: View {
     private let ambience: SBAmbience
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.lightIsStill) private var lightIsStill
+    @Environment(\.colorScheme) private var colorScheme
     @State private var isVisible = false
     @State private var light = LightEasing()
 
@@ -57,7 +58,7 @@ public struct SBLiveBackground: View {
         GeometryReader { proxy in
             TimelineView(.animation(minimumInterval: 1.0 / 30, paused: isStill || !isVisible)) { context in
                 let frame = light.frame(toward: ambience, at: context.date.timeIntervalSinceReferenceDate, still: isStill)
-                LiveLight(frame: frame, size: proxy.size)
+                LiveLight(frame: frame, size: proxy.size, night: colorScheme == .dark)
             }
         }
         .background(SBColor.ground)
@@ -147,6 +148,8 @@ private final class LightEasing {
 private struct LiveLight: View {
     let frame: LightFrame
     let size: CGSize
+    /// Dark mode: the screen's own colours, added onto the dark. Light mode: the north star's.
+    let night: Bool
 
     var body: some View {
         let amount = 0.02 + 0.03 * frame.energy
@@ -159,13 +162,14 @@ private struct LiveLight: View {
             layer(frame.palette, amount: amount)
                 .opacity(frame.fadingPalette == nil ? 1 : frame.fade)
             if frame.flash > 0 {
+                let flash = night ? SBColor.accent : Color(rgb: LightPalette.northStar.color(at: 0.85))
                 RadialGradient(
-                    colors: [SBColor.accent.opacity(0.35 * frame.flash), SBColor.accent.opacity(0)],
+                    colors: [flash.opacity(0.35 * frame.flash), flash.opacity(0)],
                     center: UnitPoint(x: 0.5, y: 0.38),
                     startRadius: 0,
                     endRadius: size.width * 0.9
                 )
-                .blendMode(.screen)
+                .blendMode(night ? .screen : .normal)
             }
         }
         .opacity(brightness)
@@ -175,6 +179,11 @@ private struct LiveLight: View {
     }
 
     private func layer(_ palette: LightPalette, amount: Double) -> some View {
-        MorphingLightLayer(composition: LightComposition.sweep(palette).morphed(phase: frame.phase, amount: frame.phase == 0 ? 0 : amount), size: size)
+        let sweep = LightComposition.sweep(palette)
+        return MorphingLightLayer(
+            composition: (night ? sweep : sweep.inLightMode()).morphed(phase: frame.phase, amount: frame.phase == 0 ? 0 : amount),
+            size: size,
+            night: night
+        )
     }
 }

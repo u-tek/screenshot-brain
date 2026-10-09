@@ -47,8 +47,6 @@ targets:
         LSRequiresIPhoneOS: true
         UILaunchScreen:
           UIColorName: LaunchMist
-        # The app is dark-only: the warm v4 ground.
-        UIUserInterfaceStyle: Dark
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         UIApplicationSceneManifest:
@@ -135,7 +133,6 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         SBAppGroupIdentifier: $(SB_APP_GROUP)
-        UIUserInterfaceStyle: Dark
         NSExtension:
           NSExtensionPointIdentifier: com.apple.share-services
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController

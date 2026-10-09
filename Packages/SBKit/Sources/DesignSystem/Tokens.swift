@@ -2,42 +2,48 @@ import Core
 import SwiftUI
 import UIKit
 
-/// Colour tokens. The app is dark-only: one warm near-black ground, warm ink, and one warm ramp.
-/// Every colour is a neutral or a step on the ramp; warm white (`accent`) is the only white.
+/// Colour tokens. Dark is the warm near-black the app was designed in; light mode is the north
+/// star's misty white with near-black ink. Every token resolves per appearance, and `accent` and
+/// `ground` swap places, so a warm-white pill with ground-coloured text in the dark becomes an ink
+/// pill with mist-coloured text in the light.
 public enum SBColor {
     // Ground and surfaces
-    public static let ground = Color(hex: 0x0B0A09)
-    /// Tiles and panels.
-    public static let surface = Color(hex: 0x161412)
+    public static let ground = Color(light: 0xF2F2F5, dark: 0x0B0A09)
+    /// Tiles and panels: frosted white in the light.
+    public static let surface = Color(light: 0xFFFFFF, dark: 0x161412, lightOpacity: 0.72)
     /// Circle buttons and dark controls.
-    public static let surface2 = Color(hex: 0x211E1B)
+    public static let surface2 = Color(light: 0xE6E5EC, dark: 0x211E1B)
     public static let line = warm(0.12)
     // Ink
-    public static let ink = Color(hex: 0xF6F1EA)
-    public static let ink2 = Color(hex: 0xA39B92)
+    public static let ink = Color(light: 0x16161A, dark: 0xF6F1EA)
+    public static let ink2 = Color(light: 0x5E5E68, dark: 0xA39B92)
     /// Non-essential text only.
-    public static let ink3 = Color(hex: 0x69635D)
+    public static let ink3 = Color(light: 0x8E8E99, dark: 0x69635D)
     /// Done, progress, the live point, the selected chip, the primary pill and the CTA circle.
-    public static let accent = Color(hex: 0xF6ECE2)
+    public static let accent = Color(light: 0x16161A, dark: 0xF6ECE2)
     /// Text and controls sitting on the light ramp card.
     public static let inkOnLight = Color(hex: 0x1D0E08)
     public static let inkOnLight2 = Color(hex: 0x1D0E08, opacity: 0.7)
-    /// Every translucent white is warm: rgba(255, 240, 225, a).
+    /// Translucent ink: warm white in the dark (rgba(255, 240, 225, a)), near-black in the light.
     public static func warm(_ alpha: Double) -> Color {
-        Color(.sRGB, red: 1, green: 240 / 255, blue: 225 / 255, opacity: alpha)
+        Color(uiColor: UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor(red: 1, green: 240 / 255, blue: 225 / 255, alpha: alpha)
+                : UIColor(red: 22 / 255, green: 22 / 255, blue: 26 / 255, alpha: alpha * 0.6)
+        })
     }
     /// Ground-coloured scrims.
     public static func shade(_ alpha: Double) -> Color {
-        Color(hex: 0x0B0A09, opacity: alpha)
+        Color(light: 0xF2F2F5, dark: 0x0B0A09, lightOpacity: alpha, darkOpacity: alpha)
     }
-    public static let ctaFill = Color(hex: 0x161412, opacity: 0.72)
-    public static let tabBarFill = Color(hex: 0x211E1B, opacity: 0.72)
+    public static let ctaFill = Color(light: 0xFFFFFF, dark: 0x161412, lightOpacity: 0.8, darkOpacity: 0.72)
+    public static let tabBarFill = Color(light: 0xFFFFFF, dark: 0x211E1B, lightOpacity: 0.8, darkOpacity: 0.72)
     /// Chips and buttons sitting on imagery.
     public static let chipOnImage = Color(hex: 0x1D0E08, opacity: 0.72)
 
     // Older names, kept so every screen inherits the new look.
-    public static let mistTop = ground
-    public static let mistBottom = ground
+    public static let mistTop = Color(light: 0xF2F2F5, dark: 0x0B0A09)
+    public static let mistBottom = Color(light: 0xECEBF3, dark: 0x0B0A09)
     public static let inkLight = ink2
     public static let inkSecondary = ink2
     public static let hairline = line
@@ -171,9 +177,12 @@ extension Color {
         )
     }
 
-    init(light: UInt32, dark: UInt32) {
+    /// A colour that resolves per appearance.
+    init(light: UInt32, dark: UInt32, lightOpacity: Double = 1, darkOpacity: Double = 1) {
         self.init(uiColor: UIColor { traits in
-            UIColor(hex: traits.userInterfaceStyle == .dark ? dark : light)
+            traits.userInterfaceStyle == .dark
+                ? UIColor(hex: dark).withAlphaComponent(darkOpacity)
+                : UIColor(hex: light).withAlphaComponent(lightOpacity)
         })
     }
 

@@ -162,6 +162,11 @@ jobs:
           else
             echo "Rendering every screen"
           fi
+          # [light] in the subject renders light mode as well as dark.
+          if [[ "$subject" == *"[light]"* ]]; then
+            echo "SB_APPEARANCES=light,dark" >> "$GITHUB_ENV"
+            echo "Rendering light and dark"
+          fi
           # [motion] in the subject also records the screens with the light moving.
           if [[ "$subject" == *"[motion]"* ]]; then
             echo "SB_MOTION=6" >> "$GITHUB_ENV"

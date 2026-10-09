@@ -35,9 +35,9 @@ else
 fi
 
 case "$slug" in
-  iphone-16-pro) routes=$(echo "$all" | grep -vE '^store\.' || true); appearances="dark" ;;
+  iphone-16-pro) routes=$(echo "$all" | grep -vE '^store\.' || true); appearances="${SB_APPEARANCES:-dark}" ;;
   iphone-16-pro-max) routes=$(echo "$all" | grep -E '^store\.' || true); appearances="light" ;;
-  *) routes=$(echo "$all" | grep -vE '^(lab|store)\.' || true); appearances="dark" ;;
+  *) routes=$(echo "$all" | grep -vE '^(lab|store)\.' || true); appearances="${SB_APPEARANCES:-dark}" ;;
 esac
 routes=$(echo "$routes" | paste -sd, -)
 if [[ -z "$routes" ]]; then
