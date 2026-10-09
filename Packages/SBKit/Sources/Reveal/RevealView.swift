@@ -79,7 +79,8 @@ public struct RevealView: View {
                     HStack(spacing: 12) {
                         SBMark()
                         Spacer()
-                        SBLabel("\(index + 1) / \(cards.count)")
+                        // Full strength: the dim label vanished where the light is brightest.
+                        SBLabel("\(index + 1) / \(cards.count)", dim: false)
                             .monospacedDigit()
                         SBCircleButton(.x, label: "Skip", size: 36, action: onFinish)
                     }
@@ -412,10 +413,23 @@ private struct ShareCardScreen: View {
     @State private var image: UIImage?
 
     var body: some View {
+        GeometryReader { proxy in
+            // The card takes what the headline and buttons leave, up to 384 tall: on a small
+            // phone a full-size card pushed Keep going off the bottom.
+            let cardHeight = min(384, max(240, proxy.size.height - 260))
+            content(cardHeight: cardHeight)
+                .frame(width: proxy.size.width, height: proxy.size.height)
+        }
+        .task {
+            image = ShareCardView.render(story: story)
+        }
+    }
+
+    private func content(cardHeight: CGFloat) -> some View {
         VStack(spacing: 18) {
             Spacer(minLength: 12)
             ShareCardView(story: story)
-                .frame(width: 216, height: 384)
+                .frame(width: cardHeight * 9 / 16, height: cardHeight)
                 .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).strokeBorder(SBColor.warm(0.14), lineWidth: 1))
                 .shadow(color: .black.opacity(0.06), radius: 20)
@@ -440,9 +454,6 @@ private struct ShareCardScreen: View {
             }
             .padding(.horizontal, 12)
             .padding(.bottom, 8)
-        }
-        .task {
-            image = ShareCardView.render(story: story)
         }
     }
 }
