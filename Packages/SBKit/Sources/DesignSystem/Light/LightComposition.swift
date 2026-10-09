@@ -205,3 +205,30 @@ extension LightComposition {
         }
     }
 }
+
+// MARK: - Morphing
+
+extension LightComposition {
+    /// The same light, gently reshaped: every control point wanders on its own slow loop and
+    /// each form turns a little, so over time the light changes shape rather than sliding about.
+    /// `phase` is in radians (one loop is 2π); `amount` is how far a point wanders, as a fraction
+    /// of the surface. At an `amount` of 0 the light is unchanged.
+    public func morphed(phase: Double, amount: Double) -> LightComposition {
+        guard amount > 0 else { return self }
+        return LightComposition(forms: forms.enumerated().map { formIndex, form in
+            var form = form
+            let offset = Double(formIndex) * 2.1
+            form.points = form.points.enumerated().map { index, point in
+                let a = Double(index) * 1.37 + offset
+                return LightPoint(
+                    point.x + amount * sin(phase * 1.0 + a),
+                    point.y + amount * 0.8 * cos(phase * 0.73 + a * 1.3)
+                )
+            }
+            form.angle += amount * 2.4 * sin(phase * 0.5 + offset)
+            form.axisEnd.x += amount * 0.6 * sin(phase * 0.41 + offset)
+            form.axisEnd.y += amount * 0.6 * cos(phase * 0.37 + offset)
+            return form
+        })
+    }
+}

@@ -17,8 +17,8 @@ public struct TriageDeck: View {
     @State private var isCommitting = false
     /// Counts the done flashes, for the light.
     @State private var flashes = 0
-    /// The top card's colour (the light eases between cards).
-    @State private var tint: RGB = SBRamp.rgb[3]
+    /// The top card's colours (the light fades between cards).
+    @State private var palette: LightPalette = .ember
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.sbBottomClearance) private var bottomClearance
 
@@ -52,9 +52,9 @@ public struct TriageDeck: View {
         .onChange(of: model.isFinished) { finished in
             if finished { onFinish() }
         }
-        .onAppear { tint = Self.tint(for: model.current) }
+        .onAppear { palette = Self.palette(for: model.current) }
         .onChange(of: model.current?.id) { _ in
-            tint = Self.tint(for: model.current)
+            palette = Self.palette(for: model.current)
         }
     }
 
@@ -202,12 +202,12 @@ public struct TriageDeck: View {
             height: max(-1, min(1, drag.height / 360))
         )
         let swell = direction == .keep || direction == .done ? strength : 0
-        return SBAmbience(energy: 0.45 + swell * 0.45, tint: tint, lean: lean, dim: fade, flashes: flashes)
+        return SBAmbience(energy: 0.45 + swell * 0.45, palette: palette, lean: lean, dim: fade, flashes: flashes)
     }
 
-    private static func tint(for card: TriageCard?) -> RGB {
-        guard let card else { return SBRamp.rgb[3] }
-        return RGB(hex: SBKind(card.item.category).coreHex)
+    private static func palette(for card: TriageCard?) -> LightPalette {
+        guard let card else { return .ember }
+        return .category(card.item.category)
     }
 }
 

@@ -29,11 +29,34 @@ public struct LightField: View {
     public var body: some View {
         GeometryReader { proxy in
             TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !isDrifting)) { context in
-                field(size: proxy.size, time: isDrifting ? context.date.timeIntervalSinceReferenceDate : 0)
+                if isDrifting {
+                    morphingField(size: proxy.size, time: context.date.timeIntervalSinceReferenceDate)
+                } else {
+                    field(size: proxy.size, time: 0)
+                }
             }
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
+    }
+
+    /// While drifting, the light slowly changes shape: one loop every `SBMotion.driftPeriod`
+    /// seconds, at a steady rate so it never jumps.
+    private func morphingField(size: CGSize, time: Double) -> some View {
+        let phase = time / SBMotion.driftPeriod * 2 * .pi
+        return ZStack {
+            if showsGround {
+                LinearGradient(colors: [SBColor.mistTop, SBColor.mistBottom], startPoint: .top, endPoint: .bottom)
+            }
+            MorphingLightLayer(composition: composition.morphed(phase: phase, amount: 0.035), size: size, night: colorScheme == .dark)
+        }
+        .frame(width: size.width, height: size.height)
+        .clipped()
+        .overlay {
+            if grain > 0 {
+                GrainOverlay(amount: grain)
+            }
+        }
     }
 
     private func field(size: CGSize, time: Double) -> some View {
@@ -64,6 +87,32 @@ public struct LightField: View {
                 GrainOverlay(amount: grain)
             }
         }
+    }
+}
+
+/// A whole composition drawn at a quarter of the size and scaled up. Soft light loses nothing at
+/// that size, and re-blurring a quarter-size field is cheap enough to reshape the light every
+/// frame, even on an iPhone 8.
+struct MorphingLightLayer: View {
+    let composition: LightComposition
+    let size: CGSize
+    var night = true
+
+    private static let scale: CGFloat = 4
+
+    var body: some View {
+        let small = CGSize(width: size.width / Self.scale, height: size.height / Self.scale)
+        ZStack {
+            ForEach(Array(composition.forms.enumerated()), id: \.offset) { _, form in
+                LightFormView(form: form, size: small, night: night)
+                    .blendMode(night ? .screen : .normal)
+            }
+        }
+        // A margin, so the blur fades out past the screen's edge rather than at it.
+        .frame(width: small.width * 1.2, height: small.height * 1.2)
+        .drawingGroup(colorMode: .linear)
+        .scaleEffect(Self.scale)
+        .frame(width: size.width, height: size.height)
     }
 }
 

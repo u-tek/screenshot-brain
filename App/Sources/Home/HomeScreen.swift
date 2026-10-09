@@ -171,7 +171,7 @@ struct KeptScreen: View {
             }
             .scrollDismissesKeyboard(.interactively)
         }
-        .sbScreen(SBAmbience(energy: 0.25, tint: SBRamp.rgb[4]))
+        .sbScreen(SBAmbience(energy: 0.25))
         .toolbar(.hidden, for: .navigationBar)
     }
 
