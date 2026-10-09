@@ -9,142 +9,198 @@ import Triage
 enum HomeRoute: Hashable {
     case item(String)
     case category(ItemCategory)
+    case kept
+    case settings
 }
 
-/// The score, the recap tile, Coming up on the timeline, Still want as kind tiles, then search.
+/// Home has one job: how many screenshots are waiting, and the button that sorts them. What's
+/// been kept is one quiet line underneath; settings is the gear. The light behind is livelier the
+/// more there is to sort, and settles once it's all sorted.
 struct HomeScreen: View {
     @ObservedObject var home: HomeModel
-    var palette: LightPalette = .sampleTopScreenshots
-    var isPremium = false
-    var onRecap: () -> Void = {}
-    var onDeleteDropped: () -> Void = {}
-    var onReveal: (RevealPeriod) -> Void = { _ in }
+    var onSort: () -> Void = {}
+    var onKept: () -> Void = {}
+    var onSettings: () -> Void = {}
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 34) {
-                header
-                // Shown even before anything's kept: new screenshots waiting is the way in.
-                if home.recapCount > 0 {
-                    RecapPrompt(count: home.recapCount, palette: palette, action: onRecap)
-                }
-                if home.isEmpty && home.query.isEmpty {
-                    EmptyHome()
-                } else {
-                    if !home.comingUp.isEmpty {
-                        ComingUpSection(items: home.comingUp)
-                    }
-                    if !home.shelves.isEmpty {
-                        StillWantSection(shelves: home.shelves)
-                    }
-                }
-                SearchSection(home: home)
-                RevealsSection(isPremium: isPremium, palette: palette, onReveal: onReveal)
-                if home.droppedCount > 0 {
-                    DroppedRow(count: home.droppedCount, action: onDeleteDropped)
-                }
-            }
-            .padding(.horizontal, SBSpace.gutter)
-            .padding(.top, 12)
-            .padding(.bottom, 120)
-        }
-        .scrollDismissesKeyboard(.interactively)
-        .sbScreen()
-    }
-
-    /// The mark, then the score: a big light number, what it's out of, and how far along.
-    private var header: some View {
         VStack(spacing: 0) {
             HStack {
                 AppMark()
                 Spacer()
+                SBCircleButton(.sliders, label: "Settings", action: onSettings)
             }
-            .padding(.bottom, 28)
-            Text("Score")
-                .sbText(.body)
-            Text("\(home.score.done)")
+            .padding(.horizontal, SBSpace.gutter)
+            .padding(.top, 8)
+
+            Spacer(minLength: 24)
+
+            if home.toSort > 0 {
+                pile
+            } else {
+                allSorted
+            }
+
+            Spacer(minLength: 24)
+
+            keptLine
+                .padding(.bottom, 20)
+        }
+        .sbScreen(ambience)
+    }
+
+    /// The count, big, and the one button.
+    private var pile: some View {
+        VStack(spacing: 0) {
+            Text("\(home.toSort)")
                 .sbText(.numXL)
                 .monospacedDigit()
-                .padding(.top, 4)
-            Text(home.score.total == 0 ? "nothing kept yet" : "of \(home.score.total) done")
+            Text(home.toSort == 1 ? "screenshot to sort" : "screenshots to sort")
                 .sbText(.unit, color: SBColor.ink2)
                 .padding(.top, 6)
-            ScoreTrack(done: home.score.done, total: home.score.total)
-                .padding(.top, 22)
-            Text(scoreLine)
-                .sbText(.body)
-                .multilineTextAlignment(.center)
-                .padding(.top, 14)
+            StartSortingButton(title: "Start sorting", action: onSort)
+                .padding(.top, 44)
         }
         .frame(maxWidth: .infinity)
+    }
+
+    private var allSorted: some View {
+        VStack(spacing: 12) {
+            Text("All sorted.")
+                .sbText(.large)
+            Text("New screenshots land here as you take them.")
+                .sbText(.body)
+                .multilineTextAlignment(.center)
+        }
+        .padding(.horizontal, 40)
+        .frame(maxWidth: .infinity)
+    }
+
+    /// "17 kept · 6 done", opening Kept. Nothing at all until something's been kept.
+    @ViewBuilder
+    private var keptLine: some View {
+        let score = home.score
+        if score.total > 0 {
+            Button(action: onKept) {
+                HStack(spacing: 8) {
+                    Text("\(score.total - score.done) kept · \(score.done) done")
+                        .sbText(.body, color: SBColor.ink)
+                    SBIconView(.arrow, size: 14)
+                        .foregroundStyle(SBColor.ink2)
+                }
+                .padding(.horizontal, 18)
+                .frame(height: 44)
+                .background(Capsule().fill(SBColor.warm(0.08)))
+                .contentShape(Capsule())
+            }
+            .buttonStyle(SBPressStyle())
+            .accessibilityLabel(Text("\(score.total - score.done) kept, \(score.done) done. Open what you kept."))
+        }
+    }
+
+    private var ambience: SBAmbience {
+        home.toSort == 0 ? .calm : SBAmbience(energy: min(0.85, 0.4 + Double(home.toSort) / 60))
+    }
+}
+
+/// The one obvious button: wide, warm white, softly lit from below.
+struct StartSortingButton: View {
+    let title: String
+    let action: () -> Void
+    @ScaledMetric(relativeTo: .title3) private var textSize: CGFloat = 19
+
+    var body: some View {
+        Button {
+            Haptics.selection()
+            action()
+        } label: {
+            HStack(spacing: 10) {
+                Text(title)
+                    .font(.system(size: textSize, weight: .semibold))
+                SBIconView(.arrow, size: 18)
+            }
+            .foregroundStyle(SBColor.ground)
+            .frame(maxWidth: .infinity)
+            .frame(minHeight: 64)
+            .background(Capsule().fill(SBColor.accent))
+            .shadow(color: SBRamp.r4.opacity(0.45), radius: 26, y: 10)
+            .contentShape(Capsule())
+        }
+        .buttonStyle(SBPressStyle())
+        .padding(.horizontal, 32)
+        .accessibilityLabel(Text(title))
+    }
+}
+
+/// Everything kept, one tap from Home: the score, what's coming up, kept things by kind, search,
+/// the Reveals, and dropped screenshots waiting to be cleared from Photos.
+struct KeptScreen: View {
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject var home: HomeModel
+    var palette: LightPalette = .sampleTopScreenshots
+    var isPremium = false
+    var onDeleteDropped: () -> Void = {}
+    var onReveal: (RevealPeriod) -> Void = { _ in }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            SBNavHeader(title: "Kept", onLeading: { dismiss() })
+            ScrollView {
+                VStack(alignment: .leading, spacing: 34) {
+                    if home.score.total > 0 {
+                        score
+                    }
+                    if home.isEmpty && home.query.isEmpty {
+                        EmptyHome()
+                    } else {
+                        if !home.comingUp.isEmpty {
+                            ComingUpSection(items: home.comingUp)
+                        }
+                        if !home.shelves.isEmpty {
+                            StillWantSection(shelves: home.shelves)
+                        }
+                    }
+                    SearchSection(home: home)
+                    RevealsSection(isPremium: isPremium, palette: palette, onReveal: onReveal)
+                    if home.droppedCount > 0 {
+                        DroppedRow(count: home.droppedCount, action: onDeleteDropped)
+                    }
+                }
+                .padding(.horizontal, SBSpace.gutter)
+                .padding(.top, 12)
+                .padding(.bottom, 40)
+            }
+            .scrollDismissesKeyboard(.interactively)
+        }
+        .sbScreen(SBAmbience(energy: 0.25, tint: SBRamp.rgb[4]))
+        .toolbar(.hidden, for: .navigationBar)
+    }
+
+    /// Done so far, out of everything kept, and how far along that is.
+    private var score: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text("\(home.score.done)")
+                    .sbText(.numL)
+                    .monospacedDigit()
+                Text("of \(home.score.total) done")
+                    .sbText(.unit, color: SBColor.ink2)
+            }
+            ScoreTrack(done: home.score.done, total: home.score.total)
+            Text(scoreLine)
+                .sbText(.body)
+        }
         .accessibilityElement(children: .combine)
     }
 
     private var scoreLine: String {
         let score = home.score
-        if score.total == 0 { return "Keep a few things and they'll count here." }
         if score.done == 0 { return "\(score.total) kept. None done yet. We can fix that." }
         if score.done == score.total { return "Everything you kept, done." }
-        return "Done \(score.done) of \(score.total). Drops don't count against you."
+        return "Drops don't count against you."
     }
 }
 
 // MARK: - Sections
-
-/// The wide warm tile: tonight's recap and how many are waiting.
-private struct RecapPrompt: View {
-    let count: Int
-    let palette: LightPalette
-    let action: () -> Void
-
-    var body: some View {
-        let shape = RoundedRectangle(cornerRadius: SBRadius.tile, style: .continuous)
-        Button(action: action) {
-            HStack(alignment: .center, spacing: 14) {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Tonight's recap")
-                        .sbText(.body, color: SBColor.ink)
-                    HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        Text("\(count)")
-                            .sbText(.numL)
-                            .monospacedDigit()
-                        Text("waiting")
-                            .sbText(.unit)
-                    }
-                }
-                Spacer()
-                SBIconView(.arrow, size: 18)
-                    .foregroundStyle(SBColor.ground)
-                    .frame(width: 44, height: 44)
-                    .background(Circle().fill(SBColor.accent))
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 18)
-            .frame(maxWidth: .infinity, minHeight: 112, alignment: .leading)
-            .background {
-                ZStack(alignment: .bottomTrailing) {
-                    LinearGradient(
-                        stops: [
-                            .init(color: SBKind.events.deep, location: 0),
-                            .init(color: SBRamp.r2, location: 0.45),
-                            .init(color: SBKind.events.core, location: 1),
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    SBLight(SBKind.places.core, width: 240, height: 150, opacity: 0.55)
-                        .offset(x: 30, y: 90)
-                }
-                .clipShape(shape)
-            }
-            .contentShape(shape)
-        }
-        .buttonStyle(SBPressStyle())
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text(count == 1 ? "Tonight's recap, 1 waiting" : "Tonight's recap, \(count) waiting"))
-        .accessibilityAddTraits(.isButton)
-    }
-}
 
 /// How far along the score is: a warm track with the done part in warm white.
 private struct ScoreTrack: View {

@@ -4,9 +4,10 @@ import Paywall
 import Store
 import SwiftUI
 
-/// Recap time, the privacy statement, the account. Purchases arrive with the paywall (M8).
+/// Recap time, premium, the privacy statement, the account. Opened from the gear on Home.
 struct SettingsScreen: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.dismiss) private var dismiss
     @State private var confirmsDelete = false
     @State private var isDeleting = false
     @State private var deleteFailed = false
@@ -15,7 +16,8 @@ struct SettingsScreen: View {
     var onShowPlans: () -> Void = {}
 
     var body: some View {
-        NavigationStack {
+        VStack(spacing: 0) {
+            SBNavHeader(onLeading: { dismiss() })
             ScrollView {
                 VStack(alignment: .leading, spacing: 26) {
                     VStack(alignment: .leading, spacing: 8) {
@@ -110,11 +112,11 @@ struct SettingsScreen: View {
                 }
                 .padding(.horizontal, SBSpace.gutter)
                 .padding(.top, 12)
-                .padding(.bottom, 120)
+                .padding(.bottom, 48)
             }
-            .sbScreen()
-            .toolbar(.hidden, for: .navigationBar)
         }
+        .sbScreen(.calm)
+        .toolbar(.hidden, for: .navigationBar)
         .sheet(isPresented: $showsDebug) {
             DebugMenu()
         }

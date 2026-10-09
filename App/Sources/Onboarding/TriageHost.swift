@@ -11,7 +11,7 @@ struct TriageHost: View {
     var body: some View {
         ZStack {
             if let triage {
-                TriageDeck(model: triage, label: "Your first recap") {
+                TriageDeck(model: triage, label: "Your first sort") {
                     model.finishRecap(triage.tally)
                     model.advance(to: .score)
                 }

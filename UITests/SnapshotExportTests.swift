@@ -10,6 +10,8 @@ import XCTest
 /// - `SB_SNAPSHOT_ROUTES`: comma-separated routes (see `SnapshotGallery` in the app).
 /// - `SB_SNAPSHOT_APPEARANCES`: comma-separated, `light` and/or `dark`. Default `light,dark`.
 /// - `SB_SNAPSHOT_DIR`: directory to write `<route>-<appearance>.png` into.
+/// - `SB_SNAPSHOT_MOTION`: seconds to stay on each screen with the light moving, for a screen
+///   recording (`scripts/export-snapshots.sh` records it). The deck also gets three slow swipes.
 final class SnapshotExportTests: XCTestCase {
     private static let nextNotification = "com.screenshotbrain.snapshot.next"
 
@@ -19,6 +21,7 @@ final class SnapshotExportTests: XCTestCase {
         let routes = list(environment["SB_SNAPSHOT_ROUTES"], default: ["welcome"])
         let appearances = list(environment["SB_SNAPSHOT_APPEARANCES"], default: ["light", "dark"])
         let outputDirectory = environment["SB_SNAPSHOT_DIR"].map { URL(fileURLWithPath: $0, isDirectory: true) }
+        let motion = environment["SB_SNAPSHOT_MOTION"].flatMap(Double.init)
         if let outputDirectory {
             try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
         }
@@ -30,7 +33,7 @@ final class SnapshotExportTests: XCTestCase {
         let app = XCUIApplication()
 
         while !remaining.isEmpty {
-            app.launchArguments = ["-SBSnapshots", remaining.joined(separator: ",")]
+            app.launchArguments = ["-SBSnapshots", remaining.joined(separator: ",")] + (motion == nil ? [] : ["-SBSnapshotMotion", "YES"])
             app.launch()
             // The first frame of the first screen.
             Thread.sleep(forTimeInterval: 2.5)
@@ -41,7 +44,7 @@ final class SnapshotExportTests: XCTestCase {
                 if let previous {
                     postNext()
                     // A change of appearance takes longer to settle than a change of screen.
-                    Thread.sleep(forTimeInterval: appearance(of: shot) == appearance(of: previous) ? 1.8 : 2.5)
+                    Thread.sleep(forTimeInterval: motion ?? (appearance(of: shot) == appearance(of: previous) ? 1.8 : 2.5))
                 }
                 previous = shot
                 guard app.state == .runningForeground else {
@@ -64,6 +67,9 @@ final class SnapshotExportTests: XCTestCase {
                     attachment.lifetime = .keepAlways
                     add(attachment)
                 }
+                if motion != nil, shot.hasPrefix("triage@") {
+                    swipeThroughDeck(app)
+                }
             }
             if !crashed {
                 remaining = []
@@ -75,6 +81,16 @@ final class SnapshotExportTests: XCTestCase {
             try failures.joined(separator: "\n").write(to: outputDirectory.appendingPathComponent("failures.txt"), atomically: true, encoding: .utf8)
         }
         XCTAssertTrue(failures.isEmpty, "These screens didn't render: \(failures.joined(separator: ", "))")
+    }
+
+    /// Keep, drop and done, each dragged slowly and held, so a recording shows the light
+    /// following the card.
+    private func swipeThroughDeck(_ app: XCUIApplication) {
+        let card = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.45))
+        for target in [CGVector(dx: 0.88, dy: 0.47), CGVector(dx: 0.12, dy: 0.47), CGVector(dx: 0.5, dy: 0.12)] {
+            card.press(forDuration: 0.2, thenDragTo: app.coordinate(withNormalizedOffset: target), withVelocity: .slow, thenHoldForDuration: 0.8)
+            Thread.sleep(forTimeInterval: 1.6)
+        }
     }
 
     private func postNext() {

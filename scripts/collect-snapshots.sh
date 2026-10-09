@@ -4,6 +4,7 @@
 #   lab.<name>   design/lab/<name>-<appearance>.png
 #   store.<n>    design/appstore/6.9-<n>-light.png
 #   anything else  design/screens/<phone>/<route>-<appearance>.png
+#   motion.mp4   design/video/<phone>.mp4 (a recording, when one was made)
 # Runs after every phone, even one that was cut short: whatever rendered is kept.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -22,5 +23,9 @@ for dir in build/snapshots/*/; do
     esac
     count=$((count + 1))
   done
+  if [[ -f "${dir}motion.mp4" ]]; then
+    mkdir -p "$out_root/design/video"
+    cp "${dir}motion.mp4" "$out_root/design/video/$slug.mp4"
+  fi
   echo "Collected $count screens from $slug"
 done

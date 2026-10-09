@@ -34,6 +34,9 @@ struct SnapshotMode: Sendable {
 
     let shots: [Shot]
 
+    /// For a screen recording: the light moves and animations run (`-SBSnapshotMotion YES`).
+    static let showsMotion = UserDefaults.standard.bool(forKey: "SBSnapshotMotion")
+
     static let current: SnapshotMode? = {
         guard let list = UserDefaults.standard.string(forKey: "SBSnapshots"), !list.isEmpty else { return nil }
         let shots = list.split(separator: ",").compactMap { token -> Shot? in
@@ -85,16 +88,15 @@ enum SnapshotGallery {
         case "score":
             return AnyView(ScoreMoment(palette: palette, score: Score(done: 2, total: 19), guessedOutOfTen: 3))
         case "home":
-            return AnyView(NavigationStack {
-                ZStack(alignment: .bottom) {
-                    HomeScreen(home: .sample(), palette: palette)
-                    GlassTabBar(selection: .constant(.saved), recapCount: 7).padding(.bottom, 4)
-                }
-            })
+            return AnyView(NavigationStack { HomeScreen(home: .sample()) })
+        case "kept":
+            return AnyView(NavigationStack { KeptScreen(home: .sample(), palette: palette) })
         case "item":
             return AnyView(NavigationStack { ItemDetailScreen(itemID: SampleData.gig.id, preview: SampleData.gig) })
         case "caughtup":
-            return AnyView(RecapTab())
+            return AnyView(SortDone(left: 0, dropped: 12))
+        case "sortdone":
+            return AnyView(SortDone(left: 17, dropped: 12))
         case "settings":
             return AnyView(SettingsScreen())
         case "notifications":
@@ -141,9 +143,11 @@ struct SnapshotHost: View {
         .id(stepper.index)
         // The app is dark-only.
         .preferredColorScheme(.dark)
-        .environment(\.lightIsStill, true)
+        .environment(\.lightIsStill, !SnapshotMode.showsMotion)
         .onAppear {
-            UIView.setAnimationsEnabled(false)
+            if !SnapshotMode.showsMotion {
+                UIView.setAnimationsEnabled(false)
+            }
         }
     }
 }

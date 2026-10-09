@@ -438,6 +438,20 @@ final class AppModel: ObservableObject {
 
     // MARK: Triage and the score
 
+    /// The next 30 screenshots to sort from Home: everything waiting, newest first.
+    func sortCards() -> [TriageCard] {
+        (try? services?.database.triageDeck(limit: 30)) ?? []
+    }
+
+    /// How many screenshots are waiting to be sorted.
+    func toSortCount() -> Int {
+        (try? services?.database.triageDeck(limit: .max).count) ?? 0
+    }
+
+    func droppedCount() -> Int {
+        (try? services?.database.dropped().count) ?? 0
+    }
+
     /// The first triage shows the 30 most recent; later recaps show what's new since the last
     /// one, plus a few older ones at a time.
     func recapCards() -> [TriageCard] {

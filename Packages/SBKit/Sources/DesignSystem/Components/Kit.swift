@@ -741,10 +741,10 @@ public struct SBGround: View {
 }
 
 extension View {
-    /// Puts this screen on the warm ground. Pushed screens need it, so the screen below doesn't
-    /// show through during the push.
-    public func sbScreen() -> some View {
-        background(SBGround())
+    /// Puts this screen on the warm, moving light (see `SBLiveBackground`), set by the screen's
+    /// state. Pushed screens need it, so the screen below doesn't show through during the push.
+    public func sbScreen(_ ambience: SBAmbience = .standard) -> some View {
+        background(SBLiveBackground(ambience))
     }
 }
 

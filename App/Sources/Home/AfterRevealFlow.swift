@@ -39,7 +39,7 @@ struct AfterRevealFlow: View {
                 model.advance(to: .home)
             }
         default:
-            MainTabs(database: model.services?.database)
+            MainScreen(database: model.services?.database)
         }
     }
 }

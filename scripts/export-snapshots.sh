@@ -61,17 +61,33 @@ xcrun simctl privacy "$udid" revoke photos "$bundle_id" || true
 xcrun simctl status_bar "$udid" override --time "9:41" --dataNetwork wifi --wifiMode active --wifiBars 3 \
   --cellularMode active --cellularBars 4 --batteryState discharging --batteryLevel 100
 
+# With $SB_MOTION (seconds per screen) the light moves, and the session is recorded to
+# motion.mp4 beside the renders.
+recorder=""
+if [[ -n "${SB_MOTION:-}" ]]; then
+  xcrun simctl io "$udid" recordVideo --codec=h264 --force "$raw/motion.mp4" > build/recording.log 2>&1 &
+  recorder=$!
+  sleep 2
+fi
+
 # Use the package checkouts the build used ($SPM_DIR in CI), instead of fetching them again.
 packages=(-skipPackageUpdates)
 [[ -n "${SPM_DIR:-}" ]] && packages+=(-clonedSourcePackagesDirPath "$SPM_DIR")
 
 status=0
 TEST_RUNNER_SB_SNAPSHOT_ROUTES="$routes" TEST_RUNNER_SB_SNAPSHOT_DIR="$raw" \
-  TEST_RUNNER_SB_SNAPSHOT_APPEARANCES="$appearances" \
+  TEST_RUNNER_SB_SNAPSHOT_APPEARANCES="$appearances" TEST_RUNNER_SB_SNAPSHOT_MOTION="${SB_MOTION:-}" \
   xcodebuild test-without-building -project ScreenshotBrain.xcodeproj -scheme ScreenshotBrain \
     -destination "platform=iOS Simulator,id=$udid" -derivedDataPath "$derived_data" "${packages[@]}" \
     -only-testing:ScreenshotBrainUITests/SnapshotExportTests \
     | xcbeautify || status=$?
+
+if [[ -n "$recorder" ]]; then
+  # The recorder writes the file out when interrupted.
+  kill -INT "$recorder" 2>/dev/null || true
+  wait "$recorder" 2>/dev/null || true
+  echo "Recorded $(du -h "$raw/motion.mp4" 2>/dev/null | cut -f1) of motion on $device"
+fi
 
 if [[ -f "$raw/failures.txt" ]]; then
   echo "::error::Screens that didn't render on $device: $(paste -sd, "$raw/failures.txt")"

@@ -45,10 +45,7 @@ enum StoreScreen: Int, CaseIterable {
         case .widget:
             WidgetShowcase()
         case .home:
-            ZStack(alignment: .bottom) {
-                HomeScreen(home: .sample())
-                GlassTabBar(selection: .constant(.saved), recapCount: 7).padding(.bottom, 4)
-            }
+            HomeScreen(home: .sample())
         }
     }
 }

@@ -23,7 +23,9 @@ sharecard
 triage
 score
 home
+kept
 item
+sortdone
 caughtup
 settings
 notifications

@@ -6,8 +6,8 @@ import Store
 import SwiftUI
 
 /// The swipe deck. Right is still want, left is drop, up is done. Cards tilt and wash with colour
-/// as they're dragged; the light behind is the top card's own, and it warms for keep, fades to
-/// grey mist for drop, and pulses the accent once for done.
+/// as they're dragged. The moving light behind takes the top card's colour and follows the drag:
+/// it leans after the thumb, swells for keep and done, dims for drop, and flashes once for done.
 public struct TriageDeck: View {
     @ObservedObject private var model: TriageModel
     private let label: String
@@ -16,6 +16,8 @@ public struct TriageDeck: View {
     /// True while a decided card flies off, so a second tap can't decide the card behind it unseen.
     @State private var isCommitting = false
     @State private var pulse = 0.0
+    /// The top card's colour, eased from card to card.
+    @State private var tint: RGB = SBRamp.rgb[3]
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.sbBottomClearance) private var bottomClearance
 
@@ -30,8 +32,7 @@ public struct TriageDeck: View {
 
     public var body: some View {
         ZStack {
-            TriageLight(palette: palette(for: model.current), warmth: warmth, fade: fade, pulse: pulse)
-                .ignoresSafeArea()
+            SBLiveBackground(ambience)
 
             VStack(spacing: 0) {
                 header
@@ -49,6 +50,10 @@ public struct TriageDeck: View {
         }
         .onChange(of: model.isFinished) { finished in
             if finished { onFinish() }
+        }
+        .onAppear { tint = Self.tint(for: model.current) }
+        .onChange(of: model.current?.id) { _ in
+            withAnimation(.easeInOut(duration: 0.9)) { tint = Self.tint(for: model.current) }
         }
     }
 
@@ -153,8 +158,11 @@ public struct TriageDeck: View {
             withAnimation(.easeInOut(duration: 0.2)) { model.decide(decision) }
             return
         }
-        isCommitting = true
-        withAnimation(SBMotion.fling) { drag = exit }
+        // The light settles back to the middle as the card flies, rather than jumping after it.
+        withAnimation(SBMotion.fling) {
+            isCommitting = true
+            drag = exit
+        }
         if decision == .done {
             withAnimation(.easeOut(duration: 0.18)) { pulse = 1 }
             withAnimation(.easeIn(duration: 0.7).delay(0.18)) { pulse = 0 }
@@ -185,42 +193,23 @@ public struct TriageDeck: View {
         return min(Double(distance / Self.threshold), 1)
     }
 
-    private var warmth: Double {
-        direction == .keep ? strength : 0
-    }
-
     private var fade: Double {
         direction == .drop ? strength : 0
     }
 
-    private func palette(for card: TriageCard?) -> LightPalette {
-        guard let item = card?.item else { return .sampleTopScreenshots }
-        return .item(category: item.category, colors: item.palette, isSafeToDisplay: item.isSafeToDisplay)
+    /// The light follows the drag while the card is held, swelling for keep and done.
+    private var ambience: SBAmbience {
+        let lean = isCommitting ? CGSize.zero : CGSize(
+            width: max(-1, min(1, drag.width / 260)),
+            height: max(-1, min(1, drag.height / 360))
+        )
+        let swell = direction == .keep || direction == .done ? strength : 0
+        return SBAmbience(energy: 0.45 + swell * 0.45, tint: tint, lean: lean, dim: fade, flash: pulse)
     }
-}
 
-/// The light behind the deck: the warm ground with one soft glow of the card's kind under it. It
-/// warms for keep, dims for drop, and pulses warm white once for done.
-struct TriageLight: View {
-    let palette: LightPalette
-    /// 0...1 towards keep: the light warms.
-    let warmth: Double
-    /// 0...1 towards drop: the light dims.
-    let fade: Double
-    /// 0...1: the pulse on done.
-    let pulse: Double
-
-    var body: some View {
-        ZStack {
-            SBGround()
-            SBLight(Color(rgb: palette.color(at: 1)), width: 380, height: 460, opacity: 0.22 * (1 - fade * 0.8), blur: 90)
-                .offset(y: 60)
-                .animation(SBMotion.settle, value: palette)
-            SBLight(SBRamp.r4, width: 380, height: 460, opacity: warmth * 0.3, blur: 90)
-                .offset(y: 60)
-            SBLight(SBColor.accent, width: 300, height: 300, opacity: pulse * 0.35, blur: 80)
-                .offset(y: -40)
-        }
+    private static func tint(for card: TriageCard?) -> RGB {
+        guard let card else { return SBRamp.rgb[3] }
+        return RGB(hex: SBKind(card.item.category).coreHex)
     }
 }
 

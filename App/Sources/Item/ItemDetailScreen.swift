@@ -146,7 +146,7 @@ struct ItemDetailScreen: View {
                     .allowsHitTesting(false)
             )
         }
-        .sbScreen()
+        .sbScreen(.kind(kind))
     }
 
     // MARK: Parts

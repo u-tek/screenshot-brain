@@ -28,7 +28,7 @@ Before the App Store, work through `LAUNCH.md`: keys, sign-offs on real devices,
 
 The look is "Mist and light": see `design/REFERENCES.md`. Light is made like it is in a design tool: a closed shape, filled with one gradient (stops interpolated in OKLab), blurred with a Gaussian stretched along the direction of motion, composited in linear colour, plus faint grain. Glass is Liquid Glass on iOS 26 and frosted material before.
 
-Screens are exported from the real app by CI. Put `[snapshots]` in a commit message (or run the workflow by hand) and CI commits PNGs to `design/screens/<device>/` and the design lab pages to `design/lab/`. Routes live in `scripts/snapshot-routes.txt`. For a quick check of a few screens on the iPhone 16 Pro only, name them: `[snapshots: home,item]` in the commit subject, or the *screens* box when running the workflow by hand (the GitHub app can do that too). CI keeps a booted-once simulator between runs, so a quick check takes minutes rather than a quarter of an hour.
+Screens are exported from the real app by CI. Put `[snapshots]` in a commit message (or run the workflow by hand) and CI commits PNGs to `design/screens/<device>/` and the design lab pages to `design/lab/`. Routes live in `scripts/snapshot-routes.txt`. For a quick check of a few screens on the iPhone 16 Pro only, name them: `[snapshots: home,item]` in the commit subject, or the *screens* box when running the workflow by hand (the GitHub app can do that too). CI keeps a booted-once simulator between runs, so a quick check takes minutes rather than a quarter of an hour. Add `[motion]` to the subject to also record the screens with the light moving, into `design/video/`.
 
 | Path | What's there |
 |---|---|
