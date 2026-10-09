@@ -119,32 +119,26 @@ struct ItemDetailScreen: View {
                     }
                     .clipShape(RoundedRectangle(cornerRadius: SBRadius.tile, style: .continuous))
 
-                    // What to do comes before the details, so it sits clear of the done button.
+                    // What to do, then done, then the details: everything in the page's flow, so
+                    // nothing floats over text.
                     actions(item)
+
+                    primaryAction(item)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 4)
 
                     DataRows(rows(item))
                 }
                 .padding(.horizontal, SBSpace.gutter)
-                .padding(.bottom, 120)
+                .padding(.bottom, 40)
             }
 
-            VStack(spacing: 12) {
-                if let note {
-                    SBToast(note)
-                        .transition(.opacity.combined(with: .offset(y: 8)))
-                }
-                primaryAction(item)
+            // A note after an action ("In your calendar.") floats briefly at the bottom.
+            if let note {
+                SBToast(note)
+                    .padding(.bottom, 12)
+                    .transition(.opacity.combined(with: .offset(y: 8)))
             }
-            .padding(.horizontal, 12)
-            .padding(.top, 36)
-            .padding(.bottom, 8)
-            // The page scrolls under a fade to the ground, so the done button never sits on the
-            // actions.
-            .background(
-                LinearGradient(colors: [SBColor.ground.opacity(0), SBColor.ground.opacity(0.92), SBColor.ground], startPoint: .top, endPoint: .bottom)
-                    .ignoresSafeArea(edges: .bottom)
-                    .allowsHitTesting(false)
-            )
         }
         .sbScreen(.kind(kind))
     }

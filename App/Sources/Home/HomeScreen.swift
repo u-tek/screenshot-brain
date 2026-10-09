@@ -227,49 +227,36 @@ private struct ComingUpSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             SBLabel("Coming up")
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(alignment: .top, spacing: 0) {
-                    ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                        NavigationLink(value: HomeRoute.item(item.id)) {
-                            ComingUpColumn(item: item, isNext: index == 0)
-                        }
-                        .buttonStyle(.plain)
+            // Two to a row, inside the margins, soonest first.
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: SBSpace.gap), GridItem(.flexible(), spacing: SBSpace.gap)], spacing: SBSpace.gap) {
+                ForEach(items) { item in
+                    NavigationLink(value: HomeRoute.item(item.id)) {
+                        ComingUpColumn(item: item)
                     }
+                    .buttonStyle(SBPressStyle())
                 }
-                .padding(.horizontal, SBSpace.gutter)
             }
-            .padding(.horizontal, -SBSpace.gutter)
         }
     }
 }
 
-/// A folder-tab card standing on the timeline line, the soonest one marked in warm white.
+/// A folder-tab card: the day on its tab, the thing's name and how long until it.
 private struct ComingUpColumn: View {
     let item: ScreenshotItem
-    let isNext: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            FolderTabCard(tab: dayText, palette: palette) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(item.title ?? "Something you saved")
-                        .sbText(.title)
-                        .lineLimit(2)
-                    Text(relative)
-                        .sbText(.labelDim)
-                }
+        FolderTabCard(tab: dayText, palette: palette) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.title ?? "Something you saved")
+                    .sbText(.title)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.85)
+                Text(relative)
+                    .sbText(.labelDim)
             }
-            .frame(width: 196, height: 196)
-            ZStack(alignment: .leading) {
-                Rectangle().fill(SBColor.line).frame(height: 1)
-                Circle()
-                    .fill(isNext ? SBColor.accent : SBColor.warm(0.3))
-                    .frame(width: 7, height: 7)
-                    .padding(.leading, 18)
-            }
-            .frame(width: 210)
         }
-        .padding(.trailing, 14)
+        .frame(maxWidth: .infinity)
+        .frame(height: 180)
         .accessibilityElement(children: .combine)
     }
 
