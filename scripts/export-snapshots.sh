@@ -86,7 +86,17 @@ if [[ -n "$recorder" ]]; then
   # The recorder writes the file out when interrupted.
   kill -INT "$recorder" 2>/dev/null || true
   wait "$recorder" 2>/dev/null || true
-  echo "Recorded $(du -h "$raw/motion.mp4" 2>/dev/null | cut -f1) of motion on $device"
+  # The full-resolution recording runs to hundreds of MB (the grain barely compresses): shrink
+  # it to 1080 tall in HEVC with macOS's own converter, and drop it if that fails.
+  if [[ -f "$raw/motion.mp4" ]]; then
+    if avconvert --source "$raw/motion.mp4" --output "$raw/motion-small.mp4" --preset PresetHEVC1920x1080 --replace > build/avconvert.log 2>&1; then
+      mv "$raw/motion-small.mp4" "$raw/motion.mp4"
+      echo "Recorded $(du -h "$raw/motion.mp4" | cut -f1) of motion on $device"
+    else
+      echo "::warning::Couldn't shrink the recording: $(tail -3 build/avconvert.log)"
+      rm -f "$raw/motion.mp4" "$raw/motion-small.mp4"
+    fi
+  fi
 fi
 
 if [[ -f "$raw/failures.txt" ]]; then
