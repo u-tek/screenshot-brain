@@ -240,9 +240,7 @@ struct TriageCardView: View {
                 ZStack {
                     kind.deep
                     SBLight(kind.core, width: 300, height: 360, opacity: 0.55, blur: 60)
-                    AssetImage(item.assetLocalID, maxPixelSize: 900)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                        .clipped()
+                    AssetImage(item.assetLocalID, maxPixelSize: 900, alignment: .top)
                     LinearGradient(colors: [SBColor.shade(0.12), .clear, .clear, SBColor.shade(0.5)], startPoint: .top, endPoint: .bottom)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)

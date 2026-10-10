@@ -170,17 +170,17 @@ private struct Thumbnail: View {
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
-        ZStack {
-            if let url = WidgetStore.url(in: .thumbnails, name: name), let image = UIImage(contentsOfFile: url.path) {
-                Image(uiImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-            } else {
-                SBColor.surface2
+        // The filled image is an overlay on a base that takes the offered space: in a ZStack it
+        // would report its own, larger size and push the rest of the widget out of place.
+        SBColor.surface2
+            .overlay(alignment: .top) {
+                if let url = WidgetStore.url(in: .thumbnails, name: name), let image = UIImage(contentsOfFile: url.path) {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                }
             }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .clipShape(shape)
+            .clipShape(shape)
         .overlay(shape.strokeBorder(SBColor.warm(0.14), lineWidth: 1))
     }
 }

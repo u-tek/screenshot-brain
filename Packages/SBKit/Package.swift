@@ -64,6 +64,7 @@ let package = Package(
         .testTarget(name: "WidgetCoreTests", dependencies: ["WidgetCore", "Store"]),
         .testTarget(name: "NotificationsTests", dependencies: ["Notifications"]),
         .testTarget(name: "PaywallTests", dependencies: ["Paywall"]),
+        .testTarget(name: "MediaTests", dependencies: ["Media"]),
         .testTarget(name: "ScanEngineTests", dependencies: ["ScanEngine", "Store", "Safety"]),
         .testTarget(
             name: "StoreTests",

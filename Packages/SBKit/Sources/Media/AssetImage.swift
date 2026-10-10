@@ -62,35 +62,54 @@ public struct AssetImage: View {
     private let maxPixelSize: Int
     private let allowsNetwork: Bool
     private let contentMode: ContentMode
+    private let alignment: Alignment
     @State private var image: CGImage?
-    @Environment(\.displayScale) private var displayScale
 
-    public init(_ localIdentifier: String, maxPixelSize: Int = 600, allowsNetwork: Bool = false, contentMode: ContentMode = .fill) {
+    /// - Parameter alignment: Which part of the screenshot stays in view when it's cropped to fill.
+    public init(_ localIdentifier: String, maxPixelSize: Int = 600, allowsNetwork: Bool = false, contentMode: ContentMode = .fill, alignment: Alignment = .center) {
         self.localIdentifier = localIdentifier
         self.maxPixelSize = maxPixelSize
         self.allowsNetwork = allowsNetwork
         self.contentMode = contentMode
+        self.alignment = alignment
     }
 
     public var body: some View {
-        ZStack {
-            // Takes the space it's offered even before (or without) an image, so whatever sits
-            // behind it, like a placeholder light, still shows.
-            Color.clear
-            if let image {
-                Image(decorative: image, scale: 1)
-                    .resizable()
-                    .aspectRatio(contentMode: contentMode)
-                    .transition(.opacity)
+        FittedImage(image: image, contentMode: contentMode, alignment: alignment)
+            .task(id: localIdentifier) {
+                let loaded = await AssetImageLoader.image(localIdentifier: localIdentifier, maxPixelSize: maxPixelSize, allowsNetwork: allowsNetwork)
+                withAnimation(.easeOut(duration: 0.25)) {
+                    image = loaded
+                }
             }
-        }
-        .task(id: localIdentifier) {
-            let loaded = await AssetImageLoader.image(localIdentifier: localIdentifier, maxPixelSize: maxPixelSize, allowsNetwork: allowsNetwork)
-            withAnimation(.easeOut(duration: 0.25)) {
-                image = loaded
+            .accessibilityHidden(true)
+    }
+}
+
+/// An image that takes exactly the space it's offered, cropped to it when filling.
+///
+/// A filled image reports the size it grew to, not the size it was offered. In a ZStack that
+/// made the stack, and every frame around it, as big as the image: a screenshot whose shape
+/// didn't match its card laid the whole screen out several times too large, so all that showed
+/// was a corner of the light, zoomed in. An overlay on a clear base can't do that.
+struct FittedImage: View {
+    let image: CGImage?
+    var contentMode: ContentMode = .fill
+    var alignment: Alignment = .center
+
+    var body: some View {
+        // The clear base takes the space it's offered even before (or without) an image, so
+        // whatever sits behind it, like a placeholder light, still shows.
+        Color.clear
+            .overlay(alignment: alignment) {
+                if let image {
+                    Image(decorative: image, scale: 1)
+                        .resizable()
+                        .aspectRatio(contentMode: contentMode)
+                        .transition(.opacity)
+                }
             }
-        }
-        .accessibilityHidden(true)
+            .clipped()
     }
 }
 
@@ -103,13 +122,9 @@ public struct ThumbnailImage: View {
     }
 
     public var body: some View {
-        if let url, let source = CGImageSourceCreateWithURL(url as CFURL, nil),
-           let image = CGImageSourceCreateImageAtIndex(source, 0, nil) {
-            Image(decorative: image, scale: 1)
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-        } else {
-            Color.clear
-        }
+        let image = url
+            .flatMap { CGImageSourceCreateWithURL($0 as CFURL, nil) }
+            .flatMap { CGImageSourceCreateImageAtIndex($0, 0, nil) }
+        FittedImage(image: image)
     }
 }
