@@ -15,16 +15,28 @@ import Testing
         return try #require(context.makeImage())
     }
 
-    /// A wide image and a scrolling screenshot, in a slot shaped like neither: the image is
-    /// cropped to the slot instead of growing it (which laid whole screens out zoomed in).
-    @Test(arguments: [(2400, 1000), (1000, 8000)])
-    func takesOnlyTheSpaceItIsOffered(width: Int, height: Int) throws {
+    /// Renders an image into a 120 by 260 slot and returns the size it took.
+    private func renderedSize(width: Int, height: Int) throws -> (width: Int, height: Int) {
         let renderer = ImageRenderer(content: FittedImage(image: try image(width: width, height: height)))
         renderer.proposedSize = ProposedViewSize(width: 120, height: 260)
         renderer.scale = 1
         let rendered = try #require(renderer.cgImage)
-        #expect(rendered.width == 120)
-        #expect(rendered.height == 260)
+        return (rendered.width, rendered.height)
+    }
+
+    /// A wide image in a tall slot is cropped to the slot instead of growing it (which laid whole
+    /// screens out zoomed in).
+    @Test func aWideImageStaysInItsSlot() throws {
+        let size = try renderedSize(width: 2400, height: 1000)
+        #expect(size.width == 120)
+        #expect(size.height == 260)
+    }
+
+    /// So is a scrolling screenshot, far taller than its slot.
+    @Test func aTallImageStaysInItsSlot() throws {
+        let size = try renderedSize(width: 1000, height: 8000)
+        #expect(size.width == 120)
+        #expect(size.height == 260)
     }
 
     /// Why FittedImage exists: the way screenshots used to be drawn, a filled image in a ZStack,
