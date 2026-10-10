@@ -50,7 +50,7 @@ let package = Package(
         .target(name: "Notifications", dependencies: ["Core", "Store"], swiftSettings: [.swiftLanguageMode(.v5)]),
         .target(
             name: "Paywall",
-            dependencies: ["Core", "DesignSystem", .product(name: "RevenueCat", package: "purchases-ios-spm")],
+            dependencies: ["Core", "DesignSystem", "Media", .product(name: "RevenueCat", package: "purchases-ios-spm")],
             // RevenueCat's callbacks predate strict concurrency checking.
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),

@@ -382,8 +382,14 @@ public enum CategoryName {
         case .event: "Events"
         case .product: "Products"
         case .recipe: "Recipes"
+        case .watch: "Watch"
+        case .listen: "Listen"
+        case .read: "Read"
+        case .travel: "Trips"
+        case .message: "Messages"
+        case .post: "Posts"
         case .reference: "Reference"
-        case .other: "Not sure yet"
+        case .other: "Everything else"
         }
     }
 }

@@ -46,6 +46,13 @@ import Testing
         #expect(ItemAction.suggested(for: withoutLink) == .shop)
     }
 
+    @Test func showsBooksAndTripsAreLookedUp() {
+        for category in [ItemCategory.watch, .listen, .read, .travel] {
+            #expect(ItemAction.suggested(for: item(category)) == .lookUp)
+        }
+        #expect(ItemAction.suggested(for: item(.message)) == nil)
+    }
+
     @Test func recipesCopyOnlyIngredientLines() {
         let text = """
         Crispy chilli noodles

@@ -37,6 +37,8 @@ struct MainScreen: View {
                     ItemDetailScreen(itemID: id) { home.reload() }
                 case .category(let category):
                     CategoryScreen(category: category, items: home.shelves.first { $0.category == category }?.items ?? [])
+                case .filed(let category):
+                    CategoryScreen(category: category, items: home.filed.first { $0.category == category }?.items ?? [], label: "Filed away")
                 case .kept:
                     KeptScreen(
                         home: home,
@@ -71,6 +73,7 @@ struct MainScreen: View {
             PaywallView(
                 purchases: model.purchases,
                 palette: model.palette,
+                items: model.paywallItems(),
                 privacyPolicy: model.configuration.privacyPolicyURL,
                 onClose: { showsPaywall = false },
                 onPurchased: {
@@ -259,18 +262,19 @@ struct SortDone: View {
     }
 }
 
-/// Everything kept in one category, oldest untouched first.
+/// Everything kept (or filed) in one category.
 struct CategoryScreen: View {
     @Environment(\.dismiss) private var dismiss
     let category: ItemCategory
     let items: [ScreenshotItem]
+    var label = "Still want"
 
     var body: some View {
         VStack(spacing: 0) {
             SBNavHeader(title: CategoryName.title(category), onLeading: { dismiss() })
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    SBLabel("Still want · \(items.count)")
+                    SBLabel("\(label) · \(items.count)")
                     VStack(spacing: SBSpace.gap) {
                         ForEach(items) { item in
                             NavigationLink(value: HomeRoute.item(item.id)) {

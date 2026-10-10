@@ -36,9 +36,7 @@ public struct ActionBarLabel: View {
     }
 
     public var body: some View {
-        // The v4 CTA: a dark capsule with a warm white circle, centred where it sits.
-        SBCTALabel(title, icon: SBIcon(systemName: systemImage))
-            .frame(maxWidth: .infinity)
+        SBCTALabel(title, icon: SBIcon(systemName: systemImage), fillsWidth: true)
     }
 }
 

@@ -179,7 +179,7 @@ struct ItemDetailScreen: View {
         case .stillWant: "Still want"
         case .done: "Done"
         case .dropped: "Dropped"
-        case .reference: "Reference"
+        case .reference: "Filed away"
         }
     }
 
@@ -223,8 +223,8 @@ struct ItemDetailScreen: View {
         Menu {
             Button { decide(.stillWant, item) } label: { Label("Still want", systemImage: "heart") }
             Button { decide(.dropped, item) } label: { Label("Drop", systemImage: "xmark") }
-            if item.category != .reference {
-                Button { decide(.reference, item) } label: { Label("Just for reference", systemImage: "archivebox") }
+            if item.state != .reference {
+                Button { decide(.reference, item) } label: { Label("File away", systemImage: "archivebox") }
             }
         } label: {
             SBCircleLabel(.more)
@@ -234,7 +234,10 @@ struct ItemDetailScreen: View {
 
     @ViewBuilder
     private func primaryAction(_ item: ScreenshotItem) -> some View {
-        if item.state == .done {
+        if item.state == .reference {
+            // Filed away: there's nothing to mark done. "Still want" in the menu brings it back.
+            EmptyView()
+        } else if item.state == .done {
             ActionBar("Done. Undo?", systemImage: "arrow.uturn.backward", palette: palette(item)) {
                 decide(.stillWant, item)
             }
@@ -276,7 +279,7 @@ struct ItemDetailScreen: View {
         case .maps:
             model.analytics.track(.actionMaps)
             Task { await MapsAction.open(item) }
-        case .shop:
+        case .shop, .lookUp:
             if let url = ShopLink.url(for: item) {
                 model.analytics.track(.actionShop)
                 openURL(url)

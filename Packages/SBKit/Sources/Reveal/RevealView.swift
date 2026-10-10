@@ -277,7 +277,7 @@ private struct CategoriesCard: View {
                 SBLabel("What you save")
                 MistHeadline(headline, size: 32, alignment: .leading)
                 if story.unsureCount > 0 {
-                    MistBody(story.unsureCount == 1 ? "1 we weren't sure about. **It's in triage.**" : "\(story.unsureCount) we weren't sure about. **They're in triage.**", alignment: .leading)
+                    MistBody(story.unsureCount == 1 ? "1 we weren't sure about. **Filed, not forgotten.**" : "\(story.unsureCount) we weren't sure about. **Filed, not forgotten.**", alignment: .leading)
                 }
             }
         } bottom: {
@@ -287,7 +287,7 @@ private struct CategoriesCard: View {
     }
 
     private var headline: String {
-        guard let top = story.topCategory else { return "Here's **what you save.**" }
+        guard let top = story.mostSaved else { return "Here's **what you save.**" }
         guard let guessed = story.guessedTopCategory else { return "Mostly, **\(CategoryWords.plural(top)).**" }
         if guessed == top {
             return "You guessed \(CategoryWords.plural(guessed)). **Nailed it.**"

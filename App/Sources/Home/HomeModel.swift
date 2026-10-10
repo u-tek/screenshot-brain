@@ -16,6 +16,8 @@ final class HomeModel: ObservableObject {
     @Published private(set) var score = Score(done: 0, total: 0)
     @Published private(set) var comingUp: [ScreenshotItem] = []
     @Published private(set) var shelves: [Shelf] = []
+    /// Filed away without sorting: chats, posts, receipts and the rest, by kind.
+    @Published private(set) var filed: [Shelf] = []
     @Published private(set) var droppedCount = 0
     /// Screenshots waiting to be sorted (near-duplicates count once).
     @Published private(set) var toSort = 0
@@ -32,7 +34,7 @@ final class HomeModel: ObservableObject {
     }
 
     var isEmpty: Bool {
-        score.total == 0 && comingUp.isEmpty && shelves.isEmpty
+        score.total == 0 && comingUp.isEmpty && shelves.isEmpty && filed.isEmpty
     }
 
     /// Something is typed in the search box, not just spaces.
@@ -45,14 +47,20 @@ final class HomeModel: ObservableObject {
         score = (try? database.score()) ?? score
         comingUp = (try? database.comingUp(now: now)) ?? []
         let grouped = (try? database.stillWant()) ?? [:]
-        shelves = grouped
-            .filter { $0.key.isIntention && !$0.value.isEmpty }
-            .map { Shelf(category: $0.key, items: $0.value) }
-            .sorted { $0.items.count == $1.items.count ? $0.category.rawValue < $1.category.rawValue : $0.items.count > $1.items.count }
+        shelves = Self.shelves(grouped.filter { $0.key.isIntention })
+        filed = Self.shelves((try? database.filed()) ?? [:])
         droppedCount = (try? database.dropped().count) ?? 0
         toSort = (try? database.triageDeck(limit: .max).count) ?? 0
         // What was found may have been decided or deleted since.
         scheduleSearch()
+    }
+
+    /// The fullest shelf first.
+    private static func shelves(_ grouped: [ItemCategory: [ScreenshotItem]]) -> [Shelf] {
+        grouped
+            .filter { !$0.value.isEmpty }
+            .map { Shelf(category: $0.key, items: $0.value) }
+            .sorted { $0.items.count == $1.items.count ? $0.category.rawValue < $1.category.rawValue : $0.items.count > $1.items.count }
     }
 
     /// A Home with things on it, for design snapshots.
@@ -61,6 +69,7 @@ final class HomeModel: ObservableObject {
         model.score = Score(done: 6, total: 23)
         model.comingUp = SampleData.comingUp
         model.shelves = SampleData.shelves.map { Shelf(category: $0.0, items: $0.1) }
+        model.filed = SampleData.filed.map { Shelf(category: $0.0, items: $0.1) }
         model.toSort = 24
         model.droppedCount = 12
         return model

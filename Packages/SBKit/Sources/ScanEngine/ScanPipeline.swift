@@ -227,7 +227,8 @@ public final class ScanPipeline: Sendable {
         item.reviewAt = dates.reviewAt
         item.isNSFWFlagged = false
         item.hasSensitiveText = verdict.hasSensitiveText
-        if verdict.hasSensitiveText, item.state == .unreviewed {
+        // Nothing to do about a chat, a post or a receipt: filed away without asking, never sorted.
+        if verdict.hasSensitiveText || !classification.category.isActionable, item.state == .unreviewed {
             item.state = .reference
         }
         item.isSafeToDisplay = Safety.isSafeToDisplay(category: classification.category, confidence: classification.confidence, verdict: verdict)
@@ -241,6 +242,57 @@ public final class ScanPipeline: Sendable {
             item.thumbnailPath = nil
         }
         return item
+    }
+
+    // MARK: Reclassifying
+
+    /// Bumped when the categories or their rules change, so screenshots read before are sorted
+    /// into the new ones.
+    public static let classifierVersion = 2
+    private static let classifierVersionKey = "scan.classifierVersion"
+
+    /// Runs the classifier again over screenshots read by an older version, from the text kept
+    /// from the first read (no image needed). Returns how many changed category.
+    @discardableResult
+    public func reclassifyIfNeeded(defaults: UserDefaults? = AppGroup.defaults()) throws -> Int {
+        guard let defaults, defaults.integer(forKey: Self.classifierVersionKey) < Self.classifierVersion else { return 0 }
+        let changed = try reclassify(try database.readItems())
+        defaults.set(Self.classifierVersion, forKey: Self.classifierVersionKey)
+        return changed
+    }
+
+    /// Reclassifies `items` and saves the ones whose category changed.
+    func reclassify(_ items: [ScreenshotItem], now: Date = Date()) throws -> Int {
+        var changed: [ScreenshotItem] = []
+        for var item in items where !item.isNSFWFlagged {
+            guard let extracted = item.extractedText, !extracted.isEmpty else { continue }
+            // The layout isn't kept, only the lines: enough for every rule but the chat bubbles.
+            let lines = extracted.components(separatedBy: .newlines).map {
+                TextLine(text: $0, box: CGRect(x: 0.05, y: 0.5, width: 0.8, height: 0.01))
+            }
+            let classification = classifier.classify(RecognizedText(lines: lines), entities: item.entities, hasSensitiveText: item.hasSensitiveText)
+            // Image labels aren't kept either: a screenshot placed by them alone keeps its place.
+            guard classification.category != .other, classification.category != item.category else { continue }
+            item.category = classification.category
+            item.confidence = classification.confidence
+            let dates = ExpiryPolicy.dates(category: item.category, entities: item.entities, text: extracted, createdAt: item.createdAt)
+            item.dueDate = dates.dueDate
+            item.expiresAt = dates.expiresAt
+            item.reviewAt = dates.reviewAt
+            item.isSafeToDisplay = item.thumbnailPath != nil
+                && item.category.isDisplayableIntention
+                && item.confidence >= Safety.confidenceBar
+                && !item.hasSensitiveText
+            if !item.category.isActionable, item.state == .unreviewed {
+                item.state = .reference
+            }
+            item.updatedAt = now
+            changed.append(item)
+        }
+        if !changed.isEmpty {
+            try database.save(changed)
+        }
+        return changed.count
     }
 
     // MARK: Grouping

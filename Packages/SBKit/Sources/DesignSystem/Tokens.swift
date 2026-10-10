@@ -64,9 +64,10 @@ public enum SBRamp {
     public static let rgb: [RGB] = [0x1D0E08, 0x4A1C0C, 0x8E3415, 0xE2582B, 0xFF8A57, 0xFFB381, 0xF2D4B6, 0xF6ECE2].map(RGB.init(hex:))
 }
 
-/// The five kinds of thing, each a step on the ramp: a lit core and a deep edge.
+/// The kinds of thing, each a step on the warm ramp: a lit core and a deep edge. The things to
+/// do are lit brightest; what's filed away is quieter stone and clay.
 public enum SBKind: String, CaseIterable, Sendable {
-    case events, places, products, recipes, reference
+    case events, places, products, recipes, watch, listen, read, travel, messages, posts, reference
 
     public init(_ category: ItemCategory) {
         switch category {
@@ -74,6 +75,12 @@ public enum SBKind: String, CaseIterable, Sendable {
         case .place: self = .places
         case .product: self = .products
         case .recipe: self = .recipes
+        case .watch: self = .watch
+        case .listen: self = .listen
+        case .read: self = .read
+        case .travel: self = .travel
+        case .message: self = .messages
+        case .post: self = .posts
         case .reference, .other: self = .reference
         }
     }
@@ -84,6 +91,12 @@ public enum SBKind: String, CaseIterable, Sendable {
         case .places: 0xFF8A57
         case .products: 0xFFB381
         case .recipes: 0xE8C49E
+        case .watch: 0xF2705E
+        case .listen: 0xE98C7C
+        case .read: 0xEED9B8
+        case .travel: 0xF7A35C
+        case .messages: 0xC9B6A4
+        case .posts: 0xD7A893
         case .reference: 0xD9C7B4
         }
     }
@@ -94,6 +107,12 @@ public enum SBKind: String, CaseIterable, Sendable {
         case .places: 0x7C2C10
         case .products: 0x7F4520
         case .recipes: 0x5F442C
+        case .watch: 0x5E1A14
+        case .listen: 0x5C2420
+        case .read: 0x5A4A36
+        case .travel: 0x6F3A10
+        case .messages: 0x3E332B
+        case .posts: 0x4D3328
         case .reference: 0x4A3B30
         }
     }

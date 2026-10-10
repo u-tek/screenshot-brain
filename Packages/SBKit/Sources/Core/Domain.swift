@@ -1,28 +1,55 @@
 import Foundation
 
-/// What a screenshot is for. Assigned by the ScanEngine's rules only when several signals agree;
-/// anything uncertain is `.other` and goes to triage, never silently into `.reference`.
+/// What a screenshot is for. Assigned by the ScanEngine's rules from the signals in it.
+///
+/// Some kinds are things to do (go, buy, cook, watch); the rest are worth keeping but there's
+/// nothing to do about them (a chat, a post, a receipt). Only the first lot are sorted: the rest
+/// are filed away without asking, and stay searchable.
 public enum ItemCategory: String, Codable, CaseIterable, Sendable {
     case place
     case event
     case product
     case recipe
+    /// Films, shows and videos to watch.
+    case watch
+    /// Music and podcasts.
+    case listen
+    /// Books and articles.
+    case read
+    /// Flights, stays and trips to plan.
+    case travel
+    /// Chats, DMs and emails.
+    case message
+    /// Social posts and memes.
+    case post
+    /// Receipts, codes, boarding passes, wifi details: kept to look up.
     case reference
+    /// Nothing recognisable. Filed away with the keep-only kinds.
     case other
 
-    /// Shown in triage and counted towards follow-through. Reference is kept for search only.
+    /// Something to do: go, buy, cook, watch, listen, read, plan. These are sorted, counted in
+    /// the score and offered by the widget.
+    public var isActionable: Bool {
+        switch self {
+        case .place, .event, .product, .recipe, .watch, .listen, .read, .travel: true
+        case .message, .post, .reference, .other: false
+        }
+    }
+
+    /// Shown in triage and counted towards follow-through.
     public var isIntention: Bool {
-        self != .reference
+        isActionable
     }
 
     /// The only categories that may reach the widget, the Reveal's example thumbnails or anything
-    /// shareable. The safety filters apply on top of this.
+    /// shareable. The safety filters apply on top of this. Chats and posts never do: they're
+    /// other people's words.
     public var isDisplayableIntention: Bool {
-        switch self {
-        case .place, .event, .product, .recipe: true
-        case .reference, .other: false
-        }
+        isActionable
     }
+
+    /// The things to do, for queries.
+    public static let actionable = allCases.filter(\.isActionable)
 }
 
 public enum ItemState: String, Codable, CaseIterable, Sendable {

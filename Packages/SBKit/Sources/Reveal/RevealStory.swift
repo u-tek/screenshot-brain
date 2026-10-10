@@ -25,7 +25,7 @@ public struct RevealStory: Sendable {
     public var busiestDayCount: Int
     /// Confidently classified categories, largest first.
     public var categories: [CategoryCount]
-    /// Read, but not confidently classified. They go to triage.
+    /// Read, but not confidently classified. Filed away, or sorted by their best guess.
     public var unsureCount: Int
     public var guessedTopCategory: ItemCategory?
     public var topExamples: [ScreenshotItem]
@@ -45,6 +45,11 @@ public struct RevealStory: Sendable {
     /// The biggest category the user can act on.
     public var topCategory: ItemCategory? {
         categories.first { $0.category.isDisplayableIntention }?.category
+    }
+
+    /// What's saved most, chats and posts included: the answer to "what do you save the most?".
+    public var mostSaved: ItemCategory? {
+        categories.first { $0.category != .reference }?.category
     }
 
     public var peakHour: Int? {
@@ -248,6 +253,12 @@ public enum CategoryWords {
         case .event: "Events"
         case .product: "Products"
         case .recipe: "Recipes"
+        case .watch: "Watch"
+        case .listen: "Listen"
+        case .read: "Read"
+        case .travel: "Trips"
+        case .message: "Messages"
+        case .post: "Posts"
         case .reference: "Reference"
         case .other: "Other"
         }
@@ -259,7 +270,13 @@ public enum CategoryWords {
         case .event: "events"
         case .product: "things to buy"
         case .recipe: "recipes"
-        case .reference: "receipts and chats"
+        case .watch: "shows and films"
+        case .listen: "songs and podcasts"
+        case .read: "books and articles"
+        case .travel: "trips"
+        case .message: "chats"
+        case .post: "posts and memes"
+        case .reference: "receipts and codes"
         case .other: "random stuff"
         }
     }
@@ -272,7 +289,13 @@ public enum CategoryWords {
         case .event: return "1 event"
         case .product: return "1 thing to buy"
         case .recipe: return "1 recipe"
-        case .reference: return "1 receipt or chat"
+        case .watch: return "1 show or film"
+        case .listen: return "1 song or podcast"
+        case .read: return "1 book or article"
+        case .travel: return "1 trip"
+        case .message: return "1 chat"
+        case .post: return "1 post"
+        case .reference: return "1 receipt or code"
         case .other: return "1 random thing"
         }
     }
@@ -283,6 +306,11 @@ public enum CategoryWords {
         case .event: "you meant to get to"
         case .product: "you meant to buy"
         case .recipe: "you meant to cook"
+        case .watch: "you meant to watch"
+        case .listen: "you meant to listen to"
+        case .read: "you meant to read"
+        case .travel: "you meant to take"
+        case .message, .post: "you kept to look back on"
         case .reference: "you kept for later"
         case .other: "you saved anyway"
         }
@@ -319,6 +347,7 @@ extension RevealStory {
         busiestDay: Date(timeIntervalSinceReferenceDate: 782_870_400),
         busiestDayCount: 19,
         categories: [
+            CategoryCount(category: .message, count: 72),
             CategoryCount(category: .place, count: 61),
             CategoryCount(category: .product, count: 40),
             CategoryCount(category: .event, count: 22),

@@ -55,6 +55,8 @@ import Testing
     @Test func referenceOtherAndLowConfidenceAreNot() {
         #expect(!Safety.isSafeToDisplay(category: .reference, confidence: 0.99, verdict: clean))
         #expect(!Safety.isSafeToDisplay(category: .other, confidence: 0.99, verdict: clean))
+        #expect(!Safety.isSafeToDisplay(category: .message, confidence: 0.99, verdict: clean))
+        #expect(!Safety.isSafeToDisplay(category: .post, confidence: 0.99, verdict: clean))
         #expect(!Safety.isSafeToDisplay(category: .event, confidence: 0.6, verdict: clean))
     }
 

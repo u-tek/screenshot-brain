@@ -7,6 +7,8 @@ public enum ItemAction: String, CaseIterable, Sendable, Identifiable {
     case calendar
     case maps
     case shop
+    /// The show, album, book or trip: its link, or a search for it.
+    case lookUp
     case ingredients
     case send
 
@@ -18,6 +20,7 @@ public enum ItemAction: String, CaseIterable, Sendable, Identifiable {
         case .calendar: "Add to calendar"
         case .maps: "Open in Maps"
         case .shop: "Open shop"
+        case .lookUp: "Look it up"
         case .ingredients: "Copy ingredients"
         case .send: "Send to someone"
         }
@@ -29,6 +32,7 @@ public enum ItemAction: String, CaseIterable, Sendable, Identifiable {
         case .calendar: "Calendar"
         case .maps: "Maps"
         case .shop: "Shop"
+        case .lookUp: "Look up"
         case .ingredients: "Ingredients"
         case .send: "Send"
         }
@@ -39,6 +43,7 @@ public enum ItemAction: String, CaseIterable, Sendable, Identifiable {
         case .calendar: "calendar"
         case .maps: "map"
         case .shop: "bag"
+        case .lookUp: "magnifyingglass"
         case .ingredients: "list.bullet"
         case .send: "paperplane"
         }
@@ -54,7 +59,10 @@ public enum ItemAction: String, CaseIterable, Sendable, Identifiable {
             actions.append(.maps)
         }
         // Somewhere to go: the link read from it, or a search for its name.
-        if ShopLink.url(for: item) != nil, item.category == .product || (ShopLink.detectedURL(for: item) != nil && item.category != .event) {
+        let lookedUp: Set<ItemCategory> = [.watch, .listen, .read, .travel]
+        if ShopLink.url(for: item) != nil, lookedUp.contains(item.category) {
+            actions.append(.lookUp)
+        } else if ShopLink.url(for: item) != nil, item.category == .product || (ShopLink.detectedURL(for: item) != nil && item.category != .event) {
             actions.append(.shop)
         }
         if item.category == .recipe, !Ingredients.lines(in: item.extractedText ?? "").isEmpty {
@@ -82,7 +90,8 @@ public enum ItemAction: String, CaseIterable, Sendable, Identifiable {
         case .place: .maps
         case .product: .shop
         case .recipe: .ingredients
-        case .reference, .other: nil
+        case .watch, .listen, .read, .travel: .lookUp
+        case .message, .post, .reference, .other: nil
         }
     }
 }

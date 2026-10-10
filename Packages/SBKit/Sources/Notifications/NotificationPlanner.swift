@@ -191,7 +191,11 @@ public enum NotificationCopy {
         case .place: return "That place you saved"
         case .product: return "That thing you saved"
         case .recipe: return "That recipe you saved"
-        case .reference, .other: return "Something you saved"
+        case .watch: return "That show you saved"
+        case .listen: return "That album you saved"
+        case .read: return "That book you saved"
+        case .travel: return "That trip you saved"
+        case .message, .post, .reference, .other: return "Something you saved"
         }
     }
 
@@ -223,7 +227,11 @@ public enum NotificationCopy {
         case .place: line = "\(name(item)). Actually going?"
         case .product: line = "\(name(item)). Still want it?"
         case .recipe: line = "\(name(item)). Cooking it this week?"
-        case .reference, .other: line = "\(name(item)). Keep it or let it go?"
+        case .watch: line = "\(name(item)). Watching it this week?"
+        case .listen: line = "\(name(item)). Given it a listen yet?"
+        case .read: line = "\(name(item)). Started it yet?"
+        case .travel: line = "\(name(item)). Booking it?"
+        case .message, .post, .reference, .other: line = "\(name(item)). Keep it or let it go?"
         }
         return line + more
     }

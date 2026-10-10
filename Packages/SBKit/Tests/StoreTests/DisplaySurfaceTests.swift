@@ -73,11 +73,17 @@ import Testing
         #expect(!(try database.widgetCandidates(now: now).map(\.id)).contains(sensitive.id))
     }
 
-    @Test func triageShowsUncertainItemsButNotReference() throws {
+    @Test func triageShowsOnlyThingsToDo() throws {
         let deck = try database.triageDeck().map(\.id)
-        #expect(deck.contains(uncertain.id))
-        #expect(deck.contains(safe.id))
-        #expect(!deck.contains(reference.id))
+        #expect(deck == [safe.id])
+    }
+
+    @Test func filedShowsWhatWasFiledAway() throws {
+        try database.setState(.reference, forItem: reference.id, at: now)
+        try database.setState(.reference, forItem: nudity.id, at: now)
+        let filed = try database.filed()
+        #expect(filed[.reference]?.map(\.id) == [reference.id])
+        #expect(!filed.values.flatMap { $0 }.map(\.id).contains(nudity.id))
     }
 
     @Test func searchFindsTextButNeverNudity() throws {

@@ -34,14 +34,16 @@ import Testing
 }
 
 @Suite struct DomainTests {
-    @Test func onlyConfidentIntentionsAreDisplayable() {
+    @Test func onlyThingsToDoAreDisplayable() {
         let displayable = ItemCategory.allCases.filter(\.isDisplayableIntention)
-        #expect(displayable == [.place, .event, .product, .recipe])
+        #expect(displayable == [.place, .event, .product, .recipe, .watch, .listen, .read, .travel])
     }
 
-    @Test func referenceIsNotAnIntention() {
-        #expect(ItemCategory.reference.isIntention == false)
-        #expect(ItemCategory.other.isIntention)
+    @Test func chatsPostsReferenceAndOtherAreNotThingsToDo() {
+        for category in [ItemCategory.message, .post, .reference, .other] {
+            #expect(!category.isActionable)
+            #expect(!category.isIntention)
+        }
     }
 
     @Test func onboardingStepsAreOrdered() {

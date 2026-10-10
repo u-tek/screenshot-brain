@@ -107,7 +107,7 @@ private struct SmallItemView: View {
     }
 }
 
-/// Drop, Still want and Done, in the app's order, Still want warm white in the middle. Buttons on
+/// Drop, Done and Still want, in the app's order, Done warm white in the middle. Buttons on
 /// iOS 17 and later; before that the whole widget opens the item.
 private struct DecisionButtons: View {
     let itemID: String
@@ -122,17 +122,17 @@ private struct DecisionButtons: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel(Text("Drop"))
                 Spacer(minLength: 0)
-                Button(intent: KeepItemIntent(itemID: itemID)) {
-                    Mark(icon: .bookmark, filled: true, size: compact ? 34 : 32)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(Text("Still want"))
-                Spacer(minLength: 0)
                 Button(intent: DoneItemIntent(itemID: itemID)) {
-                    Mark(icon: .check, filled: false, size: compact ? 34 : 32)
+                    Mark(icon: .check, filled: true, size: compact ? 34 : 32)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(Text("Done"))
+                Spacer(minLength: 0)
+                Button(intent: KeepItemIntent(itemID: itemID)) {
+                    Mark(icon: .bookmark, filled: false, size: compact ? 34 : 32)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text("Still want"))
             }
         } else {
             HStack {
@@ -310,6 +310,12 @@ enum CategoryTitle {
         case .event: "Events"
         case .product: "Products"
         case .recipe: "Recipes"
+        case .watch: "Watch"
+        case .listen: "Listen"
+        case .read: "Read"
+        case .travel: "Trips"
+        case .message: "Messages"
+        case .post: "Posts"
         case .reference: "Reference"
         case .other: "Saved"
         }

@@ -118,9 +118,15 @@ public enum ExpiryPolicy {
                 return Dates(dueDate: saleEnd, expiresAt: [lifetime, end].compactMap { $0 }.min())
             }
             return Dates(expiresAt: lifetime)
-        case .place, .recipe:
+        case .travel:
+            // A trip with a date in it is due then; without one, it's a "still want this?".
+            if let tripDate = relevant {
+                return Dates(dueDate: tripDate)
+            }
             return Dates(reviewAt: calendar.date(byAdding: .day, value: stillWantPromptDays, to: createdAt))
-        case .reference, .other:
+        case .place, .recipe, .watch, .listen, .read:
+            return Dates(reviewAt: calendar.date(byAdding: .day, value: stillWantPromptDays, to: createdAt))
+        case .message, .post, .reference, .other:
             return Dates()
         }
     }

@@ -3,7 +3,7 @@ import DesignSystem
 import Store
 import SwiftUI
 
-/// The five guessing questions, asked while the scan runs. Each answer is saved as it's given, so
+/// The four questions, asked while the scan runs. Each answer is saved as it's given, so
 /// a crash or a new phone picks up at the first question still unanswered.
 struct QuestionsFlow: View {
     @EnvironmentObject private var model: AppModel
@@ -20,7 +20,7 @@ struct QuestionsFlow: View {
 
     @ViewBuilder
     private func question(_ number: Int) -> some View {
-        let footnote = Self.footnote(question: number, read: model.screenshotsRead, isScanning: model.isScanning)
+        let footnote = Self.footnote(isScanning: model.isScanning)
         switch number {
         case 1:
             CountQuestion(palette: model.palette, footnote: footnote, initial: model.answers.guessedScreenshotCount ?? 150) { guess in
@@ -37,17 +37,12 @@ struct QuestionsFlow: View {
                 model.updateAnswers { $0.guessedDoneCount = outOfTen }
                 next(after: 3)
             } onSkip: { finish() }
-        case 4:
+        default:
             WindDownQuestion(palette: model.palette, footnote: footnote, initial: model.answers.windDownMinutes ?? 22 * 60) { minutes in
                 model.updateAnswers {
                     $0.windDownMinutes = minutes
                     $0.recapMinutes = minutes
                 }
-                next(after: 4)
-            } onSkip: { finish() }
-        default:
-            PeakQuestion(palette: model.palette, footnote: footnote, initial: model.answers.guessedPeakPeriod) { period in
-                model.updateAnswers { $0.guessedPeakPeriod = period }
                 finish()
             } onSkip: { finish() }
         }
@@ -67,18 +62,13 @@ struct QuestionsFlow: View {
         if answers.guessedScreenshotCount == nil { return 1 }
         if answers.guessedTopCategory == nil { return 2 }
         if answers.guessedDoneCount == nil { return 3 }
-        if answers.windDownMinutes == nil { return 4 }
-        return 5
+        return 4
     }
 
-    /// The live counter. Hidden on question 1, where it's the very number being guessed and
-    /// seeing it tick up would anchor the guess.
-    static func footnote(question: Int, read: Int, isScanning: Bool) -> String {
-        if question == 1 || read == 0 {
-            return "Reading your screenshots on this iPhone"
-        }
-        let count = read == 1 ? "1 screenshot" : "\(read.formatted()) screenshots"
-        return isScanning ? "\(count) read" : "All \(count) read"
+    /// What the scan is up to. Never a count: how many screenshots there are is the first
+    /// question's answer and the Reveal's opening line, and showing it here would give both away.
+    static func footnote(isScanning: Bool) -> String {
+        isScanning ? "Reading your screenshots on this iPhone" : "All read. Your Reveal is ready"
     }
 }
 
@@ -151,10 +141,16 @@ struct TopCategoryQuestion: View {
             onNext: { onNext(choice) }
         ) {
             ChoiceGrid(options: [
-                (ItemCategory.place, "Places to go"),
+                (ItemCategory.message, "Messages"),
+                (.place, "Places to go"),
                 (.event, "Gigs and events"),
                 (.product, "Things to buy"),
                 (.recipe, "Recipes"),
+                (.post, "Memes and posts"),
+                (.watch, "Shows and films"),
+                (.listen, "Music"),
+                (.read, "Books"),
+                (.travel, "Trips"),
             ], selection: $choice)
         }
     }
@@ -223,6 +219,7 @@ struct WindDownQuestion: View {
             light: .sweep(palette).mirrored(),
             palette: palette,
             footnote: footnote,
+            actionTitle: "That's everything",
             onSkip: onSkip,
             onNext: { onNext(Self.minutesAfterMidnight(rulerValue: minutesAfterFive)) }
         ) {
@@ -258,42 +255,5 @@ struct WindDownQuestion: View {
         let hour = hour24 % 12 == 0 ? 12 : hour24 % 12
         let suffix = hour24 < 12 ? "am" : "pm"
         return minute == 0 ? "\(hour)\(suffix)" : String(format: "%d:%02d%@", hour, minute, suffix)
-    }
-}
-
-struct PeakQuestion: View {
-    let palette: LightPalette
-    let footnote: String
-    @State var choice: DayPeriod?
-    let onNext: (DayPeriod?) -> Void
-    let onSkip: () -> Void
-
-    init(palette: LightPalette, footnote: String, initial: DayPeriod?, onNext: @escaping (DayPeriod?) -> Void, onSkip: @escaping () -> Void = {}) {
-        self.palette = palette
-        self.footnote = footnote
-        self._choice = State(initialValue: initial)
-        self.onNext = onNext
-        self.onSkip = onSkip
-    }
-
-    var body: some View {
-        QuestionLayout(
-            label: "Question 5",
-            headline: "When do you screenshot **the most?**",
-            subtext: "We'll check.",
-            light: .sweep(palette),
-            palette: palette,
-            footnote: footnote,
-            actionTitle: "That's everything",
-            onSkip: onSkip,
-            onNext: { onNext(choice) }
-        ) {
-            ChoiceGrid(options: [
-                (DayPeriod.morning, "Mornings"),
-                (.afternoon, "Afternoons"),
-                (.evening, "Evenings"),
-                (.lateNight, "Late at night"),
-            ], selection: $choice)
-        }
     }
 }

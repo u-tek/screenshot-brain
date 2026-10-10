@@ -9,6 +9,7 @@ import Triage
 enum HomeRoute: Hashable {
     case item(String)
     case category(ItemCategory)
+    case filed(ItemCategory)
     case kept
     case settings
 }
@@ -157,6 +158,9 @@ struct KeptScreen: View {
                         }
                         if !home.shelves.isEmpty {
                             StillWantSection(shelves: home.shelves)
+                        }
+                        if !home.filed.isEmpty {
+                            FiledSection(shelves: home.filed)
                         }
                     }
                     SearchSection(home: home)
@@ -315,6 +319,26 @@ private struct StillWantSection: View {
             return .item(category: item.category, colors: item.palette, isSafeToDisplay: true)
         }
         return .category(shelf.category)
+    }
+}
+
+/// Kept without being sorted: there was nothing to do about them. A row of small tiles, one per
+/// kind.
+private struct FiledSection: View {
+    let shelves: [HomeModel.Shelf]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SBLabel("Filed away · Nothing to do")
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: SBSpace.gap), GridItem(.flexible(), spacing: SBSpace.gap)], spacing: SBSpace.gap) {
+                ForEach(shelves) { shelf in
+                    NavigationLink(value: HomeRoute.filed(shelf.category)) {
+                        SBKindTile(kind: SBKind(shelf.category), title: CategoryName.title(shelf.category), count: shelf.items.count, height: 112)
+                    }
+                    .buttonStyle(SBPressStyle())
+                }
+            }
+        }
     }
 }
 

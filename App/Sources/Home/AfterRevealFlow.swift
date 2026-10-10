@@ -20,6 +20,7 @@ struct AfterRevealFlow: View {
             PaywallView(
                 purchases: model.purchases,
                 palette: model.palette,
+                items: model.paywallItems(),
                 privacyPolicy: model.configuration.privacyPolicyURL,
                 onClose: { model.advance(to: .notifications) },
                 onPurchased: {

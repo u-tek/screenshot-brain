@@ -2,7 +2,8 @@ import DesignSystem
 import SwiftUI
 
 /// When the scan outlasts the questions: the lens turns over the user's own light while the last
-/// screenshots are read. The orbit's dot travels round as they go, instead of a loading bar.
+/// screenshots are read. The orbit's dot travels round as they go, instead of a loading bar or a
+/// count (the count is the Reveal's to tell).
 struct FinishingUpScreen: View {
     var palette: LightPalette = .sampleTopScreenshots
     var read: Int = 0
@@ -28,10 +29,9 @@ struct FinishingUpScreen: View {
                         GlassLens(diameter: lens)
                     }
                     Spacer()
-                    SmallLabel(total > 0 ? "\(read.formatted()) of \(total.formatted()) read" : "Reading on this iPhone")
-                        .monospacedDigit()
+                    // No counts: the total is the Reveal's opening line.
+                    SmallLabel("Reading on this iPhone")
                         .padding(.bottom, 10)
-                        .accessibilityAddTraits(.updatesFrequently)
                     MistHeadline("Hang on. **Nearly there.**", size: 32)
                         .padding(.horizontal, 28)
                     MistBody("Reading the last few. Your Reveal is **almost ready.**")

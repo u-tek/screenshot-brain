@@ -175,6 +175,12 @@ final class AppModel: ObservableObject {
     /// goes straight on.
     func finishPitch() {
         analytics.track(.onboardingStarted)
+        // Test builds can't use Sign in with Apple, so the sign-in screen would have nothing to
+        // offer but "carry on": skip it.
+        if account == nil, configuration.allowsLocalAccount {
+            continueOnThisPhone()
+            return
+        }
         advance(to: account == nil ? .signIn : .photoAccess)
     }
 
@@ -317,6 +323,9 @@ final class AppModel: ObservableObject {
                         try services.pipeline.discover()
                         try services.database.applyPendingRemoteStates()
                     }
+                    // Screenshots read before the categories last changed are sorted into the
+                    // new ones (chats out of reference into messages, say).
+                    try services.pipeline.reclassifyIfNeeded()
                     return try services.database.processedCount()
                 }.value
                 screenshotsRead = baseline
@@ -419,6 +428,12 @@ final class AppModel: ObservableObject {
 
     var isPremium: Bool {
         purchases.isPremium
+    }
+
+    /// The user's own things for the widget on the paywall: what their widget would show.
+    func paywallItems(now: Date = Date()) -> [PaywallItem] {
+        guard let items = try? services?.database.widgetCandidates(now: now, limit: 5, includeSurfaced: true) else { return [] }
+        return items.map { PaywallItem($0, now: now) }
     }
 
     func purchased() {
@@ -554,5 +569,33 @@ enum AppLink: Hashable {
         case "home": self = .home
         default: return nil
         }
+    }
+}
+
+extension PaywallItem {
+    /// "FRIDAY" for something this week, "SAT 14 NOV" further out, else how long ago it was saved.
+    init(_ item: ScreenshotItem, now: Date = Date(), calendar: Calendar = .current) {
+        let detail: String
+        if let due = item.dueDate, due > now {
+            let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: now), to: calendar.startOfDay(for: due)).day ?? 0
+            if days == 0 {
+                detail = "TODAY"
+            } else if days == 1 {
+                detail = "TOMORROW"
+            } else if days < 7 {
+                detail = due.formatted(.dateTime.weekday(.wide)).uppercased()
+            } else {
+                detail = due.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated)).uppercased()
+            }
+        } else {
+            detail = "SAVED \(item.createdAt.formatted(.relative(presentation: .named, unitsStyle: .wide)))".uppercased()
+        }
+        self.init(
+            id: item.id,
+            title: item.title ?? "Something you saved",
+            category: item.category,
+            detail: detail,
+            assetLocalID: item.assetLocalID
+        )
     }
 }

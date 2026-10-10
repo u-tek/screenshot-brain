@@ -151,6 +151,13 @@ extension AppDatabase {
         }
     }
 
+    /// Every screenshot that's been read, for reclassifying.
+    public func readItems() throws -> [ScreenshotItem] {
+        try reader.read { db in
+            try ScreenshotItem.filter(Col.processedAt != nil).fetchAll(db)
+        }
+    }
+
     public func processedCount() throws -> Int {
         try reader.read { db in
             try ScreenshotItem.filter(Col.processedAt != nil).fetchCount(db)
@@ -188,7 +195,8 @@ extension AppDatabase {
 // widget and the Reveal's example thumbnails additionally require `isSafeToDisplay`.
 
 extension AppDatabase {
-    /// Unreviewed intentions for the swipe deck, newest first, near-duplicates folded into one card.
+    /// Unreviewed things to do for the swipe deck, newest first, near-duplicates folded into one
+    /// card. Chats, posts, receipts and anything unrecognised are never sorted.
     public func triageDeck(limit: Int = 30) throws -> [TriageCard] {
         Self.foldGroups(try triageCandidates(), limit: limit)
     }
@@ -199,7 +207,7 @@ extension AppDatabase {
         return try reader.read { db in
             let saved = try ScreenshotItem
                 .filter(Col.isNSFWFlagged == false)
-                .filter(Col.category != ItemCategory.reference.rawValue)
+                .filter(ItemCategory.actionable.map(\.rawValue).contains(Col.category))
                 .filter(Col.createdAt >= weekAgo)
                 .fetchCount(db)
             let done = try ScreenshotItem
@@ -237,7 +245,7 @@ extension AppDatabase {
                 .filter(Col.isNSFWFlagged == false)
                 .filter(Col.hasSensitiveText == false)
                 .filter(Col.state == ItemState.unreviewed.rawValue)
-                .filter(Col.category != ItemCategory.reference.rawValue)
+                .filter(ItemCategory.actionable.map(\.rawValue).contains(Col.category))
                 .order(Col.createdAt.desc)
                 .fetchAll(db)
         }
@@ -283,7 +291,7 @@ extension AppDatabase {
                 .filter(Col.processedAt != nil)
                 .filter(Col.isNSFWFlagged == false)
                 .filter([ItemState.unreviewed.rawValue, ItemState.stillWant.rawValue].contains(Col.state))
-                .filter(Col.category != ItemCategory.reference.rawValue)
+                .filter(ItemCategory.actionable.map(\.rawValue).contains(Col.category))
                 .filter(Col.dueDate >= start && Col.dueDate <= end)
                 .order(Col.dueDate.asc)
                 .fetchAll(db)
@@ -302,6 +310,20 @@ extension AppDatabase {
         }
         let sorted = items.sorted { ($0.stateChangedAt ?? $0.createdAt) < ($1.stateChangedAt ?? $1.createdAt) }
         return Dictionary(grouping: Self.oneOfEachGroup(sorted), by: \.category)
+    }
+
+    /// Everything filed away (chats, posts, receipts, anything unrecognised, and whatever was
+    /// filed by hand), grouped by category, newest first. Near-duplicates show once.
+    public func filed() throws -> [ItemCategory: [ScreenshotItem]] {
+        let items = try reader.read { db in
+            try ScreenshotItem
+                .filter(Col.processedAt != nil)
+                .filter(Col.isNSFWFlagged == false)
+                .filter(Col.state == ItemState.reference.rawValue)
+                .order(Col.createdAt.desc)
+                .fetchAll(db)
+        }
+        return Dictionary(grouping: Self.oneOfEachGroup(items), by: \.category)
     }
 
     /// Reference search across the text read from screenshots.

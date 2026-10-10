@@ -1,13 +1,34 @@
 import Core
 import DesignSystem
+import Media
 import SwiftUI
 
-/// The paywall: the lens over a field of light, the widget being ticked beside it, the plans in
-/// frosted cards (the selected one lit by the accent), and the action bar as the purchase button.
+/// One of the user's own saved things, for the widget on the paywall.
+public struct PaywallItem: Hashable, Sendable, Identifiable {
+    public var id: String
+    public var title: String
+    public var category: ItemCategory
+    /// "FRIDAY", "SAVED 3 WEEKS AGO".
+    public var detail: String
+    /// The screenshot, shown in the widget's picture.
+    public var assetLocalID: String?
+
+    public init(id: String, title: String, category: ItemCategory, detail: String, assetLocalID: String? = nil) {
+        self.id = id
+        self.title = title
+        self.category = category
+        self.detail = detail
+        self.assetLocalID = assetLocalID
+    }
+}
+
+/// The paywall: the lens over a field of light, the widget beside it ticking off the user's own
+/// saved things (their screenshots, their dates), the plans in frosted cards (the selected one lit by the accent), and the action bar as the purchase button.
 /// Restore is always on screen, and so are the trial terms.
 public struct PaywallView: View {
     @ObservedObject private var purchases: PurchaseService
     private let palette: LightPalette
+    private let items: [PaywallItem]
     private let privacyPolicy: URL?
     private let onClose: () -> Void
     private let onPurchased: () -> Void
@@ -19,9 +40,10 @@ public struct PaywallView: View {
     /// Apple's standard licence agreement.
     private static let terms = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!
 
-    public init(purchases: PurchaseService, palette: LightPalette, privacyPolicy: URL?, onClose: @escaping () -> Void, onPurchased: @escaping () -> Void) {
+    public init(purchases: PurchaseService, palette: LightPalette, items: [PaywallItem] = [], privacyPolicy: URL?, onClose: @escaping () -> Void, onPurchased: @escaping () -> Void) {
         self.purchases = purchases
         self.palette = palette
+        self.items = items
         self.privacyPolicy = privacyPolicy
         self.onClose = onClose
         self.onPurchased = onPurchased
@@ -60,13 +82,13 @@ public struct PaywallView: View {
                     .padding(.horizontal, 20)
                     .padding(.top, 8)
 
-                    Hero(palette: palette, compact: compact)
+                    Hero(palette: palette, items: items, compact: compact)
                         .frame(height: compact ? 112 : 200)
                         .padding(.vertical, compact ? 2 : 12)
 
                     VStack(alignment: .leading, spacing: 8) {
                         SmallLabel("Screenshot Brain Premium")
-                        MistHeadline("Keep it all **on your home screen.**", size: compact ? 26 : 30, alignment: .leading)
+                        MistHeadline(items.isEmpty ? "Keep it all **on your home screen.**" : "Keep **your plans** on your home screen.", size: compact ? 26 : 30, alignment: .leading)
                         SmallLabel("The widget on your home and Lock Screen, the all-time Reveal and full monthly stats. Everything else stays free.")
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -234,6 +256,7 @@ private struct PlanCard: View {
 /// The lens over the light, with the widget being ticked beside it.
 private struct Hero: View {
     let palette: LightPalette
+    let items: [PaywallItem]
     let compact: Bool
 
     var body: some View {
@@ -242,32 +265,46 @@ private struct Hero: View {
                 GlassLens(diameter: 150)
                     .zIndex(1)
             }
-            TickingWidget()
+            TickingWidget(items: items)
                 .frame(width: compact ? 300 : 250, height: compact ? 112 : 128)
         }
     }
 }
 
-/// A medium widget ticking things off: ✓ pulses, the card lifts away, the next arrives.
+/// A medium widget ticking things off: ✓ pulses, the card lifts away, the next arrives. It shows
+/// the user's own things when there are any.
 struct TickingWidget: View {
-    private static let items: [(category: ItemCategory, title: String, detail: String)] = [
-        (.event, "Mallrat at the Enmore", "FRIDAY"),
-        (.place, "Ramen Ikkyu", "SAVED 3 WEEKS AGO"),
-        (.recipe, "Crispy chilli noodles", "SAVED 2 MONTHS AGO"),
+    /// Before anything's been saved.
+    private static let examples = [
+        PaywallItem(id: "gig", title: "That gig on Friday", category: .event, detail: "FRIDAY"),
+        PaywallItem(id: "ramen", title: "That ramen place", category: .place, detail: "SAVED 3 WEEKS AGO"),
+        PaywallItem(id: "noodles", title: "Crispy chilli noodles", category: .recipe, detail: "SAVED 2 MONTHS AGO"),
     ]
 
+    let items: [PaywallItem]
     @State private var index = 0
     @State private var ticking = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.lightIsStill) private var lightIsStill
 
+    private var shown: [PaywallItem] {
+        items.isEmpty ? Self.examples : items
+    }
+
     var body: some View {
-        let item = Self.items[index]
+        let item = shown[index % shown.count]
         let shape = RoundedRectangle(cornerRadius: 24, style: .continuous)
         HStack(spacing: 10) {
-            LightField(.glow(.category(item.category)), grain: 0.04)
-                .frame(width: 62)
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            ZStack {
+                LightField(.glow(.category(item.category)), grain: 0.04)
+                if let asset = item.assetLocalID {
+                    // Their screenshot, from the top: where the name and the date usually are.
+                    AssetImage(asset, maxPixelSize: 300, alignment: .top)
+                }
+            }
+            .frame(width: 62)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .id(item.id)
             VStack(alignment: .leading, spacing: 3) {
                 Text(item.title)
                     .font(.system(size: 14, weight: .semibold))
@@ -302,7 +339,7 @@ struct TickingWidget: View {
                 try? await Task.sleep(nanoseconds: 1_800_000_000)
                 withAnimation(.easeOut(duration: 0.35)) { ticking = true }
                 try? await Task.sleep(nanoseconds: 380_000_000)
-                index = (index + 1) % Self.items.count
+                index = (index + 1) % shown.count
                 withAnimation(SBMotion.settle) { ticking = false }
             }
         }

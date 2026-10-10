@@ -296,8 +296,7 @@ public struct SBChipCircle: View {
     }
 }
 
-/// The forward action: a dark capsule, the label on the left, a warm white circle with the glyph
-/// on the right.
+/// The forward action: a solid warm white capsule, the label and its glyph in the middle.
 public struct SBCTA: View {
     private let title: String
     private let icon: SBIcon
@@ -320,49 +319,38 @@ public struct SBCTA: View {
     }
 }
 
-/// The CTA's look, for wrapping in other controls (a `ShareLink`, a `PhotosPicker`).
+/// The CTA's look, for wrapping in other controls (a `ShareLink`, a `PhotosPicker`): a solid warm
+/// white capsule with the label and its glyph together in the middle. (It used to carry the glyph
+/// in a circle at the far end, which read as a slider to drag.)
 public struct SBCTALabel: View {
     private let title: String
     private let icon: SBIcon
     private let onLight: Bool
+    private let fillsWidth: Bool
     @Environment(\.isEnabled) private var isEnabled
-    @ScaledMetric(relativeTo: .subheadline) private var textSize: CGFloat = 15
+    @ScaledMetric(relativeTo: .headline) private var textSize: CGFloat = 17
 
-    public init(_ title: String, icon: SBIcon = .arrow, onLight: Bool = false) {
+    public init(_ title: String, icon: SBIcon = .arrow, onLight: Bool = false, fillsWidth: Bool = false) {
         self.title = title
         self.icon = icon
         self.onLight = onLight
+        self.fillsWidth = fillsWidth
     }
 
     public var body: some View {
-        HStack(spacing: 0) {
+        HStack(spacing: 10) {
             Text(title)
-                .font(.system(size: textSize))
-                .foregroundStyle(SBColor.ink)
+                .font(.system(size: textSize, weight: .semibold))
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
-            Spacer(minLength: 24)
-            SBIconView(icon, size: 18)
-                .foregroundStyle(SBColor.ground)
-                .frame(width: 36, height: 36)
-                .background(Circle().fill(SBColor.accent))
+            SBIconView(icon, size: 17)
         }
-        .frame(minWidth: 197 - 32)
-        .fixedSize(horizontal: true, vertical: false)
-        .padding(.leading, 24)
-        .padding(.trailing, 8)
-        .frame(height: 52)
-        .background {
-            if onLight {
-                Capsule().fill(SBColor.inkOnLight)
-            } else {
-                ZStack {
-                    Capsule().fill(.ultraThinMaterial)
-                    Capsule().fill(SBColor.ctaFill)
-                    Capsule().strokeBorder(SBColor.warm(0.08), lineWidth: 1)
-                }
-            }
-        }
+        .foregroundStyle(onLight ? SBColor.ink : SBColor.ground)
+        .padding(.horizontal, 32)
+        .frame(minWidth: 197, maxWidth: fillsWidth ? .infinity : nil)
+        .frame(height: 56)
+        .background(Capsule().fill(onLight ? SBColor.inkOnLight : SBColor.accent))
+        .shadow(color: onLight ? .clear : SBRamp.r4.opacity(0.35), radius: 22, y: 8)
         .contentShape(Capsule())
         .opacity(isEnabled ? 1 : 0.5)
     }
@@ -444,7 +432,7 @@ public struct SBSegmentRow<Content: View>: View {
     }
 }
 
-/// Deciding on an item, always in the same order: Drop · Still want · Done.
+/// Deciding on an item, always in the same order: Drop · Done · Still want.
 public struct SBDecisionRow: View {
     private let onDrop: () -> Void
     private let onKeep: () -> Void
@@ -458,9 +446,10 @@ public struct SBDecisionRow: View {
 
     public var body: some View {
         SBSegmentRow {
+            // In the order of the swipes: drop is left, done is up (the middle), still want is right.
             SBSegButton("Drop", icon: .x, action: onDrop)
-            SBSegButton("Still want", icon: .bookmark, isPrimary: true, action: onKeep)
-            SBSegButton("Done", icon: .check, action: onDone)
+            SBSegButton("Done", icon: .check, isPrimary: true, action: onDone)
+            SBSegButton("Still want", icon: .bookmark, action: onKeep)
         }
     }
 }

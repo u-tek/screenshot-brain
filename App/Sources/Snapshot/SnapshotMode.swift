@@ -64,15 +64,13 @@ enum SnapshotGallery {
         case "sharein":
             return AnyView(ShareRouteScreen())
         case "question1":
-            return AnyView(CountQuestion(palette: palette, footnote: QuestionsFlow.footnote(question: 1, read: 0, isScanning: true), initial: 150, onNext: { _ in }))
+            return AnyView(CountQuestion(palette: palette, footnote: QuestionsFlow.footnote(isScanning: true), initial: 150, onNext: { _ in }))
         case "question2":
-            return AnyView(TopCategoryQuestion(palette: palette, footnote: QuestionsFlow.footnote(question: 2, read: 86, isScanning: true), initial: .place, onNext: { _ in }))
+            return AnyView(TopCategoryQuestion(palette: palette, footnote: QuestionsFlow.footnote(isScanning: true), initial: .place, onNext: { _ in }))
         case "question3":
-            return AnyView(DoneQuestion(palette: palette, footnote: QuestionsFlow.footnote(question: 3, read: 143, isScanning: true), initial: nil, onNext: { _ in }))
+            return AnyView(DoneQuestion(palette: palette, footnote: QuestionsFlow.footnote(isScanning: true), initial: nil, onNext: { _ in }))
         case "question4":
-            return AnyView(WindDownQuestion(palette: palette, footnote: QuestionsFlow.footnote(question: 4, read: 197, isScanning: true), initial: 22 * 60 + 30, onNext: { _ in }))
-        case "question5":
-            return AnyView(PeakQuestion(palette: palette, footnote: QuestionsFlow.footnote(question: 5, read: 214, isScanning: false), initial: .lateNight, onNext: { _ in }, onSkip: {}))
+            return AnyView(WindDownQuestion(palette: palette, footnote: QuestionsFlow.footnote(isScanning: false), initial: 22 * 60 + 30, onNext: { _ in }))
         case "finishing":
             return AnyView(FinishingUpScreen(palette: palette, read: 182, total: 240))
         case "sharecard":
@@ -104,7 +102,8 @@ enum SnapshotGallery {
         case "widgetguide":
             return AnyView(WidgetGuide(palette: palette))
         case "paywall":
-            return AnyView(PaywallView(purchases: PurchaseService(apiKey: nil, appUserID: nil), palette: palette, privacyPolicy: nil, onClose: {}, onPurchased: {}))
+            let items = (SampleData.comingUp + [SampleData.item(.place, "Ramen Ikkyu", daysAgo: 21)]).map { PaywallItem($0, now: SampleData.now) }
+            return AnyView(PaywallView(purchases: PurchaseService(apiKey: nil, appUserID: nil), palette: palette, items: items, privacyPolicy: nil, onClose: {}, onPurchased: {}))
         case "lab":
             return AnyView(DesignLabView())
         default:

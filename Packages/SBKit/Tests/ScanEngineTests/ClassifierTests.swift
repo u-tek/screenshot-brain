@@ -79,6 +79,49 @@ enum Fixtures {
         "Network name: CafeGuest",
         "Password: flatwhite2024",
     ])
+    static let tweet = screenshot([
+        "Dan",
+        "@danwrites",
+        "the best part of any drive is the 2am servo pie",
+        "1,204 Reposts 89 Quotes 12.3K Likes",
+        "#roadtrip #pies",
+    ])
+    static let show = screenshot([
+        "Netflix",
+        "Severance",
+        "Season 2",
+        "10 Episodes",
+        "Watch Now",
+        "Starring Adam Scott",
+    ])
+    static let artist = screenshot([
+        "Spotify",
+        "Mallrat",
+        "2.1M monthly listeners",
+        "Butterfly Blue · Album",
+        "Follow",
+    ])
+    static let book = screenshot([
+        "Goodreads",
+        "The Secret History",
+        "by Donna Tartt",
+        "Want to Read",
+        "Hardcover, 559 pages",
+    ])
+    static let stay = screenshot([
+        "Airbnb",
+        "Cabin near Byron Bay",
+        "Superhost",
+        "$240 per night",
+        "Check availability",
+    ])
+    static let email = screenshot([
+        "Inbox",
+        "From: Jess",
+        "To: me",
+        "Subject: Lunch plans",
+        "see you at the beach",
+    ])
     static let meme = screenshot([
         "me pretending to be fine",
         "lol",
@@ -107,9 +150,47 @@ enum Fixtures {
         #expect(result.category == .recipe, "signals: \(result.signals.map(\.name))")
     }
 
-    @Test func chatIsReference() {
+    @Test func chatIsAMessage() {
         let result = classify(Fixtures.chat)
-        #expect(result.category == .reference, "signals: \(result.signals.map(\.name))")
+        #expect(result.category == .message, "signals: \(result.signals.map(\.name))")
+        #expect(!result.category.isActionable)
+    }
+
+    @Test func emailIsAMessage() {
+        let result = classify(Fixtures.email)
+        #expect(result.category == .message, "signals: \(result.signals.map(\.name))")
+    }
+
+    @Test func tweetIsAPost() {
+        let result = classify(Fixtures.tweet)
+        #expect(result.category == .post, "signals: \(result.signals.map(\.name))")
+    }
+
+    @Test func showIsToWatch() {
+        let result = classify(Fixtures.show)
+        #expect(result.category == .watch, "signals: \(result.signals.map(\.name))")
+        #expect(result.confidence >= 0.8)
+    }
+
+    @Test func artistIsToListen() {
+        let result = classify(Fixtures.artist)
+        #expect(result.category == .listen, "signals: \(result.signals.map(\.name))")
+    }
+
+    @Test func bookIsToRead() {
+        let result = classify(Fixtures.book)
+        #expect(result.category == .read, "signals: \(result.signals.map(\.name))")
+    }
+
+    @Test func stayIsATrip() {
+        let result = classify(Fixtures.stay)
+        #expect(result.category == .travel, "signals: \(result.signals.map(\.name))")
+    }
+
+    @Test func aLeanIsAssignedBelowTheDisplayBar() {
+        let result = classify(screenshot(["Spotify", "Butterfly Blue"]))
+        #expect(result.category == .listen, "signals: \(result.signals.map(\.name))")
+        #expect(result.confidence < 0.8)
     }
 
     @Test func boardingPassIsReference() {
@@ -120,7 +201,7 @@ enum Fixtures {
         #expect(classify(Fixtures.wifi).category == .reference)
     }
 
-    @Test func uncertainScreenshotsAreOtherNeverReference() {
+    @Test func uncertainScreenshotsAreOther() {
         let result = classify(Fixtures.meme)
         #expect(result.category == .other)
         #expect(result.confidence < 0.8)

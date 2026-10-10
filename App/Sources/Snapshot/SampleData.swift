@@ -54,4 +54,11 @@ enum SampleData {
         (.recipe, (0..<4).map { item(.recipe, "Recipe \($0)", daysAgo: 60 - Double($0)) }),
         (.event, [gig, comingUp[1]]),
     ]
+
+    static let filed: [(ItemCategory, [ScreenshotItem])] = [
+        (.message, (0..<42).map { item(.message, "Chat \($0)", daysAgo: Double($0), state: .reference) }),
+        (.post, (0..<18).map { item(.post, "Post \($0)", daysAgo: Double($0), state: .reference) }),
+        (.reference, (0..<11).map { item(.reference, "Receipt \($0)", daysAgo: Double($0), state: .reference) }),
+        (.other, (0..<7).map { item(.other, "Photo \($0)", daysAgo: Double($0), state: .reference) }),
+    ]
 }
