@@ -33,6 +33,28 @@ public enum Haptics {
     public static func success() {
         UINotificationFeedbackGenerator().notificationOccurred(.success)
     }
+
+    // The ruler's detents fire many times a second, so their generators are made once and kept
+    // warm: a fresh generator each time lands late, and the clicks drift behind the finger.
+    private static let detentGenerator = UISelectionFeedbackGenerator()
+    private static let majorDetentGenerator = UIImpactFeedbackGenerator(style: .rigid)
+
+    /// Call when a drag on a ruler starts, so its first click is on time.
+    public static func prepareDetents() {
+        detentGenerator.prepare()
+        majorDetentGenerator.prepare()
+    }
+
+    /// A ruler passing a tick: a light click, firmer on every fifth.
+    public static func detent(major: Bool) {
+        if major {
+            majorDetentGenerator.impactOccurred(intensity: 0.75)
+            majorDetentGenerator.prepare()
+        } else {
+            detentGenerator.selectionChanged()
+            detentGenerator.prepare()
+        }
+    }
 }
 
 /// Named motion. Springs everywhere; nothing linear except the slow drift of light.

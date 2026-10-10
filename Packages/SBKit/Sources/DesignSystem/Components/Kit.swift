@@ -600,10 +600,24 @@ public struct SBLight: View {
     }
 
     public var body: some View {
-        Ellipse()
-            .fill(color)
+        // A gradient falling off like a blurred ellipse, not a blur filter: a filter is redrawn
+        // every frame anything around it moves (a card being dragged), which costs frames.
+        Color.clear
             .frame(width: width, height: height)
-            .blur(radius: blur)
+            .overlay {
+                EllipticalGradient(
+                    stops: [
+                        .init(color: color, location: 0),
+                        .init(color: color.opacity(0.75), location: 0.28),
+                        .init(color: color.opacity(0.3), location: 0.42),
+                        .init(color: color.opacity(0), location: 0.5),
+                    ],
+                    center: .center,
+                    startRadiusFraction: 0,
+                    endRadiusFraction: 1
+                )
+                .frame(width: width + blur * 2, height: height + blur * 2)
+            }
             .opacity(opacity)
             .allowsHitTesting(false)
             .accessibilityHidden(true)
@@ -672,6 +686,8 @@ public struct SBKindTile: View {
                     .position(x: proxy.size.width / 2, y: 0)
                     .blur(radius: 36)
             }
+            // Blurred once into a bitmap, so scrolling moves pixels instead of re-blurring.
+            .drawingGroup()
             (Text(title.uppercased()) + Text("  ·  \(count)").foregroundColor(SBColor.ink2))
                 .sbText(.label)
                 .padding(.bottom, 26)
@@ -718,6 +734,7 @@ public struct SBRampCard<Content: View>: View {
                             .position(x: proxy.size.width * wellCenter.x, y: proxy.size.height * wellCenter.y)
                             .blur(radius: 6)
                     }
+                    .drawingGroup()
                 }
                 .clipShape(shape)
             }

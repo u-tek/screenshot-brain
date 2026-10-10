@@ -21,7 +21,7 @@ final class DeviceTilt {
     func retain() {
         users += 1
         guard users == 1, manager.isDeviceMotionAvailable else { return }
-        manager.deviceMotionUpdateInterval = 1.0 / 30
+        manager.deviceMotionUpdateInterval = 1.0 / 60
         manager.startDeviceMotionUpdates()
     }
 

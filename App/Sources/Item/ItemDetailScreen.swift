@@ -109,7 +109,8 @@ struct ItemDetailScreen: View {
                     ZStack {
                         SBColor.surface
                         SBLight(kind.core, width: 260, height: 300, opacity: 0.5, blur: 50)
-                        AssetImage(item.assetLocalID, maxPixelSize: 1400, allowsNetwork: true)
+                        // Whole, not cropped: a landscape or scrolling screenshot keeps all of itself.
+                        AssetImage(item.assetLocalID, maxPixelSize: 1400, allowsNetwork: true, contentMode: .fit, backdrop: true)
                             .aspectRatio(9 / 19.5, contentMode: .fit)
                             .frame(maxHeight: 260)
                             .clipShape(RoundedRectangle(cornerRadius: SBRadius.shot, style: .continuous))

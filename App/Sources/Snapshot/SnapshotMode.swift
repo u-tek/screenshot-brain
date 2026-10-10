@@ -130,6 +130,12 @@ struct SnapshotHost: View {
     let mode: SnapshotMode
     @StateObject private var stepper = SnapshotStepper()
 
+    init(mode: SnapshotMode) {
+        self.mode = mode
+        // Before any screen asks for a sample item's screenshot.
+        SampleScreenshots.register()
+    }
+
     var body: some View {
         let shot = mode.shots[min(stepper.index, mode.shots.count - 1)]
         Group {

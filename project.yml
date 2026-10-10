@@ -45,6 +45,8 @@ targets:
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         ITSAppUsesNonExemptEncryption: false
         LSRequiresIPhoneOS: true
+        # ProMotion: without this, iPhone apps are held to 60 frames a second.
+        CADisableMinimumFrameDurationOnPhone: true
         UILaunchScreen:
           UIColorName: LaunchMist
         UISupportedInterfaceOrientations:

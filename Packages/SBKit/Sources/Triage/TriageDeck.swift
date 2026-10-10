@@ -217,14 +217,18 @@ public struct TriageDeck: View {
     }
 }
 
-/// One card: the screenshot filling the upper part, lit by its kind, and a folder panel with the
-/// kind, the title, when, and the date or the suggested action. Groups show as a stack.
+/// One card: the whole screenshot in the upper part, over a wash of its own colours, and a folder
+/// panel with the kind, the title, when, and the date or the suggested action. Groups show as a
+/// stack.
 struct TriageCardView: View {
     let card: TriageCard
     var direction: TriageDecision?
     var strength: Double = 0
     /// Only the top card shows its group's stack: behind it, the deck already does.
     var showsGroup = true
+
+    /// How far the panel's folder tab rises above the rest of its top edge.
+    private static let tabHeight: CGFloat = 28
 
     var body: some View {
         let item = card.item
@@ -235,13 +239,21 @@ struct TriageCardView: View {
                 StackEdge(shape: shape, depth: 2)
                 StackEdge(shape: shape, depth: 1)
             }
-            ZStack(alignment: .bottom) {
-                // The screenshot fills the card above the panel, lit by its kind behind.
+            // The screenshot runs on under the panel's tab, so the tab sits on it.
+            VStack(spacing: -Self.tabHeight) {
                 ZStack {
                     kind.deep
                     SBLight(kind.core, width: 300, height: 360, opacity: 0.55, blur: 60)
-                    AssetImage(item.assetLocalID, maxPixelSize: 900, alignment: .top)
-                    LinearGradient(colors: [SBColor.shade(0.12), .clear, .clear, SBColor.shade(0.5)], startPoint: .top, endPoint: .bottom)
+                    // The whole screenshot: a card's shape rarely matches a screenshot's, and
+                    // cropping one to fill left too little of it to read.
+                    AssetImage(
+                        item.assetLocalID,
+                        maxPixelSize: 1600,
+                        contentMode: .fit,
+                        backdrop: true,
+                        insets: EdgeInsets(top: 16, leading: 16, bottom: Self.tabHeight + 14, trailing: 16),
+                        cornerRadius: 14
+                    )
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 panel(item, kind: kind)

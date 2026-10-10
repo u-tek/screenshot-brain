@@ -190,6 +190,8 @@ public struct LightTile: View {
                         .position(x: proxy.size.width / 2, y: 0)
                         .blur(radius: 36)
                 }
+                // Blurred once into a bitmap, so scrolling moves pixels instead of re-blurring.
+                .drawingGroup()
             }
             .clipShape(shape)
         }

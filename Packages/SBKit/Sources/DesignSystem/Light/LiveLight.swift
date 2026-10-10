@@ -56,7 +56,7 @@ public struct SBLiveBackground: View {
 
     public var body: some View {
         GeometryReader { proxy in
-            TimelineView(.animation(minimumInterval: 1.0 / 30, paused: isStill || !isVisible)) { context in
+            TimelineView(.animation(minimumInterval: nil, paused: isStill || !isVisible)) { context in
                 let frame = light.frame(toward: ambience, at: context.date.timeIntervalSinceReferenceDate, still: isStill)
                 LiveLight(frame: frame, size: proxy.size, night: colorScheme == .dark)
             }

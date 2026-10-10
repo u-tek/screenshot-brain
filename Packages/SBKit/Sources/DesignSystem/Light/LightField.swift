@@ -33,7 +33,7 @@ public struct LightField: View {
 
     public var body: some View {
         GeometryReader { proxy in
-            TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !isDrifting)) { context in
+            TimelineView(.animation(minimumInterval: nil, paused: !isDrifting)) { context in
                 if isDrifting {
                     morphingField(size: proxy.size, time: context.date.timeIntervalSinceReferenceDate)
                 } else {
