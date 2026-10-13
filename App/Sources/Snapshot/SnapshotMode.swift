@@ -117,6 +117,10 @@ enum SnapshotGallery {
             return AnyView(WidgetGuide(palette: palette))
         case "home.sorted":
             return AnyView(NavigationStack { HomeScreen(home: .sampleSorted()) })
+        case "home.pick":
+            return AnyView(NavigationStack { HomeScreen(home: .samplePick()) })
+        case "home.weekend":
+            return AnyView(NavigationStack { HomeScreen(home: .sampleWeekend()) })
         case "sortdone.tally":
             return AnyView(SortDone(
                 left: 0,

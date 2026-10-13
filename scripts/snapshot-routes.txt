@@ -35,6 +35,8 @@ notifications
 widgetguide
 paywall
 home.sorted
+home.pick
+home.weekend
 sortdone.tally
 store.1
 store.2

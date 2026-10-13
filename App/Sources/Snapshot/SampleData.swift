@@ -6,6 +6,13 @@ import Store
 enum SampleData {
     /// 9:41, like the status bar in the snapshots.
     static let now = Calendar.current.date(bySettingHour: 9, minute: 41, second: 0, of: Date()) ?? Date()
+    /// The start of the Tuesday of this week, for screens that change with the day.
+    static let tuesday: Date = {
+        let calendar = Calendar.current
+        let start = calendar.startOfDay(for: now)
+        let back = (calendar.component(.weekday, from: start) - 3 + 7) % 7
+        return calendar.date(byAdding: .day, value: -back, to: start) ?? start
+    }()
 
     static func item(
         _ category: ItemCategory,

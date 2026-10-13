@@ -30,13 +30,15 @@ struct MainScreen: View {
                 onSort: { isSorting = true },
                 onKept: { path.append(HomeRoute.kept) },
                 onDidIt: openDidIt,
-                onSettings: { path.append(HomeRoute.settings) }
+                onSettings: { path.append(HomeRoute.settings) },
+                isPremium: model.isPremium,
+                onShowPlans: { showsPaywall = true }
             )
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: HomeRoute.self) { route in
                 switch route {
                 case .item(let id):
-                    ItemDetailScreen(itemID: id) { home.reload() }
+                    ItemDetailScreen(itemID: id, onChange: { home.reload() }, onShowPlans: { showsPaywall = true })
                 case .category(let category):
                     CategoryScreen(category: category, items: home.shelves.first { $0.category == category }?.items ?? [])
                 case .filed(let category):
@@ -48,16 +50,33 @@ struct MainScreen: View {
                         isPremium: model.isPremium,
                         onDeleteDropped: { deleteDropped() },
                         onReveal: openReveal,
-                        onDidIt: openDidIt
+                        onDidIt: openDidIt,
+                        onShowPlans: { showsPaywall = true },
+                        onSmartShelf: { shelf in
+                            model.analytics.track(.smartShelfOpened)
+                            path.append(HomeRoute.smartShelf(shelf))
+                        },
+                        onWeeklyShop: {
+                            model.analytics.track(.weeklyShopOpened)
+                            path.append(HomeRoute.weeklyShop)
+                        }
                     )
                 case .didIt:
                     DidItScreen(home: home, palette: model.palette, onShared: { model.analytics.track(.didItShared) })
                 case .settings:
                     SettingsScreen(onShowPlans: { showsPaywall = true })
+                case .smartShelf(let shelf):
+                    SmartShelfScreen(shelf: shelf, items: home.smartShelves.first { $0.0 == shelf }?.1 ?? [])
+                case .weeklyShop:
+                    WeeklyShopScreen(items: home.keptRecipes)
                 }
             }
         }
-        .onAppear { home.reload() }
+        .onAppear {
+            home.meaningSearchEnabled = model.isPremium
+            home.reload()
+        }
+        .onChange(of: model.isPremium) { home.meaningSearchEnabled = $0 }
         .onChange(of: model.isScanning) { scanning in
             if !scanning { home.reload() }
         }

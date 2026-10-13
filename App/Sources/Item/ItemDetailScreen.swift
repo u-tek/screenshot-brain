@@ -254,6 +254,7 @@ struct ItemDetailScreen: View {
         return Button {
             Haptics.selection()
             if isPremium {
+                model.analytics.track(.cookModeOpened)
                 showsCookMode = true
             } else {
                 onShowPlans()
@@ -317,6 +318,21 @@ struct ItemDetailScreen: View {
         }
         model.itemsChanged()
         onChange()
+        if state == .done, item.state != .done {
+            model.analytics.track(.itemMarkedDone)
+            flash(Self.doneLine(monthCount: Self.doneThisMonth((try? database.doneLog()) ?? [])))
+        }
+    }
+
+    /// How many things were done this calendar month, this one included.
+    static func doneThisMonth(_ log: [DoneEntry], now: Date = Date(), calendar: Calendar = .current) -> Int {
+        log.filter { calendar.isDate($0.doneAt, equalTo: now, toGranularity: .month) }.count
+    }
+
+    /// "Done." the first time in a month, then a running count. No streaks: it's the month's tally,
+    /// and it starts again quietly on the 1st.
+    static func doneLine(monthCount: Int) -> String {
+        monthCount <= 1 ? "Done. First one this month." : "Done. That's \(monthCount) this month."
     }
 
     /// A photo or note added: show it, and let Home's log know.

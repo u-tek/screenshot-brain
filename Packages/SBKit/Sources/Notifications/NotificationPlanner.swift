@@ -78,6 +78,8 @@ public struct PlannedNotification: Hashable, Sendable {
         /// A quiet night: something kept a while, brought back up.
         case resurface
         case monthlyReveal
+        /// Thursday evening: two kept things for the weekend.
+        case weekendPlan
     }
 
     public var kind: Kind
@@ -101,6 +103,7 @@ public struct NotificationHistory: Codable, Hashable, Sendable {
     public var winBackSentAt: Date?
     public var lateWinBackSentAt: Date?
     public var lastResurfacedAt: Date?
+    public var lastWeekendPlanAt: Date?
     public var trialReminderSent = false
     /// "2026-10" for the month whose Reveal was announced.
     public var monthlyRevealSent: String?
@@ -116,6 +119,7 @@ public struct NotificationHistory: Codable, Hashable, Sendable {
         winBackSentAt = try container.decodeIfPresent(Date.self, forKey: .winBackSentAt)
         lateWinBackSentAt = try container.decodeIfPresent(Date.self, forKey: .lateWinBackSentAt)
         lastResurfacedAt = try container.decodeIfPresent(Date.self, forKey: .lastResurfacedAt)
+        lastWeekendPlanAt = try container.decodeIfPresent(Date.self, forKey: .lastWeekendPlanAt)
         trialReminderSent = try container.decodeIfPresent(Bool.self, forKey: .trialReminderSent) ?? false
         monthlyRevealSent = try container.decodeIfPresent(String.self, forKey: .monthlyRevealSent)
     }
@@ -133,6 +137,7 @@ public struct NotificationHistory: Codable, Hashable, Sendable {
         case .winBack: winBackSentAt = plan.fireAt
         case .lateWinBack: lateWinBackSentAt = plan.fireAt
         case .resurface: lastResurfacedAt = plan.fireAt
+        case .weekendPlan: lastWeekendPlanAt = plan.fireAt
         case .trialReminder: trialReminderSent = true
         case .monthlyReveal: monthlyRevealSent = NotificationPlanner.monthKey(plan.fireAt, calendar: calendar)
         case .recap, .expiry, .digest: break
@@ -217,6 +222,16 @@ public enum NotificationPlanner {
 
         let isSunday = calendar.component(.weekday, from: fireAt) == 1
 
+        // Thursday evening: the weekend, from what's been kept. Takes the night's one slot, so a
+        // recap waits a day.
+        if calendar.component(.weekday, from: fireAt) == 5,
+           fireAt.timeIntervalSince(context.history.lastWeekendPlanAt ?? .distantPast) > 3 * 86_400 {
+            let plan = weekendPlan(context, at: fireAt)
+            if plan.count >= 2 {
+                return PlannedNotification(kind: .weekendPlan, body: NotificationCopy.weekendPlan(plan, at: fireAt, calendar: calendar), fireAt: fireAt, itemID: nil, link: "screenshotbrain://home")
+            }
+        }
+
         // Something new: the recap. It names one new thing, not the same one every night.
         if let first = context.newItems.first(where: { !context.history.recappedItemIDs.contains($0.id) && !context.history.nudgedItemIDs.contains($0.id) }) ?? context.newItems.first {
             let body = isSunday
@@ -240,6 +255,28 @@ public enum NotificationPlanner {
             return PlannedNotification(kind: .resurface, body: NotificationCopy.resurface(item, keptAt: keptAt, at: fireAt), fireAt: fireAt, itemID: item.id, link: "screenshotbrain://item/\(item.id)")
         }
         return nil
+    }
+
+    /// Up to two named things for the coming weekend: dated ones on Friday to Sunday first, then
+    /// places and events kept longest.
+    static func weekendPlan(_ context: NotificationContext, at fireAt: Date) -> [NotableItem] {
+        let end = fireAt.addingTimeInterval(4 * 86_400)
+        let named = { (item: NotableItem) -> Bool in
+            guard let title = item.title?.trimmingCharacters(in: .whitespacesAndNewlines) else { return false }
+            return !title.isEmpty && title.count <= 40
+        }
+        let dated = context.datedItems.filter { item in
+            guard let due = item.dueDate, named(item) else { return false }
+            return due > fireAt && due <= end
+        }
+        let outings = context.keptItems.filter { item in
+            named(item) && item.dueDate == nil && [.place, .event, .travel].contains(item.category)
+        }
+        var plan: [NotableItem] = []
+        for item in dated + outings where plan.count < 2 && !plan.contains(where: { $0.id == item.id }) {
+            plan.append(item)
+        }
+        return plan
     }
 
     /// The next time the clock reads the recap time.
@@ -356,6 +393,17 @@ public enum NotificationCopy {
         case .product: return "The \(name(item)) deal ends \(when). Still want it?"
         default: return "\(name(item)) is \(when). Still keen?"
         }
+    }
+
+    /// "This weekend, from your saves: Fontaines D.C. on Saturday, and Ramen Ikkyu."
+    public static func weekendPlan(_ items: [NotableItem], at now: Date, calendar: Calendar) -> String {
+        let parts = items.map { item -> String in
+            guard let due = item.dueDate else { return name(item) }
+            let when = day(due, from: now, calendar: calendar)
+            return when == "tonight" || when == "tomorrow" ? "\(name(item)) \(when)" : "\(name(item)) on \(when)"
+        }
+        let list = parts.count > 1 ? parts.dropLast().joined(separator: ", ") + ", and " + parts[parts.count - 1] : parts.first ?? ""
+        return "This weekend, from your saves: \(list)."
     }
 
     public static func digest(saved: Int, done: Int, waiting: Int) -> String {

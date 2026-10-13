@@ -204,6 +204,28 @@ import Testing
         #expect(plan.body == "That recipe you saved 2 months ago. Cooking it this week?")
     }
 
+    @Test func thursdayEveningIsTheWeekendPlan() throws {
+        let thursday = start.addingTimeInterval(86_400)
+        let saturday = calendar.date(from: DateComponents(year: 2026, month: 10, day: 10, hour: 20))!
+        let fontaines = NotableItem(id: "f", title: "Fontaines D.C.", category: .event, dueDate: saturday)
+        let list = [kept("Ramen Ikkyu", daysAgo: 21, from: thursday), kept("Tate Modern late", daysAgo: 5, from: thursday)]
+        let plan = try #require(NotificationPlanner.plan(context(now: thursday, dated: [fontaines], kept: list), calendar: calendar))
+        #expect(plan.kind == .weekendPlan)
+        #expect(plan.body == "This weekend, from your saves: Fontaines D.C. on Saturday, and Ramen Ikkyu.")
+        #expect(plan.link == "screenshotbrain://home")
+
+        // One thing isn't a plan: the night goes on as usual.
+        let one = try #require(NotificationPlanner.plan(context(now: thursday, kept: [list[0]]), calendar: calendar))
+        #expect(one.kind == .resurface)
+
+        // Not on other nights, and not twice in a week.
+        #expect(NotificationPlanner.plan(context(now: start, kept: list), calendar: calendar)?.kind != .weekendPlan)
+        var history = NotificationHistory()
+        history.record(plan, calendar: calendar)
+        let laterThursday = thursday.addingTimeInterval(3_600)
+        #expect(NotificationPlanner.plan(context(now: laterThursday, dated: [fontaines], history: history, kept: list), calendar: calendar)?.kind != .weekendPlan)
+    }
+
     @Test func sundayDigest() throws {
         let sunday = calendar.date(from: DateComponents(year: 2026, month: 10, day: 11, hour: 18))!
         let plan = try #require(NotificationPlanner.plan(context(now: sunday, weekSaved: 4, weekDone: 2), calendar: calendar))

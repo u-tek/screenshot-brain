@@ -24,12 +24,22 @@ final class HomeModel: ObservableObject {
     /// Screenshots waiting to be sorted (near-duplicates count once).
     @Published private(set) var toSort = 0
     @Published private(set) var results: [ScreenshotItem] = []
+    /// A fixed "now" for design snapshots, so the weekend plan doesn't depend on the day CI runs.
+    var fixedNow: Date?
+    /// How many times today's pick has been swapped today (Premium).
+    @Published private(set) var reroll = PickReroll.today()
     @Published var query = "" {
         didSet { scheduleSearch() }
     }
 
+    /// Premium: search by meaning as well as by keyword ("that cosy place", "the thing in March").
+    var meaningSearchEnabled = false {
+        didSet { if meaningSearchEnabled != oldValue { scheduleSearch() } }
+    }
+
     private let database: AppDatabase?
     private var searchTask: Task<Void, Never>?
+    private let meaning = MeaningSearch()
 
     init(database: AppDatabase?) {
         self.database = database
@@ -54,8 +64,24 @@ final class HomeModel: ObservableObject {
         droppedCount = (try? database.dropped().count) ?? 0
         doneLog = (try? database.doneLog()) ?? []
         toSort = (try? database.triageDeck(limit: .max).count) ?? 0
+        reroll = PickReroll.today(now: now)
         // What was found may have been decided or deleted since.
         scheduleSearch()
+    }
+
+    /// Kept things regrouped by occasion (free, date night, rainy day…), for Kept's shelves.
+    var smartShelves: [(SmartShelf, [ScreenshotItem])] {
+        SmartShelf.group(shelves.flatMap(\.items))
+    }
+
+    /// Another pick (or another weekend), for Premium.
+    func pickAnother() {
+        reroll = PickReroll.increment()
+    }
+
+    /// Kept recipes, for this week's shop.
+    var keptRecipes: [ScreenshotItem] {
+        shelves.first { $0.category == .recipe }?.items ?? []
     }
 
     /// The fullest shelf first.
@@ -89,7 +115,14 @@ final class HomeModel: ObservableObject {
         searchTask = Task {
             try? await Task.sleep(nanoseconds: 180_000_000)
             guard !Task.isCancelled else { return }
-            results = (try? database.search(query)) ?? []
+            let found: [ScreenshotItem]
+            if meaningSearchEnabled {
+                found = (try? await meaning.search(query, in: database)) ?? []
+            } else {
+                found = (try? database.search(query)) ?? []
+            }
+            guard !Task.isCancelled else { return }
+            results = found
         }
     }
 
@@ -97,6 +130,25 @@ final class HomeModel: ObservableObject {
     static func sampleSorted() -> HomeModel {
         let model = sample()
         model.toSort = 0
+        model.fixedNow = SampleData.tuesday
+        return model
+    }
+
+    /// "All sorted" on a Friday evening: the weekend plan.
+    static func sampleWeekend() -> HomeModel {
+        let model = sample()
+        model.toSort = 0
+        model.fixedNow = SampleData.tuesday.addingTimeInterval(3 * 86_400 + 9 * 3_600)
+        return model
+    }
+
+    /// "All sorted" with nothing dated: today's pick.
+    static func samplePick() -> HomeModel {
+        let model = sample()
+        model.toSort = 0
+        model.comingUp = []
+        model.shelves = model.shelves.filter { $0.category != .event }
+        model.fixedNow = SampleData.tuesday.addingTimeInterval(10 * 3_600)
         return model
     }
 }

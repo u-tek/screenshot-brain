@@ -13,6 +13,8 @@ enum HomeRoute: Hashable {
     case kept
     case didIt
     case settings
+    case smartShelf(SmartShelf)
+    case weeklyShop
 }
 
 /// Home has one job: how many screenshots are waiting, and the button that sorts them. What's
@@ -24,6 +26,8 @@ struct HomeScreen: View {
     var onKept: () -> Void = {}
     var onDidIt: () -> Void = {}
     var onSettings: () -> Void = {}
+    var isPremium = false
+    var onShowPlans: () -> Void = {}
 
     var body: some View {
         VStack(spacing: 0) {
@@ -68,7 +72,7 @@ struct HomeScreen: View {
 
     /// Not a dead end: once it's all sorted, one thing from what's been kept to go and do.
     private var allSorted: some View {
-        AllSorted(pick: home.nextUp)
+        AllSorted(pick: home.nextUp, weekend: home.weekendPlan, isPremium: isPremium, onAnother: { home.pickAnother() }, onShowPlans: onShowPlans)
     }
 
     /// "17 kept" opening Kept, and "6 done" opening the did-it log. Each shows once there's
@@ -154,6 +158,9 @@ struct KeptScreen: View {
     var onDeleteDropped: () -> Void = {}
     var onReveal: (RevealPeriod) -> Void = { _ in }
     var onDidIt: () -> Void = {}
+    var onShowPlans: () -> Void = {}
+    var onSmartShelf: (SmartShelf) -> Void = { _ in }
+    var onWeeklyShop: () -> Void = {}
 
     var body: some View {
         VStack(spacing: 0) {
@@ -173,6 +180,17 @@ struct KeptScreen: View {
                         }
                         if !home.shelves.isEmpty {
                             StillWantSection(shelves: home.shelves)
+                        }
+                        if !home.isSearching {
+                            let smart = home.smartShelves
+                            if !smart.isEmpty {
+                                SmartShelvesSection(shelves: smart, isPremium: isPremium, palette: palette, onLocked: onShowPlans, open: onSmartShelf)
+                            }
+                            if !home.keptRecipes.isEmpty {
+                                WeeklyShopRow(recipes: home.keptRecipes.count, isPremium: isPremium) {
+                                    isPremium ? onWeeklyShop() : onShowPlans()
+                                }
+                            }
                         }
                         if !home.filed.isEmpty {
                             FiledSection(shelves: home.filed)
@@ -380,7 +398,7 @@ private struct SearchSection: View {
             HStack(spacing: 10) {
                 SBIconView(.search, size: 18)
                     .foregroundStyle(SBColor.ink2)
-                TextField("Wifi password, that address, the recipe…", text: $home.query)
+                TextField(home.meaningSearchEnabled ? "That cosy place, the gig in March…" : "Wifi password, that address, the recipe…", text: $home.query)
                     .font(SBFont.body(16))
                     .foregroundStyle(SBColor.ink)
                     .focused($focused)
@@ -510,6 +528,39 @@ private struct DroppedRow: View {
         }
         .padding(18)
         .background(RoundedRectangle(cornerRadius: SBRadius.tile, style: .continuous).fill(SBColor.surface))
+    }
+}
+
+/// The way into this week's shop: tick the recipes you'll cook, get one list. Premium.
+private struct WeeklyShopRow: View {
+    let recipes: Int
+    let isPremium: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("This week's shop")
+                        .sbText(.title)
+                    Text(recipes == 1 ? "One list from the recipe you kept" : "One list from the \(recipes) recipes you kept")
+                        .sbText(.body)
+                }
+                Spacer()
+                if isPremium {
+                    SBIconView(.system("chevron.right"), size: 14)
+                        .foregroundStyle(SBColor.ink2)
+                } else {
+                    SBChip("Premium")
+                }
+            }
+            .padding(18)
+            .background(RoundedRectangle(cornerRadius: SBRadius.tile, style: .continuous).fill(SBColor.surface))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(SBPressStyle())
+        .accessibilityElement(children: .combine)
+        .accessibilityHint(Text(isPremium ? "Opens this week's shop" : "Shows the plans"))
     }
 }
 

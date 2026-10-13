@@ -61,6 +61,14 @@ public enum AnalyticsEvent: String, CaseIterable, Sendable {
     case notificationOpened = "notification.opened"
     case paywallDismissed = "paywall.dismissed"
     case itemMarkedDone = "item.markedDone"
+
+    // Suggestions, all from what's been kept. `premium` is 1 for a Premium user (free taps go to
+    // the plans); `count` is how many things the weekend plan holds.
+    case pickRerolled = "pick.rerolled"
+    case weekendPlanShown = "weekendPlan.shown"
+    case smartShelfOpened = "smartShelf.opened"
+    case weeklyShopOpened = "weeklyShop.opened"
+    case cookModeOpened = "cookMode.opened"
 }
 
 /// Privacy-first analytics: event counts only.
