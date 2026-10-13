@@ -2,6 +2,7 @@ import Core
 import DesignSystem
 import Paywall
 import Store
+import StoreKit
 import SwiftUI
 
 /// Recap time, premium, the privacy statement, the account. Opened from the gear on Home.
@@ -13,11 +14,13 @@ struct SettingsScreen: View {
     @State private var deleteFailed = false
     @State private var showsDebug = false
     @State private var restoreMessage: String?
+    @State private var managesSubscription = false
     var onShowPlans: () -> Void = {}
 
     var body: some View {
         VStack(spacing: 0) {
             SBNavHeader(onLeading: { dismiss() })
+                .manageSubscriptionsSheet(isPresented: $managesSubscription)
             ScrollView {
                 VStack(alignment: .leading, spacing: 26) {
                     VStack(alignment: .leading, spacing: 8) {
@@ -41,6 +44,12 @@ struct SettingsScreen: View {
                         if !model.isPremium {
                             Button("See plans", action: onShowPlans)
                                 .font(SBFont.body(16, weight: .semibold))
+                                .foregroundStyle(SBColor.ink)
+                                .buttonStyle(.plain)
+                        } else {
+                            // Cancelling is as easy as starting: Apple's own sheet, right here.
+                            Button("Manage or cancel subscription") { managesSubscription = true }
+                                .font(SBFont.body(16))
                                 .foregroundStyle(SBColor.ink)
                                 .buttonStyle(.plain)
                         }

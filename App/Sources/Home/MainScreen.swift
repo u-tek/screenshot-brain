@@ -158,6 +158,8 @@ struct SortSession: View {
     /// Everything decided since sorting opened, across batches.
     @State private var sorted = TriageTally()
     @State private var nextUp: NextUp?
+    /// How many cards a batch holds (AppModel.sortCards).
+    static let batchSize = 30
     var onDeleteDropped: (@escaping @MainActor () -> Void) -> Void = { _ in }
     var onClose: () -> Void = {}
 
@@ -345,8 +347,11 @@ struct SortDone: View {
         .joined(separator: " · ")
     }
 
+    /// When one more batch clears the pile, say so: being close is the reason to carry on.
     private var moreToSort: String {
-        left == 1 ? "1 more to sort." : "\(left) more to sort."
+        if left == 1 { return "1 more to sort." }
+        if left <= SortSession.batchSize { return "\(left) left. One more go clears it." }
+        return "\(left) more to sort."
     }
 }
 
