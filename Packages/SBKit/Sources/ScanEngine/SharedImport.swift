@@ -41,7 +41,13 @@ extension ScanPipeline {
             guard let image = Self.halfResolution(data) else { discard(); continue }
 
             let item = ScreenshotItem(assetLocalID: identifier, createdAt: file.takenAt, updatedAt: now)
-            let read = await analyse(item, image: image, now: now)
+            guard let read = await attemptAnalysis(item, image: image, now: now) else {
+                // The nudity screen or Vision failed: it stays in the inbox for next time, and is
+                // given up on (never kept unscreened) after a week.
+                let deposited = (try? file.url.resourceValues(forKeys: [.creationDateKey]))?.creationDate ?? now
+                if now.timeIntervalSince(deposited) >= 7 * 86_400 { discard() }
+                continue
+            }
             // A flagged image is never kept: nothing could ever show it.
             if !read.isNSFWFlagged, let display = ScreenshotLibrary.downsample(data, maxPixelSize: Self.sharedDisplaySize) {
                 try? Self.writeJPEG(display, to: keep.appendingPathComponent("\(digest).jpg"))
@@ -65,12 +71,6 @@ extension ScanPipeline {
     }
 
     static func writeJPEG(_ image: CGImage, to url: URL) throws {
-        guard let destination = CGImageDestinationCreateWithURL(url as CFURL, UTType.jpeg.identifier as CFString, 1, nil) else {
-            throw CocoaError(.fileWriteUnknown)
-        }
-        CGImageDestinationAddImage(destination, image, [kCGImageDestinationLossyCompressionQuality: 0.85] as CFDictionary)
-        guard CGImageDestinationFinalize(destination) else {
-            throw CocoaError(.fileWriteUnknown)
-        }
+        try Thumbnailer.writeJPEG(image, to: url, quality: 0.85)
     }
 }

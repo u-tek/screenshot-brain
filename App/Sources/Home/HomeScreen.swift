@@ -128,7 +128,6 @@ struct StartSortingButton: View {
         }
         .buttonStyle(SBPressStyle())
         .padding(.horizontal, 32)
-        .accessibilityLabel(Text(title))
     }
 }
 
@@ -310,15 +309,7 @@ private struct StillWantSection: View {
 
     private func detail(_ shelf: HomeModel.Shelf) -> String {
         let oldest = shelf.items.first.map { ($0.stateChangedAt ?? $0.createdAt).formatted(.relative(presentation: .numeric, unitsStyle: .narrow)) } ?? ""
-        return "\(shelf.items.count) KEPT · OLDEST \(oldest.uppercased())"
-    }
-
-    private func palette(_ shelf: HomeModel.Shelf) -> LightPalette {
-        // The tile glows with the colours of the oldest safe thing on the shelf.
-        if let item = shelf.items.first(where: \.isSafeToDisplay) {
-            return .item(category: item.category, colors: item.palette, isSafeToDisplay: true)
-        }
-        return .category(shelf.category)
+        return "\(shelf.items.count) kept, oldest \(oldest)"
     }
 }
 
@@ -478,6 +469,7 @@ private struct DroppedRow: View {
                 SBChip("Delete")
             }
             .buttonStyle(SBPressStyle())
+            .accessibilityLabel(Text(count == 1 ? "Delete 1 dropped screenshot from Photos" : "Delete \(count) dropped screenshots from Photos"))
         }
         .padding(18)
         .background(RoundedRectangle(cornerRadius: SBRadius.tile, style: .continuous).fill(SBColor.surface))

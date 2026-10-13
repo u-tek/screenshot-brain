@@ -65,7 +65,8 @@ public struct WidgetItem: Hashable, Sendable {
             }
             return due.formatted(.dateTime.day().month(.abbreviated))
         }
-        let days = calendar.dateComponents([.day], from: item.createdAt, to: now).day ?? 0
+        // Calendar days, not 24-hour spans: 11pm last night is "yesterday" at 8am.
+        let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: item.createdAt), to: calendar.startOfDay(for: now)).day ?? 0
         switch days {
         case ..<1: return "Saved today"
         case 1: return "Saved yesterday"
@@ -173,9 +174,27 @@ public enum WidgetSchedule {
 }
 
 extension WidgetAccess {
+    /// The paywall writes these (see `PurchaseService`): the same keys, since the two modules
+    /// can't import each other. Both are in the App Group's defaults.
+    public static let expiryKey = "premium.expiresAt"
+    public static let trialEndedKey = "premium.trialEnded"
+    /// Premium that the app hasn't refreshed for this long past its expiry counts as over: the
+    /// app might simply not have been opened since it lapsed.
+    public static let expiryGrace: TimeInterval = 3 * 86_400
+
     /// Locked once the purchase state says there's no premium (the trial has ended or was never
-    /// started). Until it's known, the widget stays open rather than punish a slow first read.
-    public static func current(defaults: UserDefaults? = AppGroup.defaults()) -> WidgetAccess {
-        Entitlement.isPremium(defaults) == false ? .locked : .unlocked
+    /// started), or the stored expiry passed more than the grace ago. Until it's known, the
+    /// widget stays open rather than punish a slow first read.
+    public static func current(defaults: UserDefaults? = AppGroup.defaults(), now: Date = Date()) -> WidgetAccess {
+        if Entitlement.isPremium(defaults) == false { return .locked }
+        if let expiresAt = defaults?.object(forKey: expiryKey) as? Date, expiresAt.addingTimeInterval(expiryGrace) < now {
+            return .locked
+        }
+        return .unlocked
+    }
+
+    /// Whether a free trial ran and ended without becoming a purchase, for the locked card's words.
+    public static func trialEnded(defaults: UserDefaults? = AppGroup.defaults()) -> Bool {
+        defaults?.bool(forKey: trialEndedKey) ?? false
     }
 }

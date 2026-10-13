@@ -9,6 +9,11 @@ struct SavedThingEntry: TimelineEntry {
     let card: WidgetCard
     let score: Score
 
+    /// The database couldn't be read: the same "screenshot something" card, which opens the app.
+    static var openTheApp: SavedThingEntry {
+        SavedThingEntry(date: Date(), card: .screenshotSomething, score: Score(done: 0, total: 0))
+    }
+
     static let placeholder = SavedThingEntry(
         date: Date(),
         card: .item(WidgetItem(id: "placeholder", title: "That ramen place", category: .place, detail: "Saved 3 weeks ago", isUnreviewed: false, thumbnailName: nil, lightName: WidgetLight.fileName(for: .place))),
@@ -28,14 +33,15 @@ struct SavedThingProvider: TimelineProvider {
             completion(.placeholder)
             return
         }
-        let plan = WidgetStore.timeline()
-        completion(plan.entries.first.map(SavedThingEntry.init) ?? .placeholder)
+        // A snapshot only looks: it mustn't mark anything surfaced or touch the schedule.
+        let plan = WidgetStore.timeline(commit: false)
+        completion(plan.entries.first.map(SavedThingEntry.init) ?? .openTheApp)
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<SavedThingEntry>) -> Void) {
         let plan = WidgetStore.timeline()
         let entries = plan.entries.map(SavedThingEntry.init)
-        completion(Timeline(entries: entries.isEmpty ? [.placeholder] : entries, policy: .after(plan.reloadAt)))
+        completion(Timeline(entries: entries.isEmpty ? [.openTheApp] : entries, policy: .after(plan.reloadAt)))
     }
 }
 
@@ -71,11 +77,13 @@ extension SavedThingEntry {
 enum WidgetStore {
     static let database: AppDatabase? = try? AppDatabase.openShared()
 
-    static func timeline(now: Date = Date()) -> (entries: [WidgetEntryPlan], reloadAt: Date) {
+    static func timeline(now: Date = Date(), commit: Bool = true) -> (entries: [WidgetEntryPlan], reloadAt: Date) {
         guard let database else {
-            return ([], now.addingTimeInterval(3_600))
+            // Can't read the shared database: say so with a real state, and try again soon.
+            let card: WidgetCard = WidgetAccess.current(now: now) == .locked ? .locked : .screenshotSomething
+            return ([WidgetEntryPlan(date: now, card: card, score: Score(done: 0, total: 0))], now.addingTimeInterval(3_600))
         }
-        return WidgetTimeline(database: database, defaults: AppGroup.defaults()).build(access: .current(), now: now)
+        return WidgetTimeline(database: database, defaults: AppGroup.defaults()).build(access: .current(now: now), now: now, commit: commit)
     }
 
     static func url(in directory: AppGroup.Directory, name: String?) -> URL? {

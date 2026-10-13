@@ -68,6 +68,20 @@ import Testing
         #expect(try database.oldestUndone()?.id == safe.id)
     }
 
+    @Test func oldestUndoneSkipsFlaggedAndSensitiveItems() throws {
+        // Older than the safe item, and marked safe by mistake: still never the Reveal's pick.
+        let longAgo = now.addingTimeInterval(-90 * 86_400)
+        func unsafe(_ name: String, nsfw: Bool, sensitive: Bool) -> ScreenshotItem {
+            ScreenshotItem(
+                id: name, assetLocalID: "asset-\(name)", createdAt: longAgo, category: .event, confidence: 0.95,
+                state: .unreviewed, isSafeToDisplay: true, isNSFWFlagged: nsfw, hasSensitiveText: sensitive,
+                thumbnailPath: "\(name).jpg", updatedAt: now, processedAt: now
+            )
+        }
+        try database.save([unsafe("old-nsfw", nsfw: true, sensitive: false), unsafe("old-sensitive", nsfw: false, sensitive: true)])
+        #expect(try database.oldestUndone()?.id == safe.id)
+    }
+
     @Test func sensitiveTextStaysOutOfTriageAndTheWidget() throws {
         #expect(!(try database.triageDeck().map(\.id)).contains(sensitive.id))
         #expect(!(try database.widgetCandidates(now: now).map(\.id)).contains(sensitive.id))

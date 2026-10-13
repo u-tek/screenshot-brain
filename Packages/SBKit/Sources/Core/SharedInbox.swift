@@ -13,7 +13,7 @@ public enum SharedInbox {
         let taken = captureDate(of: source) ?? Date()
         let fileExtension = source.pathExtension.isEmpty ? "img" : source.pathExtension.lowercased()
         let name = "\(Int(taken.timeIntervalSince1970))-\(UUID().uuidString).\(fileExtension)"
-        try FileManager.default.copyItem(at: source, to: inbox.appendingPathComponent(name))
+        try place(into: inbox, named: name) { try FileManager.default.copyItem(at: source, to: $0) }
     }
 
     /// Writes picked image data into the inbox (the in-app picker, which needs no photo access).
@@ -22,7 +22,20 @@ public enum SharedInbox {
         let source = CGImageSourceCreateWithData(data as CFData, nil)
         let taken = source.flatMap { captureDate(of: $0) } ?? Date()
         let name = "\(Int(taken.timeIntervalSince1970))-\(UUID().uuidString).\(fileExtension)"
-        try data.write(to: inbox.appendingPathComponent(name), options: .atomic)
+        try place(into: inbox, named: name) { try data.write(to: $0, options: .atomic) }
+    }
+
+    /// Writes a file into the inbox under a dot-prefixed temporary name, then moves it to `name`.
+    /// `pending` skips dot-prefixed files, so the app never reads one that is half written.
+    private static func place(into inbox: URL, named name: String, write: (URL) throws -> Void) throws {
+        let temporary = inbox.appendingPathComponent(".\(name).partial")
+        do {
+            try write(temporary)
+            try FileManager.default.moveItem(at: temporary, to: inbox.appendingPathComponent(name))
+        } catch {
+            try? FileManager.default.removeItem(at: temporary)
+            throw error
+        }
     }
 
     /// Images waiting in the inbox, oldest first, with the date each was taken.

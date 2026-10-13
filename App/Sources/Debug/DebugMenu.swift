@@ -1,3 +1,4 @@
+#if DEBUG
 import Core
 import DesignSystem
 import Media
@@ -173,3 +174,4 @@ struct AccuracyView: View {
         .onAppear { model.load() }
     }
 }
+#endif

@@ -19,7 +19,11 @@ public struct ScreenshotLibrary: Sendable {
         case image(CGImage)
         /// Only in iCloud right now; read it later rather than download during the first scan.
         case cloudOnly
+        /// The asset is gone from the library.
         case missing
+        /// The asset is there but couldn't be loaded this time (a failed request, an image that
+        /// wouldn't decode, photo access not full). Left unread, to try again.
+        case unavailable
     }
 
     public init() {}
@@ -70,13 +74,25 @@ public struct ScreenshotLibrary: Sendable {
         }
 
         // Local identifiers change on a new phone; cloud identifiers map items across devices.
-        let mappings = PHPhotoLibrary.shared().cloudIdentifierMappings(forLocalIdentifiers: screenshots.map(\.assetLocalID))
+        let cloudIDs = cloudIdentifiers(for: screenshots.map(\.assetLocalID))
         for index in screenshots.indices {
-            if case .success(let cloudID)? = mappings[screenshots[index].assetLocalID] {
-                screenshots[index].cloudID = cloudID.stringValue
-            }
+            screenshots[index].cloudID = cloudIDs[screenshots[index].assetLocalID]
         }
         return screenshots
+    }
+
+    /// Cloud identifiers for local ones, for the assets that have one.
+    public func cloudIdentifiers(for localIdentifiers: [String]) -> [String: String] {
+        let candidates = localIdentifiers.filter { !$0.hasPrefix(AppGroup.sharedIdentifierPrefix) }
+        guard !candidates.isEmpty else { return [:] }
+        let mappings = PHPhotoLibrary.shared().cloudIdentifierMappings(forLocalIdentifiers: candidates)
+        var result: [String: String] = [:]
+        for (localIdentifier, mapping) in mappings {
+            if case .success(let cloudID) = mapping {
+                result[localIdentifier] = cloudID.stringValue
+            }
+        }
+        return result
     }
 
     /// Local identifiers that no longer exist in the library.
@@ -93,7 +109,9 @@ public struct ScreenshotLibrary: Sendable {
     /// much faster). Downloads from iCloud only when `allowsNetwork` (the backfill pass).
     public func loadImage(localIdentifier: String, scale: Double = 0.5, allowsNetwork: Bool = false) async -> LoadResult {
         guard let asset = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil).firstObject else {
-            return .missing
+            // With full access, no asset means it was deleted. Without it (limited, or revoked), it
+            // may only be out of sight, so it stays for next time.
+            return PHPhotoLibrary.authorizationStatus(for: .readWrite) == .authorized ? .missing : .unavailable
         }
         let maxPixelSize = max(Int(Double(max(asset.pixelWidth, asset.pixelHeight)) * scale), 320)
         let options = PHImageRequestOptions()
@@ -108,10 +126,10 @@ public struct ScreenshotLibrary: Sendable {
             }
         }
         guard let data = response.data else {
-            return response.inCloud ? .cloudOnly : .missing
+            return response.inCloud ? .cloudOnly : .unavailable
         }
         guard let image = Self.downsample(data, maxPixelSize: maxPixelSize) else {
-            return .missing
+            return .unavailable
         }
         return .image(image)
     }
@@ -146,20 +164,32 @@ public struct ScreenshotLibrary: Sendable {
 public enum Thumbnailer {
     public static let maxPixelSize = 360
 
-    /// Writes a thumbnail and returns its file name, relative to `directory`.
+    /// Writes a thumbnail and returns its file name, relative to `directory`. Written under a
+    /// temporary name and renamed into place, so the widget never reads half a file.
     public static func write(_ image: CGImage, id: String, directory: URL) throws -> String {
         let fileName = "\(id).jpg"
-        let url = directory.appendingPathComponent(fileName)
         let small = downscaled(image, maxPixelSize: maxPixelSize) ?? image
-        guard let destination = CGImageDestinationCreateWithURL(url as CFURL, UTType.jpeg.identifier as CFString, 1, nil) else {
-            throw CocoaError(.fileWriteUnknown)
-        }
-        let properties: [CFString: Any] = [kCGImageDestinationLossyCompressionQuality: 0.75]
-        CGImageDestinationAddImage(destination, small, properties as CFDictionary)
-        guard CGImageDestinationFinalize(destination) else {
-            throw CocoaError(.fileWriteUnknown)
-        }
+        try writeJPEG(small, to: directory.appendingPathComponent(fileName), quality: 0.75)
         return fileName
+    }
+
+    /// Writes a JPEG to a dot-prefixed temporary file beside `url`, then renames it over `url`.
+    static func writeJPEG(_ image: CGImage, to url: URL, quality: Double) throws {
+        let temporary = url.deletingLastPathComponent().appendingPathComponent(".\(url.lastPathComponent).\(UUID().uuidString).tmp")
+        guard let destination = CGImageDestinationCreateWithURL(temporary as CFURL, UTType.jpeg.identifier as CFString, 1, nil) else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+        let properties: [CFString: Any] = [kCGImageDestinationLossyCompressionQuality: quality]
+        CGImageDestinationAddImage(destination, image, properties as CFDictionary)
+        guard CGImageDestinationFinalize(destination) else {
+            try? FileManager.default.removeItem(at: temporary)
+            throw CocoaError(.fileWriteUnknown)
+        }
+        // rename(2) replaces an existing file in one step.
+        guard rename(temporary.path, url.path) == 0 else {
+            try? FileManager.default.removeItem(at: temporary)
+            throw CocoaError(.fileWriteUnknown)
+        }
     }
 
     static func downscaled(_ image: CGImage, maxPixelSize: Int) -> CGImage? {

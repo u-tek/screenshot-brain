@@ -13,10 +13,14 @@ public struct WidgetTimeline {
         self.defaults = defaults
     }
 
-    public func build(access: WidgetAccess, now: Date = Date(), calendar: Calendar = .current) -> (entries: [WidgetEntryPlan], reloadAt: Date) {
-        let shown = WidgetPlanner.surfaced(schedule: WidgetSchedule.load(defaults), now: now)
-        for entry in shown {
-            try? database.markSurfaced(ids: [entry.id], at: entry.date)
+    /// `commit: false` only reads (for snapshots): nothing is marked surfaced and the schedule
+    /// is left as the last real timeline made it.
+    public func build(access: WidgetAccess, now: Date = Date(), calendar: Calendar = .current, commit: Bool = true) -> (entries: [WidgetEntryPlan], reloadAt: Date) {
+        if commit {
+            let shown = WidgetPlanner.surfaced(schedule: WidgetSchedule.load(defaults), now: now)
+            for entry in shown {
+                try? database.markSurfaced(ids: [entry.id], at: entry.date)
+            }
         }
         let candidates = (try? database.widgetCandidates(now: now, calendar: calendar)) ?? []
         let kept = (try? database.widgetCandidates(now: now, calendar: calendar, includeSurfaced: true).count) ?? candidates.count
@@ -32,6 +36,7 @@ public struct WidgetTimeline {
             now: now,
             calendar: calendar
         )
+        guard commit else { return plan }
         let schedule = plan.entries.compactMap { entry -> ScheduledItem? in
             guard case .item(let item) = entry.card else { return nil }
             return ScheduledItem(id: item.id, date: entry.date)

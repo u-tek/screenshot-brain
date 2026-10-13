@@ -16,6 +16,7 @@ struct MainScreen: View {
     @State private var deleteError: String?
     @State private var showsPaywall = false
     @State private var reveal: RevealStory?
+    @State private var isBuilding = false
     @Environment(\.scenePhase) private var scenePhase
 
     init(database: AppDatabase?) {
@@ -99,19 +100,30 @@ struct MainScreen: View {
     private func follow(_ link: AppLink?) {
         guard let link else { return }
         model.pendingLink = nil
+        // Covers can't stack: close whatever is up first, and present the next one a tick later
+        // (after the dismissal, if there was one).
+        let hadCover = isSorting || showsPaywall || reveal != nil
+        isSorting = false
+        showsPaywall = false
+        reveal = nil
         switch link {
         case .item(let id):
-            isSorting = false
             path = NavigationPath()
             path.append(HomeRoute.item(id))
         case .recap:
             path = NavigationPath()
-            isSorting = true
+            Task {
+                if hadCover { try? await Task.sleep(nanoseconds: 500_000_000) }
+                isSorting = true
+            }
         case .home:
-            isSorting = false
             path = NavigationPath()
         case .paywall:
-            showsPaywall = true
+            guard !model.isPremium else { return }
+            Task {
+                if hadCover { try? await Task.sleep(nanoseconds: 500_000_000) }
+                showsPaywall = true
+            }
         }
     }
 
@@ -120,8 +132,11 @@ struct MainScreen: View {
             showsPaywall = true
             return
         }
+        guard !isBuilding else { return }
+        isBuilding = true
         Task {
             reveal = await model.buildReveal(period)
+            isBuilding = false
         }
     }
 
@@ -291,5 +306,9 @@ struct CategoryScreen: View {
         }
         .sbScreen(.kind(SBKind(category)))
         .toolbar(.hidden, for: .navigationBar)
+        // The last one was decided: nothing left to show here.
+        .onChange(of: items.isEmpty) { isEmpty in
+            if isEmpty { dismiss() }
+        }
     }
 }

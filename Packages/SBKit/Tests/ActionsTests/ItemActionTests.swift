@@ -67,6 +67,25 @@ import Testing
         #expect(ItemAction.available(for: item(.recipe, text: text)).first == .ingredients)
     }
 
+    @Test func stepsAddressesAndDurationsAreNotIngredients() {
+        let text = """
+        1. Preheat the oven to 200 degrees
+        2) Mix the flour and the eggs
+        10 minutes later it should be golden
+        12 King St, Newtown
+        3 eggs
+        1.5 kg potatoes
+        """
+        #expect(Ingredients.lines(in: text) == ["3 eggs", "1.5 kg potatoes"])
+    }
+
+    @Test func sensitiveItemsOfferNoLookups() {
+        let place = item(.place, entities: [DetectedEntity(kind: .address, text: "12 King St, Newtown")], sensitive: true)
+        #expect(ItemAction.available(for: place).isEmpty)
+        let product = item(.product, sensitive: true)
+        #expect(ItemAction.available(for: product).isEmpty)
+    }
+
     @Test func sensitiveItemsCantBeSent() {
         #expect(!ItemAction.available(for: item(.other, sensitive: true)).contains(.send))
     }
