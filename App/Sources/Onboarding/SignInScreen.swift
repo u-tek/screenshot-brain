@@ -2,12 +2,9 @@ import AuthenticationServices
 import DesignSystem
 import SwiftUI
 
-/// Sign in with Apple, so progress survives a crash or a new phone. Usually right after the first
-/// score, when there's progress to keep; from the pitch for someone back on a new phone.
+/// Sign in with Apple, so progress survives a crash or a new phone.
 struct SignInScreen: View {
     var palette: LightPalette = .sampleTopScreenshots
-    /// Signing in from the pitch, to pick up progress from another phone.
-    var isReturning = false
     /// Sideload test builds only.
     var allowsLocal = false
     var onLocal: () -> Void = {}
@@ -21,11 +18,11 @@ struct SignInScreen: View {
                 .frame(maxWidth: .infinity)
                 .padding(.top, 10)
             Spacer()
-            SmallLabel(isReturning ? "Welcome back" : "Keep your score")
+            SmallLabel("Before we start")
                 .padding(.bottom, 10)
-            MistHeadline(isReturning ? "Pick up **where you left off.**" : "So you never lose **your progress.**", size: 34, alignment: .leading)
+            MistHeadline("So you never lose **your progress.**", size: 34, alignment: .leading)
                 .padding(.bottom, 14)
-            MistBody(isReturning ? "Use the Apple ID you signed in with before. Your progress comes back, and your screenshots are read again **here, on this iPhone.**" : "Your guesses, your score and what you've ticked off follow you to a new phone. **Your screenshots never leave this one.**", alignment: .leading)
+            MistBody("Your guesses, your score and what you've ticked off follow you to a new phone. **Your screenshots never leave this one.**", alignment: .leading)
                 .padding(.bottom, 28)
 
             if allowsLocal {

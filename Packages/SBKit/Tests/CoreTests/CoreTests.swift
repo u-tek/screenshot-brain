@@ -47,10 +47,7 @@ import Testing
     }
 
     @Test func onboardingStepsAreOrdered() {
-        #expect(OnboardingStep.pitch < .photoAccess)
-        // Sign-in waits until there's progress to keep, and comes before any purchase.
-        #expect(OnboardingStep.score < .signIn)
-        #expect(OnboardingStep.signIn < .paywall)
+        #expect(OnboardingStep.pitch < .signIn)
         #expect(OnboardingStep.reveal < .triage)
         #expect(OnboardingStep.allCases.sorted() == OnboardingStep.allCases)
     }

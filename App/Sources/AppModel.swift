@@ -93,7 +93,7 @@ final class AppModel: ObservableObject {
             await syncNow()
         }
         resolveResume()
-        if step >= .photoAccess {
+        if step > .signIn {
             startScan()
         }
     }
@@ -105,7 +105,7 @@ final class AppModel: ObservableObject {
         noticeWidget()
         let previous = photoAccess
         photoAccess = ScreenshotLibrary.currentAccess()
-        guard step >= .photoAccess else { return }
+        guard account != nil, step >= .photoAccess else { return }
         if step == .photoAccess, previous != photoAccess, hasPhotoAccess {
             advanceAfterPhotoAccess()
         }
@@ -171,34 +171,17 @@ final class AppModel: ObservableObject {
 
     // MARK: Onboarding progress
 
-    /// "Show me" on the pitch: straight to the screenshots. Sign-in waits until after the score.
+    /// "Show me" on the pitch. Someone already signed in (the Keychain outlives a reinstall)
+    /// goes straight on.
     func finishPitch() {
         analytics.track(.onboardingStarted)
-        advance(to: .photoAccess)
-    }
-
-    /// "I've used it before" on the pitch: sign in first, so a new phone picks up the progress
-    /// synced from the old one.
-    func signInFromPitch() {
-        analytics.track(.onboardingStarted)
-        advance(to: .signIn)
-    }
-
-    /// After the score: sign in, unless there's already an account (signed in from the pitch, or
-    /// the Keychain outlived a reinstall).
-    func finishScore() {
-        advance(to: account == nil ? .signIn : .paywall)
-    }
-
-    /// True when sign-in comes before anything has been read: someone back from another phone.
-    var isSigningInFirst: Bool {
-        photoAccess == .notDetermined && screenshotsFound == 0
-    }
-
-    /// Where sign-in leads: the screenshots for someone who signed in from the pitch, otherwise on
-    /// to the paywall.
-    private var stepAfterSignIn: OnboardingStep {
-        isSigningInFirst ? .photoAccess : .paywall
+        // Test builds can't use Sign in with Apple, so the sign-in screen would have nothing to
+        // offer but "carry on": skip it.
+        if account == nil, configuration.allowsLocalAccount {
+            continueOnThisPhone()
+            return
+        }
+        advance(to: account == nil ? .signIn : .photoAccess)
     }
 
     func advance(to step: OnboardingStep) {
@@ -230,7 +213,7 @@ final class AppModel: ObservableObject {
         var account = Account(userID: credential.user, givenName: credential.fullName?.givenName ?? AccountStore.load()?.givenName)
         AccountStore.save(account)
         self.account = account
-        analytics.track(.signedIn, counts: ["first": isSigningInFirst ? 1 : 0])
+        analytics.track(.signedIn)
 
         let code = credential.authorizationCode.flatMap { String(data: $0, encoding: .utf8) }
         let userID = credential.user
@@ -244,8 +227,8 @@ final class AppModel: ObservableObject {
             }
             // Progress syncs from the moment of sign-in: a returning user resumes where they were.
             await syncNow()
-            if step == .signIn {
-                advance(to: stepAfterSignIn)
+            if step <= .signIn {
+                advance(to: .photoAccess)
             }
             resolveResume()
         }
@@ -257,7 +240,7 @@ final class AppModel: ObservableObject {
         let account = Account(userID: "local-\(UUID().uuidString)", givenName: nil, refreshToken: nil, isLocalOnly: true)
         AccountStore.save(account)
         self.account = account
-        advance(to: stepAfterSignIn)
+        advance(to: .photoAccess)
     }
 
     private var syncsToCloud: Bool {

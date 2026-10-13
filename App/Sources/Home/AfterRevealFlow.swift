@@ -14,7 +14,7 @@ struct AfterRevealFlow: View {
             TriageHost()
         case .score:
             ScoreMoment(palette: model.palette, score: model.score, guessedOutOfTen: model.answers.guessedDoneCount) {
-                model.finishScore()
+                model.advance(to: .paywall)
             }
         case .paywall:
             PaywallView(

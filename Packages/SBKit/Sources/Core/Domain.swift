@@ -79,19 +79,17 @@ public enum DayPeriod: String, Codable, CaseIterable, Sendable {
 
 /// The first-open flow, in order. Persisted so onboarding resumes and is never repeated.
 ///
-/// Sign-in comes after the first sort and the score, not before: asking for an account before
-/// anyone has seen what the app does costs more people than it keeps, and "so you never lose your
-/// progress" only means something once there's progress. It still comes before the paywall, so a
-/// purchase follows the account. Someone back on a new phone can sign in from the pitch instead.
+/// The pitch comes before sign-in: asking for an account on the very first screen, before anyone
+/// knows what the app does, costs more people than it keeps.
 public enum OnboardingStep: String, Codable, CaseIterable, Sendable, Comparable {
     case pitch
+    case signIn
     case photoAccess
     case questions
     case finishingUp
     case reveal
     case triage
     case score
-    case signIn
     case paywall
     case notifications
     case widgetGuide
