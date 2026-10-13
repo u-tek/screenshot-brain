@@ -154,7 +154,7 @@ final class AppModel: ObservableObject {
     func requestNotifications() async {
         let granted = await NotificationScheduler.requestPermission()
         analytics.track(granted ? .notificationsAllowed : .notificationsDeclined)
-        advance(to: .widgetGuide)
+        advance(to: .paywall)
     }
 
     var hasPhotoAccess: Bool {

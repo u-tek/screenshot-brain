@@ -3,8 +3,8 @@ import DesignSystem
 import Paywall
 import SwiftUI
 
-/// Everything after the Reveal: triage, the score moment, the paywall, the notifications
-/// pre-prompt, the widget guide and Home.
+/// Everything after the Reveal: triage, the score moment, the notifications pre-prompt, the
+/// paywall, the widget guide and Home.
 struct AfterRevealFlow: View {
     @EnvironmentObject private var model: AppModel
 
@@ -14,7 +14,7 @@ struct AfterRevealFlow: View {
             TriageHost()
         case .score:
             ScoreMoment(palette: model.palette, score: model.score, guessedOutOfTen: model.answers.guessedDoneCount) {
-                model.advance(to: .paywall)
+                model.advance(to: .notifications)
             }
         case .paywall:
             PaywallView(
@@ -22,10 +22,10 @@ struct AfterRevealFlow: View {
                 palette: model.palette,
                 items: model.paywallItems(),
                 privacyPolicy: model.configuration.privacyPolicyURL,
-                onClose: { model.advance(to: .notifications) },
+                onClose: { model.advance(to: .widgetGuide) },
                 onPurchased: {
                     model.purchased()
-                    model.advance(to: .notifications)
+                    model.advance(to: .widgetGuide)
                 }
             )
             .onAppear { model.analytics.track(.paywallShown) }
@@ -33,7 +33,7 @@ struct AfterRevealFlow: View {
             NotificationsPrompt(palette: model.palette, recapMinutes: model.answers.recapMinutes ?? 21 * 60 + 30) {
                 Task { await model.requestNotifications() }
             } onSkip: {
-                model.advance(to: .widgetGuide)
+                model.advance(to: .paywall)
             }
         case .widgetGuide:
             WidgetGuide(palette: model.palette) {

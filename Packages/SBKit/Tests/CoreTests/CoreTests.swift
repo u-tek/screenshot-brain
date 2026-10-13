@@ -49,6 +49,9 @@ import Testing
     @Test func onboardingStepsAreOrdered() {
         #expect(OnboardingStep.pitch < .signIn)
         #expect(OnboardingStep.reveal < .triage)
+        // The notification ask follows the score and comes before the paywall.
+        #expect(OnboardingStep.score < .notifications)
+        #expect(OnboardingStep.notifications < .paywall)
         #expect(OnboardingStep.allCases.sorted() == OnboardingStep.allCases)
     }
 

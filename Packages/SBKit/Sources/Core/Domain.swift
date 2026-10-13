@@ -90,8 +90,10 @@ public enum OnboardingStep: String, Codable, CaseIterable, Sendable, Comparable 
     case reveal
     case triage
     case score
-    case paywall
+    /// Asked straight after the score, while it still feels good, and before the paywall so the
+    /// ask never follows a "Not now".
     case notifications
+    case paywall
     case widgetGuide
     case home
 
