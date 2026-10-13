@@ -12,6 +12,8 @@ public final class PurchaseService: ObservableObject {
 
     @Published public private(set) var plans: [PlanOption] = []
     @Published public private(set) var defaultPlan: PlanOption.Kind = .annual
+    /// The last attempt to load plans failed (or found none): the paywall offers a retry.
+    @Published public private(set) var plansFailed = false
     @Published public private(set) var isPremium: Bool
     /// False when no RevenueCat key is configured: the paywall shows, purchases can't happen.
     public let isAvailable: Bool
@@ -41,16 +43,30 @@ public final class PurchaseService: ObservableObject {
     }
 
     public func loadPlans() async {
-        guard isAvailable, let offering = try? await Purchases.shared.offerings().current else { return }
+        guard isAvailable else { return }
+        let offering: Offering
+        do {
+            guard let current = try await Purchases.shared.offerings().current else {
+                plansFailed = true
+                return
+            }
+            offering = current
+        } catch {
+            plansFailed = true
+            return
+        }
+        plansFailed = false
         var options: [PlanOption] = []
         var found: [PlanOption.Kind: Package] = [:]
         let weekly = offering.weekly
         if let annual = offering.annual {
             found[.annual] = annual
+            // The trial is only promised to someone who can still have it.
+            let eligibility = await Purchases.shared.checkTrialOrIntroDiscountEligibility(product: annual.storeProduct)
             options.append(PlanOption(
                 kind: .annual,
                 price: annual.storeProduct.localizedPriceString,
-                trialDays: Self.trialDays(annual.storeProduct),
+                trialDays: eligibility == .eligible ? Self.trialDays(annual.storeProduct) : nil,
                 weeklyEquivalent: annual.storeProduct.localizedPricePerWeek.map { "\($0) a week" }
             ))
         }
@@ -67,12 +83,20 @@ public final class PurchaseService: ObservableObject {
         defaultPlan = PaywallExperiment.defaultPlan(metadata: offering.metadata)
     }
 
-    /// Returns true when premium is active afterwards; false if the user backed out.
-    public func purchase(_ kind: PlanOption.Kind) async throws -> Bool {
-        guard let package = packages[kind] else { return false }
+    /// How a purchase ended.
+    public enum PurchaseOutcome: Sendable {
+        case purchased
+        case cancelled
+        /// Neither: Ask to Buy, or a payment still being approved. Premium arrives when it is.
+        case pending
+    }
+
+    public func purchase(_ kind: PlanOption.Kind) async throws -> PurchaseOutcome {
+        guard let package = packages[kind] else { return .cancelled }
         let result = try await Purchases.shared.purchase(package: package)
         apply(result.customerInfo)
-        return !result.userCancelled && isPremium
+        if result.userCancelled { return .cancelled }
+        return isPremium ? .purchased : .pending
     }
 
     public func restore() async throws -> Bool {
@@ -98,14 +122,32 @@ public final class PurchaseService: ObservableObject {
         let entitlement = info.entitlements[Self.entitlementID]
         let active = entitlement?.isActive == true
         let trialEnds = entitlement?.periodType == .trial ? entitlement?.expirationDate : nil
+        // Nil for lifetime. The widget locks itself if this passes without a refresh.
+        let expiresAt = active ? entitlement?.expirationDate : nil
+        // A trial that ran out without becoming a purchase.
+        let trialEnded = entitlement?.periodType == .trial && !active
+        let defaults = AppGroup.defaults()
         let changed = active != isPremium || Entitlement.isPremium() != active || Entitlement.trialEndsAt() != trialEnds
+            || (defaults?.object(forKey: Self.expiryKey) as? Date) != expiresAt
+            || defaults?.bool(forKey: Self.trialEndedKey) != trialEnded
         isPremium = active
         Entitlement.setPremium(active)
         Entitlement.setTrialEndsAt(trialEnds)
+        if let expiresAt {
+            defaults?.set(expiresAt, forKey: Self.expiryKey)
+        } else {
+            defaults?.removeObject(forKey: Self.expiryKey)
+        }
+        defaults?.set(trialEnded, forKey: Self.trialEndedKey)
         if changed {
             WidgetCenter.shared.reloadAllTimelines()
         }
     }
+
+    /// The App Group keys the widget reads (`WidgetAccess.expiryKey` and `trialEndedKey`; Paywall
+    /// and WidgetCore can't import each other, so the strings are repeated).
+    static let expiryKey = "premium.expiresAt"
+    static let trialEndedKey = "premium.trialEnded"
 
     private static func trialDays(_ product: StoreProduct) -> Int? {
         guard let intro = product.introductoryDiscount, intro.paymentMode == .freeTrial else { return nil }

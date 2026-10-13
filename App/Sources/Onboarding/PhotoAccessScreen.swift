@@ -56,7 +56,9 @@ struct ShareRouteScreen: View {
     var onShared: () -> Void = {}
     @State private var picked: [PhotosPickerItem] = []
     @State private var isSaving = false
+    @State private var couldntRead = false
     @Environment(\.openURL) private var openURL
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         GeometryReader { proxy in
@@ -65,7 +67,7 @@ struct ShareRouteScreen: View {
                 LightField(.sweep(palette), drifts: true)
                     .ignoresSafeArea()
 
-                VStack(spacing: 0) {
+                let content = VStack(spacing: 0) {
                     Button {
                         if let url = URL(string: UIApplication.openSettingsURLString) {
                             openURL(url)
@@ -105,7 +107,7 @@ struct ShareRouteScreen: View {
 
                     Spacer(minLength: 16)
 
-                    SmallLabel(isSaving ? "Reading what you picked" : "Ten or more makes a good Reveal")
+                    SmallLabel(isSaving ? "Reading what you picked" : (couldntRead ? "Couldn't read those. Try again." : "Ten or more makes a good Reveal"))
                         .padding(.bottom, 12)
                     PhotosPicker(selection: $picked, maxSelectionCount: 60, matching: .screenshots) {
                         ActionBarLabel("Pick screenshots", systemImage: "plus", palette: palette)
@@ -115,24 +117,41 @@ struct ShareRouteScreen: View {
                     .padding(.bottom, 8)
                     .disabled(isSaving)
                 }
-                .frame(width: proxy.size.width, height: proxy.size.height)
+
+                if dynamicTypeSize.isAccessibilitySize {
+                    // Large text outgrows the screen: scroll, so the action stays reachable.
+                    ScrollView {
+                        content.frame(width: proxy.size.width, alignment: .top)
+                            .frame(minHeight: proxy.size.height)
+                    }
+                } else {
+                    content.frame(width: proxy.size.width, height: proxy.size.height)
+                }
             }
         }
         .onChange(of: picked) { items in
             guard !items.isEmpty else { return }
             isSaving = true
+            couldntRead = false
             Task {
+                var deposited = 0
                 // The picker runs outside the app and needs no photo access. Each picked image
                 // goes into the inbox, and the scan reads it like a shared one.
                 for item in items {
                     if let data = try? await item.loadTransferable(type: Data.self) {
                         let fileExtension = item.supportedContentTypes.first?.preferredFilenameExtension ?? "img"
-                        try? SharedInbox.deposit(data: data, fileExtension: fileExtension)
+                        if (try? SharedInbox.deposit(data: data, fileExtension: fileExtension)) != nil {
+                            deposited += 1
+                        }
                     }
                 }
                 picked = []
                 isSaving = false
-                onShared()
+                if deposited > 0 {
+                    onShared()
+                } else {
+                    couldntRead = true
+                }
             }
         }
     }

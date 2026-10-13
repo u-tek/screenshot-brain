@@ -8,6 +8,7 @@ struct FinishingUpScreen: View {
     var palette: LightPalette = .sampleTopScreenshots
     var read: Int = 0
     var total: Int = 0
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private var progress: Double {
         total > 0 ? min(Double(read) / Double(total), 1) : 0
@@ -21,7 +22,7 @@ struct FinishingUpScreen: View {
                 LightField(.sweep(palette).shifted(down: 0.12), drifts: true)
                     .ignoresSafeArea()
 
-                VStack(spacing: 0) {
+                let content = VStack(spacing: 0) {
                     Spacer()
                     ZStack {
                         LensOrbit(diameter: lens * 1.22, dotAngle: -.pi / 2 + progress * 2 * .pi)
@@ -39,7 +40,16 @@ struct FinishingUpScreen: View {
                         .padding(.horizontal, 36)
                         .padding(.bottom, 56)
                 }
-                .frame(width: proxy.size.width, height: proxy.size.height)
+
+                if dynamicTypeSize.isAccessibilitySize {
+                    // Large text outgrows the screen: scroll, so the action stays reachable.
+                    ScrollView {
+                        content.frame(width: proxy.size.width, alignment: .top)
+                            .frame(minHeight: proxy.size.height)
+                    }
+                } else {
+                    content.frame(width: proxy.size.width, height: proxy.size.height)
+                }
             }
         }
     }

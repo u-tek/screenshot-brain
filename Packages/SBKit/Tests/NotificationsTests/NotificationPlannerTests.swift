@@ -91,7 +91,43 @@ import Testing
     @Test func trialReminderOnDayFive() throws {
         let plan = try #require(NotificationPlanner.plan(context(now: start, trialEndsAt: start.addingTimeInterval(2 * 86_400 + 3_600)), calendar: calendar))
         #expect(plan.kind == .trialReminder)
-        #expect(plan.body == "Your widget trial ends in 2 days. You've ticked off 6 things.")
+        #expect(plan.body == "Your free week of Premium ends in 2 days. You've ticked off 6 things.")
+    }
+
+    @Test func trialReminderSaysTomorrowForOneDay() throws {
+        let plan = try #require(NotificationPlanner.plan(context(now: start, trialEndsAt: calendar.date(from: DateComponents(year: 2026, month: 10, day: 8, hour: 12))), calendar: calendar))
+        #expect(plan.body == "Your free week of Premium ends tomorrow. You've ticked off 6 things.")
+    }
+
+    @Test func aRecapDoesNotBlockTheLaterExpiryNudge() throws {
+        let item = NotableItem(id: "gig", title: nil, category: .event, dueDate: start.addingTimeInterval(1.8 * 86_400))
+        let recap = try #require(NotificationPlanner.plan(context(now: start, new: [item]), calendar: calendar))
+        #expect(recap.kind == .recap)
+        var history = NotificationHistory()
+        history.record(recap, calendar: calendar)
+        let later = start.addingTimeInterval(86_400)
+        let nudge = try #require(NotificationPlanner.plan(context(now: later, dated: [item], history: history), calendar: calendar))
+        #expect(nudge.kind == .expiry)
+    }
+
+    @Test func movingTheRecapTimeNeverMakesTwoInADay() throws {
+        let item = NotableItem(id: "a", title: nil, category: .place, dueDate: nil)
+        let first = try #require(NotificationPlanner.plan(context(now: start, new: [item]), calendar: calendar))
+        var history = NotificationHistory()
+        history.record(first, calendar: calendar)
+        // The recap time moves later the same day: the next one waits for tomorrow.
+        var moved = context(now: start, new: [item], history: history)
+        moved.recapMinutes = 23 * 60
+        let second = try #require(NotificationPlanner.plan(moved, calendar: calendar))
+        #expect(!calendar.isDate(second.fireAt, inSameDayAs: first.fireAt))
+    }
+
+    @Test func oldSavedHistoryStillLoads() throws {
+        let json = #"{"nudgedItemIDs":["a"],"trialReminderSent":true}"#
+        let history = try JSONDecoder().decode(NotificationHistory.self, from: Data(json.utf8))
+        #expect(history.nudgedItemIDs == ["a"])
+        #expect(history.trialReminderSent)
+        #expect(history.lastPlannedAt == nil)
     }
 
     @Test func winBackOnceThenSilence() throws {

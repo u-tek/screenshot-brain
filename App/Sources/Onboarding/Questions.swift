@@ -38,7 +38,7 @@ struct QuestionsFlow: View {
                 next(after: 3)
             } onSkip: { finish() }
         default:
-            WindDownQuestion(palette: model.palette, footnote: footnote, initial: model.answers.windDownMinutes ?? 22 * 60) { minutes in
+            WindDownQuestion(palette: model.palette, footnote: footnote, initial: model.answers.windDownMinutes ?? 21 * 60 + 30) { minutes in
                 model.updateAnswers {
                     $0.windDownMinutes = minutes
                     $0.recapMinutes = minutes

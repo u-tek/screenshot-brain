@@ -17,20 +17,9 @@ struct AfterRevealFlow: View {
                 model.advance(to: .notifications)
             }
         case .paywall:
-            PaywallView(
-                purchases: model.purchases,
-                palette: model.palette,
-                items: model.paywallItems(),
-                privacyPolicy: model.configuration.privacyPolicyURL,
-                onClose: { model.advance(to: .widgetGuide) },
-                onPurchased: {
-                    model.purchased()
-                    model.advance(to: .widgetGuide)
-                }
-            )
-            .onAppear { model.analytics.track(.paywallShown) }
+            OnboardingPaywall()
         case .notifications:
-            NotificationsPrompt(palette: model.palette, recapMinutes: model.answers.recapMinutes ?? 21 * 60 + 30) {
+            NotificationsPrompt(palette: model.palette, recapMinutes: NightlyRecap.recapMinutes(model.answers)) {
                 Task { await model.requestNotifications() }
             } onSkip: {
                 model.advance(to: .paywall)
@@ -41,6 +30,35 @@ struct AfterRevealFlow: View {
             }
         default:
             MainScreen(database: model.services?.database)
+        }
+    }
+}
+
+/// The paywall after the Reveal. Its items (what the user's widget would show) are read once when
+/// it appears, not on every redraw.
+private struct OnboardingPaywall: View {
+    @EnvironmentObject private var model: AppModel
+    @State private var items: [PaywallItem]?
+
+    var body: some View {
+        ZStack {
+            if let items {
+                PaywallView(
+                    purchases: model.purchases,
+                    palette: model.palette,
+                    items: items,
+                    privacyPolicy: model.configuration.privacyPolicyURL,
+                    onClose: { model.advance(to: .widgetGuide) },
+                    onPurchased: {
+                        model.purchased()
+                        model.advance(to: .widgetGuide)
+                    }
+                )
+                .onAppear { model.analytics.track(.paywallShown) }
+            }
+        }
+        .task {
+            if items == nil { items = model.paywallItems() }
         }
     }
 }

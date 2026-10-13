@@ -53,6 +53,32 @@ import Testing
         #expect(WidgetAccess.current(defaults: defaults) == .unlocked)
     }
 
+    @Test func lockedOnceThePurchaseHasLongLapsed() {
+        let defaults = UserDefaults(suiteName: "widget-tests-\(UUID().uuidString)")
+        Entitlement.setPremium(true, defaults: defaults)
+        defaults?.set(now.addingTimeInterval(-2 * 86_400), forKey: WidgetAccess.expiryKey)
+        #expect(WidgetAccess.current(defaults: defaults, now: now) == .unlocked)
+        defaults?.set(now.addingTimeInterval(-4 * 86_400), forKey: WidgetAccess.expiryKey)
+        #expect(WidgetAccess.current(defaults: defaults, now: now) == .locked)
+        defaults?.removeObject(forKey: WidgetAccess.expiryKey)
+        #expect(WidgetAccess.current(defaults: defaults, now: now) == .unlocked)
+    }
+
+    @Test func aSnapshotChangesNothing() throws {
+        let database = try AppDatabase.inMemory()
+        try database.save([item("a", daysAgo: 5), item("b", daysAgo: 4)])
+        let defaults = UserDefaults(suiteName: "widget-tests-\(UUID().uuidString)")
+        let timeline = WidgetTimeline(database: database, defaults: defaults)
+        _ = timeline.build(access: .unlocked, now: now, commit: false)
+        #expect(WidgetSchedule.load(defaults).isEmpty)
+        // Nothing was marked surfaced, so both are still to come (and a nudge, with so little kept).
+        let titles = timeline.build(access: .unlocked, now: now.addingTimeInterval(7_200)).entries.compactMap { entry -> String? in
+            if case .item(let item) = entry.card { return item.title }
+            return nil
+        }
+        #expect(titles == ["a", "b"])
+    }
+
     @Test func nothingShowsTwiceInADay() throws {
         let database = try AppDatabase.inMemory()
         // Oldest untouched first: a, then b, then c.
@@ -89,5 +115,10 @@ import Testing
         dated.dueDate = now.addingTimeInterval(86_400)
         #expect(WidgetItem.detail(for: dated, now: now, calendar: calendar) == "Tomorrow")
         #expect(WidgetItem.detail(for: item("old", daysAgo: 21), now: now, calendar: calendar) == "Saved 3 weeks ago")
+        // 11pm last night is yesterday at 8am, though it's only nine hours.
+        let morning = calendar.date(from: DateComponents(year: 2026, month: 3, day: 10, hour: 8))!
+        var lastNight = item("late")
+        lastNight.createdAt = calendar.date(from: DateComponents(year: 2026, month: 3, day: 9, hour: 23))!
+        #expect(WidgetItem.detail(for: lastNight, now: morning, calendar: calendar) == "Saved yesterday")
     }
 }

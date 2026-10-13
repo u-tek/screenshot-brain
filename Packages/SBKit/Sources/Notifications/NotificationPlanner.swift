@@ -91,7 +91,13 @@ public struct PlannedNotification: Hashable, Sendable {
 
 /// What's been sent, so one-off notifications stay one-off.
 public struct NotificationHistory: Codable, Hashable, Sendable {
+    /// Items an expiry or win-back nudge has been about.
     public var nudgedItemIDs: Set<String> = []
+    /// Items a recap has named. Kept apart so naming one never blocks its later expiry nudge.
+    public var recappedItemIDs: Set<String> = []
+    /// When the last notification was planned for, so a changed recap time can't make a second
+    /// one on the same calendar day.
+    public var lastPlannedAt: Date?
     public var winBackSentAt: Date?
     public var lateWinBackSentAt: Date?
     public var lastResurfacedAt: Date?
@@ -101,9 +107,27 @@ public struct NotificationHistory: Codable, Hashable, Sendable {
 
     public init() {}
 
+    // Histories saved before a field existed still load.
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        nudgedItemIDs = try container.decodeIfPresent(Set<String>.self, forKey: .nudgedItemIDs) ?? []
+        recappedItemIDs = try container.decodeIfPresent(Set<String>.self, forKey: .recappedItemIDs) ?? []
+        lastPlannedAt = try container.decodeIfPresent(Date.self, forKey: .lastPlannedAt)
+        winBackSentAt = try container.decodeIfPresent(Date.self, forKey: .winBackSentAt)
+        lateWinBackSentAt = try container.decodeIfPresent(Date.self, forKey: .lateWinBackSentAt)
+        lastResurfacedAt = try container.decodeIfPresent(Date.self, forKey: .lastResurfacedAt)
+        trialReminderSent = try container.decodeIfPresent(Bool.self, forKey: .trialReminderSent) ?? false
+        monthlyRevealSent = try container.decodeIfPresent(String.self, forKey: .monthlyRevealSent)
+    }
+
     public mutating func record(_ plan: PlannedNotification, calendar: Calendar = .current) {
+        lastPlannedAt = plan.fireAt
         if let id = plan.itemID {
-            nudgedItemIDs.insert(id)
+            if plan.kind == .recap {
+                recappedItemIDs.insert(id)
+            } else {
+                nudgedItemIDs.insert(id)
+            }
         }
         switch plan.kind {
         case .winBack: winBackSentAt = plan.fireAt
@@ -136,7 +160,11 @@ public enum NotificationPlanner {
     public static let resurfaceGap: TimeInterval = 3 * 86_400 - 2 * 3_600
 
     public static func plan(_ context: NotificationContext, calendar: Calendar = .current) -> PlannedNotification? {
-        let fireAt = nextRecap(after: context.now, minutes: context.recapMinutes, calendar: calendar)
+        var fireAt = nextRecap(after: context.now, minutes: context.recapMinutes, calendar: calendar)
+        // One a day, even if the recap time moved: a day that already has one waits for tomorrow.
+        if let last = context.history.lastPlannedAt, calendar.isDate(last, inSameDayAs: fireAt) {
+            fireAt = calendar.date(byAdding: .day, value: 1, to: fireAt) ?? fireAt.addingTimeInterval(86_400)
+        }
         let away = fireAt.timeIntervalSince(context.lastOpenedAt)
         let expiring = context.datedItems.filter { item in
             guard let due = item.dueDate, !context.history.nudgedItemIDs.contains(item.id) else { return false }
@@ -173,7 +201,7 @@ public enum NotificationPlanner {
         if let trialEnds = context.trialEndsAt, !context.history.trialReminderSent {
             let left = trialEnds.timeIntervalSince(fireAt)
             if left > 0, left <= 2.5 * 86_400 {
-                return PlannedNotification(kind: .trialReminder, body: NotificationCopy.trialReminder(done: context.doneCount), fireAt: fireAt, itemID: nil, link: "screenshotbrain://paywall")
+                return PlannedNotification(kind: .trialReminder, body: NotificationCopy.trialReminder(done: context.doneCount, endsAt: trialEnds, at: fireAt, calendar: calendar), fireAt: fireAt, itemID: nil, link: "screenshotbrain://paywall")
             }
         }
 
@@ -190,7 +218,7 @@ public enum NotificationPlanner {
         let isSunday = calendar.component(.weekday, from: fireAt) == 1
 
         // Something new: the recap. It names one new thing, not the same one every night.
-        if let first = context.newItems.first(where: { !context.history.nudgedItemIDs.contains($0.id) }) ?? context.newItems.first {
+        if let first = context.newItems.first(where: { !context.history.recappedItemIDs.contains($0.id) && !context.history.nudgedItemIDs.contains($0.id) }) ?? context.newItems.first {
             let body = isSunday
                 ? NotificationCopy.digest(saved: context.weekSaved, done: context.weekDone, waiting: context.newItems.count)
                 : NotificationCopy.recap(first, others: context.newItems.count - 1, at: fireAt, calendar: calendar)
@@ -216,6 +244,11 @@ public enum NotificationPlanner {
 
     /// The next time the clock reads the recap time.
     public static func nextRecap(after now: Date, minutes: Int, calendar: Calendar = .current) -> Date {
+        // The calendar knows daylight-saving days (and times that don't exist on them).
+        let wanted = DateComponents(hour: minutes / 60, minute: minutes % 60, second: 0)
+        if let next = calendar.nextDate(after: now, matching: wanted, matchingPolicy: .nextTime) {
+            return next
+        }
         let today = calendar.date(bySettingHour: minutes / 60, minute: minutes % 60, second: 0, of: now) ?? now
         if today > now { return today }
         return calendar.date(byAdding: .day, value: 1, to: today) ?? today.addingTimeInterval(86_400)
@@ -255,7 +288,7 @@ public enum NotificationCopy {
         let formatter = DateFormatter()
         formatter.calendar = calendar
         formatter.timeZone = calendar.timeZone
-        formatter.locale = Locale(identifier: "en_AU")
+        formatter.locale = .current
         formatter.dateFormat = "EEEE"
         return formatter.string(from: date)
     }
@@ -330,9 +363,16 @@ public enum NotificationCopy {
         return waiting > 0 ? base + " \(waiting) new to look at." : base
     }
 
-    public static func trialReminder(done: Int) -> String {
+    public static func trialReminder(done: Int, endsAt: Date, at now: Date, calendar: Calendar) -> String {
         let ticked = done == 1 ? "1 thing" : "\(done) things"
-        return "Your widget trial ends in 2 days. You've ticked off \(ticked)."
+        let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: now), to: calendar.startOfDay(for: endsAt)).day ?? 2
+        let when: String
+        switch days {
+        case ...0: when = "today"
+        case 1: when = "tomorrow"
+        default: when = "in \(days) days"
+        }
+        return "Your free week of Premium ends \(when). You've ticked off \(ticked)."
     }
 
     public static func monthlyReveal(at date: Date, calendar: Calendar) -> String {
@@ -340,7 +380,7 @@ public enum NotificationCopy {
         let formatter = DateFormatter()
         formatter.calendar = calendar
         formatter.timeZone = calendar.timeZone
-        formatter.locale = Locale(identifier: "en_AU")
+        formatter.locale = .current
         formatter.dateFormat = "LLLL"
         return "Your \(formatter.string(from: previous)) Reveal is ready. Guess how many you did?"
     }

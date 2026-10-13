@@ -11,11 +11,15 @@ struct ScreenshotBrainApp: App {
     var body: some Scene {
         WindowGroup {
             Group {
+                #if DEBUG
                 if let snapshot = SnapshotMode.current {
                     SnapshotHost(mode: snapshot)
                 } else {
                     RootView()
                 }
+                #else
+                RootView()
+                #endif
             }
             .environmentObject(model)
             .dynamicTypeSize(...DynamicTypeSize.accessibility2)
@@ -53,7 +57,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
 
     @MainActor
     private func open(_ url: URL) async {
-        Analytics.telemetryDeck(appID: AppConfiguration.main.telemetryDeckAppID).track(.recapOpened)
+        if url.host == "recap" {
+            Analytics.telemetryDeck(appID: AppConfiguration.main.telemetryDeckAppID).track(.recapOpened)
+        }
         await UIApplication.shared.open(url)
     }
 }

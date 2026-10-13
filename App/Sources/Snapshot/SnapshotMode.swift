@@ -113,8 +113,10 @@ enum SnapshotGallery {
         case "paywall":
             let items = (SampleData.comingUp + [SampleData.item(.place, "Ramen Ikkyu", daysAgo: 21)]).map { PaywallItem($0, now: SampleData.now) }
             return AnyView(PaywallView(purchases: PurchaseService(apiKey: nil, appUserID: nil), palette: palette, items: items, privacyPolicy: nil, onClose: {}, onPurchased: {}))
+        #if DEBUG
         case "lab":
             return AnyView(DesignLabView())
+        #endif
         default:
             if route.hasPrefix("store."), let screen = Int(route.dropFirst(6)).flatMap(StoreScreen.init(rawValue:)) {
                 return AnyView(StoreScreenView(screen: screen))
@@ -122,6 +124,7 @@ enum SnapshotGallery {
             if route.hasPrefix("reveal."), let card = RevealCard(rawValue: String(route.dropFirst(7))) {
                 return AnyView(RevealView(story: .sample, startAt: card, onFinish: {}))
             }
+            #if DEBUG
             guard route.hasPrefix("lab."), let page = DesignLabPage(rawValue: String(route.dropFirst(4))) else {
                 return nil
             }
@@ -130,6 +133,9 @@ enum SnapshotGallery {
                     .ignoresSafeArea()
                 page.view
             })
+            #else
+            return nil
+            #endif
         }
     }
 }

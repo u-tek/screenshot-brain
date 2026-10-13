@@ -58,6 +58,7 @@ private struct MediumItemView: View {
     var body: some View {
         HStack(spacing: 12) {
             Thumbnail(name: item.thumbnailName)
+                .privacySensitive()
                 .frame(width: 84)
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: 6) {
@@ -77,6 +78,7 @@ private struct MediumItemView: View {
                         .foregroundStyle(SBColor.ink)
                         .lineLimit(2)
                         .widgetAccentable()
+                        .privacySensitive()
                     Text(item.detail.uppercased())
                         .font(.system(size: 10, weight: .medium, design: .monospaced))
                         .foregroundStyle(SBColor.ink2)
@@ -100,6 +102,7 @@ private struct SmallItemView: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             Thumbnail(name: item.thumbnailName)
+                .privacySensitive()
             DecisionButtons(itemID: item.id, compact: true)
                 .padding(8)
         }
@@ -222,7 +225,7 @@ private struct LockedCard: View {
                 Image(systemName: "lock")
                     .font(.system(size: 15, weight: .light))
                     .foregroundStyle(SBColor.ink)
-                Text(WidgetMarkup.attributed("Your trial's over. **Unlock the widget.**", size: compact ? 14 : 16))
+                Text(WidgetMarkup.attributed(WidgetAccess.trialEnded() ? "Your trial's over. **Unlock the widget.**" : "**Unlock the widget** with Premium.", size: compact ? 14 : 16))
                     .multilineTextAlignment(.center)
             }
             .padding(14)

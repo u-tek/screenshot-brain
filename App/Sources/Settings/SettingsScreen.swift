@@ -12,7 +12,10 @@ struct SettingsScreen: View {
     @State private var confirmsDelete = false
     @State private var isDeleting = false
     @State private var deleteFailed = false
+    #if DEBUG
     @State private var showsDebug = false
+    #endif
+    @State private var isRestoring = false
     @State private var restoreMessage: String?
     @State private var managesSubscription = false
     var onShowPlans: () -> Void = {}
@@ -58,7 +61,10 @@ struct SettingsScreen: View {
                                 restoreMessage = "Purchases aren't set up in this build."
                                 return
                             }
+                            guard !isRestoring else { return }
+                            isRestoring = true
                             Task {
+                                defer { isRestoring = false }
                                 do {
                                     let restored = try await model.purchases.restore()
                                     restoreMessage = restored ? "Restored." : "Nothing to restore on this Apple ID."
@@ -70,6 +76,7 @@ struct SettingsScreen: View {
                         .font(SBFont.body(16))
                         .foregroundStyle(SBColor.ink)
                         .buttonStyle(.plain)
+                        .disabled(isRestoring)
                         if let restoreMessage {
                             SmallLabel(restoreMessage)
                         }
@@ -130,9 +137,11 @@ struct SettingsScreen: View {
         }
         .sbScreen(.calm)
         .toolbar(.hidden, for: .navigationBar)
+        #if DEBUG
         .sheet(isPresented: $showsDebug) {
             DebugMenu()
         }
+        #endif
         .confirmationDialog("Delete your account?", isPresented: $confirmsDelete, titleVisibility: .visible) {
             Button("Delete everything", role: .destructive) {
                 isDeleting = true
@@ -162,6 +171,7 @@ struct SettingsScreen: View {
         } set: { date in
             let parts = Calendar.current.dateComponents([.hour, .minute], from: date)
             model.updateAnswers { $0.recapMinutes = (parts.hour ?? 21) * 60 + (parts.minute ?? 0) }
+            model.replanRecap()
         }
     }
 

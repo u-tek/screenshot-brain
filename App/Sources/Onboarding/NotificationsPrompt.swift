@@ -38,6 +38,7 @@ struct NotificationsPrompt: View {
 struct WidgetGuide: View {
     var palette: LightPalette = .sampleTopScreenshots
     var onDone: () -> Void = {}
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         GeometryReader { proxy in
@@ -45,7 +46,7 @@ struct WidgetGuide: View {
             ZStack {
                 LightField(.sweep(palette), drifts: true)
                     .ignoresSafeArea()
-                VStack(alignment: .leading, spacing: 0) {
+                let content = VStack(alignment: .leading, spacing: 0) {
                     SmallLabel("The widget")
                         .padding(.top, 16)
                         .padding(.bottom, 10)
@@ -68,7 +69,16 @@ struct WidgetGuide: View {
                         .padding(.bottom, 8)
                 }
                 .padding(.horizontal, 24)
-                .frame(width: proxy.size.width, height: proxy.size.height)
+
+                if dynamicTypeSize.isAccessibilitySize {
+                    // Large text outgrows the screen: scroll, so the action stays reachable.
+                    ScrollView {
+                        content.frame(width: proxy.size.width, alignment: .topLeading)
+                            .frame(minHeight: proxy.size.height)
+                    }
+                } else {
+                    content.frame(width: proxy.size.width, height: proxy.size.height)
+                }
             }
         }
     }

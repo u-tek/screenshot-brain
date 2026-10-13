@@ -286,6 +286,10 @@ struct ItemDetailScreen: View {
             }
         case .ingredients:
             let lines = Ingredients.lines(in: item.extractedText ?? "")
+            guard !lines.isEmpty else {
+                flash("Couldn't find any ingredients.")
+                return
+            }
             UIPasteboard.general.string = lines.joined(separator: "\n")
             model.analytics.track(.actionCopyIngredients)
             Haptics.success()

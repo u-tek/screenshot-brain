@@ -30,6 +30,22 @@ import Testing
         #expect(deck.dropFirst(3).map(\.item.id) == older.prefix(5).map(\.id))
     }
 
+    @Test func aGroupSpanningTheCutOffIsOneCard() throws {
+        let database = try AppDatabase.inMemory()
+        let group = ItemGroup(createdAt: base, itemCount: 2, updatedAt: base)
+        try database.writer.write { db in try group.insert(db) }
+        var newer = item(daysAgo: 1)
+        newer.groupID = group.id
+        var older = item(daysAgo: 6)
+        older.groupID = group.id
+        try database.save([newer, older])
+
+        let deck = try database.recapDeck(newSince: base.addingTimeInterval(-3 * 86_400), olderLimit: 5)
+        #expect(deck.count == 1)
+        #expect(deck.first?.item.id == newer.id)
+        #expect(deck.first?.groupSize == 2)
+    }
+
     @Test func remembersTheLastRecapAcrossScans() throws {
         let database = try AppDatabase.inMemory()
         try database.markRecapped(at: base)

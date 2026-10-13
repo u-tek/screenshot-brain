@@ -55,15 +55,18 @@ public enum ItemAction: String, CaseIterable, Sendable, Identifiable {
         if EventDraft(item: item) != nil {
             actions.append(.calendar)
         }
-        if item.category == .place || item.entities.contains(where: { $0.kind == .address }) {
-            actions.append(.maps)
-        }
-        // Somewhere to go: the link read from it, or a search for its name.
-        let lookedUp: Set<ItemCategory> = [.watch, .listen, .read, .travel]
-        if ShopLink.url(for: item) != nil, lookedUp.contains(item.category) {
-            actions.append(.lookUp)
-        } else if ShopLink.url(for: item) != nil, item.category == .product || (ShopLink.detectedURL(for: item) != nil && item.category != .event) {
-            actions.append(.shop)
+        // Maps, shop and look-up send text or a link out of the app: never for sensitive text.
+        if !item.hasSensitiveText {
+            if item.category == .place || item.entities.contains(where: { $0.kind == .address }) {
+                actions.append(.maps)
+            }
+            // Somewhere to go: the link read from it, or a search for its name.
+            let lookedUp: Set<ItemCategory> = [.watch, .listen, .read, .travel]
+            if ShopLink.url(for: item) != nil, lookedUp.contains(item.category) {
+                actions.append(.lookUp)
+            } else if ShopLink.url(for: item) != nil, item.category == .product || (ShopLink.detectedURL(for: item) != nil && item.category != .event) {
+                actions.append(.shop)
+            }
         }
         if item.category == .recipe, !Ingredients.lines(in: item.extractedText ?? "").isEmpty {
             actions.append(.ingredients)
@@ -163,9 +166,23 @@ public enum Ingredients {
             .filter { line in
                 guard line.filter(\.isLetter).count >= 2, line.count <= 80 else { return false }
                 let range = NSRange(line.startIndex..., in: line)
-                return quantity.firstMatch(in: line, range: range) != nil
+                guard let match = quantity.firstMatch(in: line, range: range), let matched = Range(match.range, in: line) else { return false }
+                // A unit makes it an ingredient. A bare number needs a closer look.
+                if match.range(at: 4).location != NSNotFound { return true }
+                let rest = line[matched.upperBound...]
+                // "1. Preheat the oven", "2) Mix": a numbered step.
+                if let first = rest.first, ".):".contains(first) { return false }
+                // "10 minutes", "12 King St": a duration, an address.
+                let words = rest.split(whereSeparator: { !$0.isLetter }).map { $0.lowercased() }
+                return !words.contains { notIngredientWords.contains($0) }
             }
     }
+
+    private static let notIngredientWords: Set<String> = [
+        "minute", "minutes", "min", "mins", "hour", "hours", "hr", "hrs", "second", "seconds", "sec", "secs",
+        "day", "days", "week", "weeks", "degrees", "servings", "people",
+        "st", "street", "rd", "road", "ave", "avenue", "ln", "lane", "dr", "drive", "blvd", "pde", "parade", "hwy", "highway",
+    ]
 }
 
 public enum MapsQuery {

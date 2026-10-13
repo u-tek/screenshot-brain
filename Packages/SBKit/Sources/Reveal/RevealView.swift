@@ -63,13 +63,16 @@ public struct RevealView: View {
             GeometryReader { proxy in
                 Color.clear
                     .contentShape(Rectangle())
-                    .onTapGesture(coordinateSpace: .local) { location in
-                        if location.x < proxy.size.width / 3 {
-                            back()
-                        } else {
-                            advance()
+                    // onTapGesture(coordinateSpace:) is iOS 17; this reads the same on iOS 16.
+                    .gesture(
+                        SpatialTapGesture().onEnded { tap in
+                            if tap.location.x < proxy.size.width / 3 {
+                                back()
+                            } else {
+                                advance()
+                            }
                         }
-                    }
+                    )
             }
             .accessibilityHidden(true)
 
