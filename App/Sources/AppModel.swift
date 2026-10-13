@@ -3,6 +3,7 @@ import Combine
 import Core
 import DesignSystem
 import Foundation
+import Media
 import Notifications
 import Paywall
 import Reveal
@@ -85,6 +86,10 @@ final class AppModel: ObservableObject {
     func start() async {
         // Follows purchases from launch, so a renewal or a lapse shows without opening the paywall.
         Task { await purchases.start() }
+        // Photos left behind by things marked not done after all.
+        if let names = try? services?.database.memoryPhotoNames() {
+            Task.detached(priority: .utility) { MemoryPhotos.removeUnused(keeping: names) }
+        }
         if let account, !(await AccountStore.isStillAuthorised(account)) {
             signOutLocally()
             return

@@ -42,6 +42,16 @@ public enum MemoryPhotos {
         try? FileManager.default.removeItem(at: directory.appendingPathComponent(name))
     }
 
+    /// Deletes the copies nothing uses any more: left behind when something stops being done.
+    public static func removeUnused(keeping names: Set<String>, directory: URL? = nil) {
+        guard let directory = directory ?? (try? AppGroup.directory(.memories)),
+              let files = try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
+        else { return }
+        for file in files where !names.contains(file.lastPathComponent) {
+            try? FileManager.default.removeItem(at: file)
+        }
+    }
+
     static func image(_ identifier: String, maxPixelSize: Int) -> CGImage? {
         let name = String(identifier.dropFirst(identifierPrefix.count))
         guard let directory = try? AppGroup.directory(.memories),

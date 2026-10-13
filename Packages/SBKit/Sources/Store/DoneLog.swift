@@ -124,22 +124,62 @@ extension AppDatabase {
             SELECT id, id, COALESCE(groupID, id), COALESCE(stateChangedAt, updatedAt), title, category,
                    thumbnailPath, palette, isSafeToDisplay, hasSensitiveText, COALESCE(stateChangedAt, updatedAt)
             FROM screenshotItem
-            WHERE state = ? AND isNSFWFlagged = 0
+            WHERE state = ? AND isNSFWFlagged = 0 AND processedAt IS NOT NULL
             ORDER BY COALESCE(stateChangedAt, updatedAt)
             """, arguments: [ItemState.done.rawValue])
     }
 
-    /// Keeps the log in step with items whose state was just written: an entry for each thing
-    /// done (one per group of near-duplicates), gone again when it's no longer done.
+    /// Keeps the log in step with items just written: an entry for each thing done (one per
+    /// group of near-duplicates), brought up to date as the item is read and checked, and gone
+    /// again once nothing in its group is done.
+    ///
+    /// An item isn't logged until it has been read: a state from another device can arrive for
+    /// a screenshot this device has only just found, with no title, kind or safety checks yet.
     static func recordDone(_ items: [ScreenshotItem], in db: Database) throws {
-        let undone = items.filter { $0.state != .done }.map(\.id)
+        let undone = items.filter { $0.state != .done }
         if !undone.isEmpty {
-            try DoneEntry.filter(undone.contains(DoneEntry.Columns.itemID)).deleteAll(db)
+            // The group each was in, and whatever entry was made from it before it was grouped.
+            var keys = Set(undone.map { $0.groupID ?? $0.id })
+            keys.formUnion(try DoneEntry
+                .filter(undone.map(\.id).contains(DoneEntry.Columns.itemID))
+                .fetchAll(db)
+                .map(\.groupKey))
+            for key in keys {
+                let stillDone = try ScreenshotItem
+                    .filter(ScreenshotItem.Columns.state == ItemState.done.rawValue)
+                    .filter(ScreenshotItem.Columns.groupID == key || ScreenshotItem.Columns.id == key)
+                    .fetchCount(db) > 0
+                if !stillDone {
+                    try DoneEntry.filter(DoneEntry.Columns.groupKey == key).deleteAll(db)
+                }
+            }
         }
-        for item in items where item.state == .done && !item.isNSFWFlagged {
+        for item in items where item.state == .done && !item.isNSFWFlagged && item.processedAt != nil {
             let key = item.groupID ?? item.id
-            guard try DoneEntry.filter(DoneEntry.Columns.groupKey == key).fetchCount(db) == 0 else { continue }
-            try DoneEntry(item: item).insert(db)
+            if var entry = try DoneEntry.filter(DoneEntry.Columns.groupKey == key).fetchOne(db) {
+                // Read again or rechecked since (reclassified, or found to hold something
+                // sensitive): the entry follows, so the share card never shows what it shouldn't.
+                guard entry.itemID == item.id else { continue }
+                let before = entry
+                entry.title = item.title
+                entry.category = item.category
+                entry.thumbnailPath = item.thumbnailPath
+                entry.palette = item.palette
+                entry.isSafeToDisplay = item.isSafeToDisplay
+                entry.hasSensitiveText = item.hasSensitiveText
+                if entry != before {
+                    try entry.update(db)
+                }
+            } else {
+                try DoneEntry(item: item).insert(db)
+            }
+        }
+    }
+
+    /// The photo files the log still uses, so the rest can be cleared away.
+    public func memoryPhotoNames() throws -> Set<String> {
+        try reader.read { db in
+            try String.fetchSet(db, sql: "SELECT photoName FROM doneEntry WHERE photoName IS NOT NULL")
         }
     }
 }

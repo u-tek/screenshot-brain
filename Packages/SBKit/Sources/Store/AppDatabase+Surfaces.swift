@@ -105,6 +105,8 @@ extension AppDatabase {
             for item in items {
                 try item.save(db)
             }
+            // Read (or read again) after being done: the did-it log catches up.
+            try Self.recordDone(items.filter { $0.state == .done }, in: db)
         }
     }
 
