@@ -65,6 +65,8 @@ struct NextUpCard: View {
             }
         }
         .frame(maxWidth: .infinity)
+        // Its own height, not all that's left: it's one thing, not the whole screen.
+        .fixedSize(horizontal: false, vertical: true)
         .accessibilityElement(children: .combine)
         .accessibilityHint(Text("Opens it"))
     }
