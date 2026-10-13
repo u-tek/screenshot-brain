@@ -64,16 +64,9 @@ struct HomeScreen: View {
         .frame(maxWidth: .infinity)
     }
 
+    /// Not a dead end: once it's all sorted, one thing from what's been kept to go and do.
     private var allSorted: some View {
-        VStack(spacing: 12) {
-            Text("All sorted.")
-                .sbText(.large)
-            Text("New screenshots land here as you take them.")
-                .sbText(.body)
-                .multilineTextAlignment(.center)
-        }
-        .padding(.horizontal, 40)
-        .frame(maxWidth: .infinity)
+        AllSorted(pick: home.nextUp)
     }
 
     /// "17 kept · 6 done", opening Kept. Nothing at all until something's been kept.

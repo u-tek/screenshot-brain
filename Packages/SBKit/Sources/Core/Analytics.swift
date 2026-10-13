@@ -38,6 +38,12 @@ public enum AnalyticsEvent: String, CaseIterable, Sendable {
     case trialStarted = "purchase.trialStarted"
     case purchaseCompleted = "purchase.completed"
     case purchaseRestored = "purchase.restored"
+
+    // Coming back: what shows once it's all sorted, and carrying on past a batch. `from` is 0 for
+    // Home and 1 for the end of a sort; `dated` is 1 when the pick has a date coming up.
+    case nextUpShown = "nextUp.shown"
+    case nextUpOpened = "nextUp.opened"
+    case sortKeptGoing = "sort.keptGoing"
 }
 
 /// Privacy-first analytics: event counts only.

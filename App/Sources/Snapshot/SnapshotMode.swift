@@ -101,6 +101,15 @@ enum SnapshotGallery {
             return AnyView(NotificationsPrompt(palette: palette))
         case "widgetguide":
             return AnyView(WidgetGuide(palette: palette))
+        case "home.sorted":
+            return AnyView(NavigationStack { HomeScreen(home: .sampleSorted()) })
+        case "sortdone.tally":
+            return AnyView(SortDone(
+                left: 0,
+                dropped: 6,
+                sorted: TriageTally(kept: 4, done: 2, dropped: 6),
+                nextUp: NextUp(item: SampleData.gig, reason: .comingUp)
+            ))
         case "paywall":
             let items = (SampleData.comingUp + [SampleData.item(.place, "Ramen Ikkyu", daysAgo: 21)]).map { PaywallItem($0, now: SampleData.now) }
             return AnyView(PaywallView(purchases: PurchaseService(apiKey: nil, appUserID: nil), palette: palette, items: items, privacyPolicy: nil, onClose: {}, onPurchased: {}))

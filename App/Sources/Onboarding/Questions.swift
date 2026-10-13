@@ -91,7 +91,7 @@ struct CountQuestion: View {
 
     var body: some View {
         QuestionLayout(
-            label: "Question 1",
+            label: "Question 1 of 4",
             headline: "How many **screenshots** do you reckon you took?",
             subtext: "Just the last two months. **No peeking.**",
             light: .sweep(palette),
@@ -131,7 +131,7 @@ struct TopCategoryQuestion: View {
 
     var body: some View {
         QuestionLayout(
-            label: "Question 2",
+            label: "Question 2 of 4",
             headline: "What do you save **the most?**",
             subtext: "Go with your gut.",
             light: .sweep(palette.reversed).mirrored(),
@@ -181,7 +181,7 @@ struct DoneQuestion: View {
 
     var body: some View {
         QuestionLayout(
-            label: "Question 3",
+            label: "Question 3 of 4",
             headline: "How many of those have you **actually done?**",
             subtext: "The restaurants, the gigs, the recipes. **Honestly.**",
             light: .sweep(palette.reversed),
@@ -213,7 +213,7 @@ struct WindDownQuestion: View {
 
     var body: some View {
         QuestionLayout(
-            label: "Question 4",
+            label: "Question 4 of 4",
             headline: "What time do you **wind down?**",
             subtext: "That's when your recap turns up. One a night, tops.",
             light: .sweep(palette).mirrored(),

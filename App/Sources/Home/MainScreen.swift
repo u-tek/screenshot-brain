@@ -63,6 +63,7 @@ struct MainScreen: View {
             follow(link)
         }
         .onAppear { follow(model.pendingLink) }
+        .environment(\.analytics, model.analytics)
         .fullScreenCover(isPresented: $isSorting, onDismiss: { home.reload() }) {
             SortSession(onDeleteDropped: deleteDropped) {
                 isSorting = false
@@ -146,13 +147,17 @@ struct MainScreen: View {
 }
 
 /// Sorting, from Home: the pile 30 at a time, newest first. "Finish later" goes straight back;
-/// finishing a batch shows how it went, with what's left and the dropped ones to clear.
+/// finishing a batch shows how it went, with what's left and the dropped ones to clear, and once
+/// it's all sorted, one thing to go and do.
 struct SortSession: View {
     @EnvironmentObject private var model: AppModel
     @State private var triage: TriageModel?
     @State private var isBatchOver = false
     @State private var left = 0
     @State private var dropped = 0
+    /// Everything decided since sorting opened, across batches.
+    @State private var sorted = TriageTally()
+    @State private var nextUp: NextUp?
     var onDeleteDropped: (@escaping @MainActor () -> Void) -> Void = { _ in }
     var onClose: () -> Void = {}
 
@@ -167,8 +172,11 @@ struct SortSession: View {
                 SortDone(
                     left: left,
                     dropped: dropped,
-                    onKeepGoing: startBatch,
+                    sorted: sorted,
+                    nextUp: nextUp,
+                    onKeepGoing: keepGoing,
                     onDeleteDropped: { onDeleteDropped(refreshCounts) },
+                    onOpenNextUp: openNextUp,
                     onClose: onClose
                 )
                 .transition(.opacity)
@@ -190,8 +198,22 @@ struct SortSession: View {
         refreshCounts()
     }
 
+    private func keepGoing() {
+        model.analytics.track(.sortKeptGoing, counts: ["left": left])
+        startBatch()
+    }
+
+    /// Closes sorting and opens the pick over Home, the same way a widget link does.
+    private func openNextUp(_ pick: NextUp) {
+        model.analytics.track(.nextUpOpened, counts: ["from": 1, "dated": pick.isDated])
+        model.pendingLink = .item(pick.item.id)
+    }
+
     private func finish(_ triage: TriageModel) {
         model.finishRecap(triage.tally)
+        sorted.kept += triage.tally.kept
+        sorted.done += triage.tally.done
+        sorted.dropped += triage.tally.dropped
         if triage.isFinished {
             refreshCounts()
             isBatchOver = true
@@ -203,17 +225,27 @@ struct SortSession: View {
     private func refreshCounts() {
         left = model.toSortCount()
         dropped = model.droppedCount()
+        nextUp = left == 0 ? NextUp.pick(from: model.services?.database) : nil
     }
 }
 
-/// The end of a batch: all sorted (or how many are left), a way to clear the dropped ones from
-/// Photos, and back to Home.
+/// The end of a batch: how many were just sorted and where they went, then either how many are
+/// left (with "Keep going") or, once it's all sorted, one thing kept to go and do. Plus a way to
+/// clear the dropped ones from Photos, and back to Home.
 struct SortDone: View {
     let left: Int
     let dropped: Int
+    var sorted = TriageTally()
+    var nextUp: NextUp?
     var onKeepGoing: () -> Void = {}
     var onDeleteDropped: () -> Void = {}
+    var onOpenNextUp: (NextUp) -> Void = { _ in }
     var onClose: () -> Void = {}
+    @Environment(\.analytics) private var analytics
+
+    private var sortedCount: Int { sorted.kept + sorted.done + sorted.dropped }
+    /// The pick only shows once the pile's gone, so "Keep going" stays the one thing to do.
+    private var pick: NextUp? { left == 0 ? nextUp : nil }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -226,14 +258,30 @@ struct SortDone: View {
 
             Spacer()
 
-            VStack(spacing: 12) {
-                Text(left > 0 ? "Nice." : "All sorted.")
-                    .sbText(.large)
-                Text(left > 0 ? (left == 1 ? "1 more to sort." : "\(left) more to sort.") : "New screenshots land here as you take them.")
-                    .sbText(.body)
-                    .multilineTextAlignment(.center)
+            if sortedCount > 0 {
+                tally
+            } else {
+                VStack(spacing: 12) {
+                    Text(left > 0 ? "Nice." : "All sorted.")
+                        .sbText(.large)
+                    Text(left > 0 ? moreToSort : "New screenshots land here as you take them.")
+                        .sbText(.body)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.horizontal, 40)
             }
-            .padding(.horizontal, 40)
+
+            if let pick {
+                Button { onOpenNextUp(pick) } label: {
+                    NextUpCard(pick: pick)
+                }
+                .buttonStyle(SBPressStyle())
+                .padding(.horizontal, SBSpace.gutter)
+                .padding(.top, 32)
+                .onAppear {
+                    analytics.track(.nextUpShown, counts: ["from": 1, "dated": pick.isDated])
+                }
+            }
 
             Spacer()
 
@@ -259,6 +307,46 @@ struct SortDone: View {
             .padding(.bottom, 28)
         }
         .sbScreen(left > 0 ? SBAmbience(energy: 0.55) : .calm)
+        .onAppear {
+            // Clearing the whole pile is the moment worth feeling.
+            if sortedCount > 0, left == 0 { Haptics.success() }
+        }
+    }
+
+    /// "12 sorted", where they went, and what's left: the same big number as Home's pile.
+    private var tally: some View {
+        VStack(spacing: 0) {
+            Text("\(sortedCount)")
+                .sbText(.numXL)
+                .monospacedDigit()
+            Text("sorted")
+                .sbText(.unit, color: SBColor.ink2)
+                .padding(.top, 6)
+            Text(breakdown)
+                .sbText(.body, color: SBColor.ink)
+                .padding(.top, 18)
+            Text(left > 0 ? moreToSort : "That's the lot. All sorted.")
+                .sbText(.body)
+                .padding(.top, 6)
+        }
+        .multilineTextAlignment(.center)
+        .padding(.horizontal, 40)
+        .accessibilityElement(children: .combine)
+    }
+
+    /// "4 still want · 2 done · 6 dropped", leaving out the empty ones.
+    private var breakdown: String {
+        [
+            sorted.kept > 0 ? "\(sorted.kept) still want" : nil,
+            sorted.done > 0 ? "\(sorted.done) done" : nil,
+            sorted.dropped > 0 ? "\(sorted.dropped) dropped" : nil,
+        ]
+        .compactMap { $0 }
+        .joined(separator: " · ")
+    }
+
+    private var moreToSort: String {
+        left == 1 ? "1 more to sort." : "\(left) more to sort."
     }
 }
 

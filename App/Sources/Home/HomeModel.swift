@@ -88,4 +88,11 @@ final class HomeModel: ObservableObject {
             results = (try? database.search(query)) ?? []
         }
     }
+
+    /// Home with nothing left to sort, for design snapshots: "All sorted" and the pick.
+    static func sampleSorted() -> HomeModel {
+        let model = sample()
+        model.toSort = 0
+        return model
+    }
 }

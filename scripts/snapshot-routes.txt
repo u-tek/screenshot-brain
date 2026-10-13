@@ -30,6 +30,8 @@ settings
 notifications
 widgetguide
 paywall
+home.sorted
+sortdone.tally
 store.1
 store.2
 store.3
