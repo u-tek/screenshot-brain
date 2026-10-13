@@ -7,12 +7,15 @@ public struct NotableItem: Hashable, Sendable {
     public var title: String?
     public var category: ItemCategory
     public var dueDate: Date?
+    /// When it was kept, for things brought back up from what's been kept.
+    public var keptAt: Date?
 
-    public init(id: String, title: String?, category: ItemCategory, dueDate: Date?) {
+    public init(id: String, title: String?, category: ItemCategory, dueDate: Date?, keptAt: Date? = nil) {
         self.id = id
         self.title = title
         self.category = category
         self.dueDate = dueDate
+        self.keptAt = keptAt
     }
 }
 
@@ -32,6 +35,9 @@ public struct NotificationContext: Sendable {
     public var trialEndsAt: Date?
     public var doneCount: Int
     public var history: NotificationHistory
+    /// Things kept and not yet done, kept longest first: what a quiet night or a win-back brings
+    /// back up.
+    public var keptItems: [NotableItem]
 
     public init(
         now: Date,
@@ -43,7 +49,8 @@ public struct NotificationContext: Sendable {
         lastOpenedAt: Date,
         trialEndsAt: Date?,
         doneCount: Int,
-        history: NotificationHistory
+        history: NotificationHistory,
+        keptItems: [NotableItem] = []
     ) {
         self.now = now
         self.recapMinutes = recapMinutes
@@ -55,6 +62,7 @@ public struct NotificationContext: Sendable {
         self.trialEndsAt = trialEndsAt
         self.doneCount = doneCount
         self.history = history
+        self.keptItems = keptItems
     }
 }
 
@@ -65,6 +73,10 @@ public struct PlannedNotification: Hashable, Sendable {
         case digest
         case trialReminder
         case winBack
+        /// The second and last win-back, three weeks away.
+        case lateWinBack
+        /// A quiet night: something kept a while, brought back up.
+        case resurface
         case monthlyReveal
     }
 
@@ -81,6 +93,8 @@ public struct PlannedNotification: Hashable, Sendable {
 public struct NotificationHistory: Codable, Hashable, Sendable {
     public var nudgedItemIDs: Set<String> = []
     public var winBackSentAt: Date?
+    public var lateWinBackSentAt: Date?
+    public var lastResurfacedAt: Date?
     public var trialReminderSent = false
     /// "2026-10" for the month whose Reveal was announced.
     public var monthlyRevealSent: String?
@@ -93,6 +107,8 @@ public struct NotificationHistory: Codable, Hashable, Sendable {
         }
         switch plan.kind {
         case .winBack: winBackSentAt = plan.fireAt
+        case .lateWinBack: lateWinBackSentAt = plan.fireAt
+        case .resurface: lastResurfacedAt = plan.fireAt
         case .trialReminder: trialReminderSent = true
         case .monthlyReveal: monthlyRevealSent = NotificationPlanner.monthKey(plan.fireAt, calendar: calendar)
         case .recap, .expiry, .digest: break
@@ -104,11 +120,20 @@ public struct NotificationHistory: Codable, Hashable, Sendable {
 ///
 /// At most one a day, by construction: there's one slot, at the recap time. Copy is always
 /// specific. No streaks: missing a day never costs anything.
+///
+/// Quiet nights aren't always silent: every few days, something kept a while comes back up, so
+/// what was saved gets done rather than forgotten. Someone who stops opening the app hears twice,
+/// at a week and at three weeks, then nothing.
 public enum NotificationPlanner {
     /// Dated things get a nudge this long before they pass.
     public static let expiryLead: TimeInterval = 2 * 86_400
     public static let winBackAfter: TimeInterval = 7 * 86_400
+    public static let lateWinBackAfter: TimeInterval = 21 * 86_400
     public static let silentAfter: TimeInterval = 30 * 86_400
+    /// Things kept more recently than this aren't brought back up yet.
+    public static let resurfaceAfterKept: TimeInterval = 7 * 86_400
+    /// Quiet-night resurfacing happens at most this often (less an hour or two for clock changes).
+    public static let resurfaceGap: TimeInterval = 3 * 86_400 - 2 * 3_600
 
     public static func plan(_ context: NotificationContext, calendar: Calendar = .current) -> PlannedNotification? {
         let fireAt = nextRecap(after: context.now, minutes: context.recapMinutes, calendar: calendar)
@@ -118,14 +143,30 @@ public enum NotificationPlanner {
             return due > fireAt && due.timeIntervalSince(fireAt) <= expiryLead
         }
 
+        // Kept a week or more, not nudged before, and not already been and gone.
+        let resurfaceable = context.keptItems.filter { item in
+            guard let keptAt = item.keptAt, !context.history.nudgedItemIDs.contains(item.id) else { return false }
+            if let due = item.dueDate, due <= fireAt { return false }
+            return fireAt.timeIntervalSince(keptAt) >= resurfaceAfterKept
+        }
+
         // A month away: stop completely.
         if away >= silentAfter { return nil }
 
-        // A week away: one nudge about something expiring, then quiet until they're back.
+        // Away a while: one nudge at a week (something expiring, else something kept), one more at
+        // three weeks, then quiet until they're back.
         if away >= winBackAfter {
-            let alreadySent = (context.history.winBackSentAt ?? .distantPast) > context.lastOpenedAt
-            guard !alreadySent, let item = expiring.first else { return nil }
-            return PlannedNotification(kind: .winBack, body: NotificationCopy.expiry(item, at: fireAt, calendar: calendar), fireAt: fireAt, itemID: item.id, link: "screenshotbrain://item/\(item.id)")
+            let firstSent = (context.history.winBackSentAt ?? .distantPast) > context.lastOpenedAt
+            if !firstSent {
+                if let item = expiring.first {
+                    return PlannedNotification(kind: .winBack, body: NotificationCopy.expiry(item, at: fireAt, calendar: calendar), fireAt: fireAt, itemID: item.id, link: "screenshotbrain://item/\(item.id)")
+                }
+                guard let item = resurfaceable.first else { return nil }
+                return PlannedNotification(kind: .winBack, body: NotificationCopy.stillOnYourList(item), fireAt: fireAt, itemID: item.id, link: "screenshotbrain://item/\(item.id)")
+            }
+            let lateSent = (context.history.lateWinBackSentAt ?? .distantPast) > context.lastOpenedAt
+            guard !lateSent, away >= lateWinBackAfter, let item = resurfaceable.first else { return nil }
+            return PlannedNotification(kind: .lateWinBack, body: NotificationCopy.lateWinBack(item, kept: context.keptItems.count), fireAt: fireAt, itemID: item.id, link: "screenshotbrain://item/\(item.id)")
         }
 
         // Day 5 of the 7-day trial.
@@ -163,6 +204,12 @@ public enum NotificationPlanner {
 
         if isSunday, context.weekSaved > 0 || context.weekDone > 0 {
             return PlannedNotification(kind: .digest, body: NotificationCopy.digest(saved: context.weekSaved, done: context.weekDone, waiting: 0), fireAt: fireAt, itemID: nil, link: "screenshotbrain://home")
+        }
+
+        // A quiet night: every few days, something kept a while.
+        let lastResurfaced = context.history.lastResurfacedAt ?? .distantPast
+        if fireAt.timeIntervalSince(lastResurfaced) >= resurfaceGap, let item = resurfaceable.first, let keptAt = item.keptAt {
+            return PlannedNotification(kind: .resurface, body: NotificationCopy.resurface(item, keptAt: keptAt, at: fireAt), fireAt: fireAt, itemID: item.id, link: "screenshotbrain://item/\(item.id)")
         }
         return nil
     }
@@ -215,25 +262,57 @@ public enum NotificationCopy {
 
     public static func recap(_ item: NotableItem, others: Int, at now: Date, calendar: Calendar) -> String {
         let more = others > 0 ? (others == 1 ? " 1 more waiting." : " \(others) more waiting.") : ""
-        let line: String
-        switch item.category {
-        case .event:
-            // A gig that's been and gone isn't "Saturday".
-            if let due = item.dueDate, due > now {
-                line = "\(name(item)) is \(day(due, from: now, calendar: calendar)). Still going?"
-            } else {
-                line = "\(name(item)). Going?"
-            }
-        case .place: line = "\(name(item)). Actually going?"
-        case .product: line = "\(name(item)). Still want it?"
-        case .recipe: line = "\(name(item)). Cooking it this week?"
-        case .watch: line = "\(name(item)). Watching it this week?"
-        case .listen: line = "\(name(item)). Given it a listen yet?"
-        case .read: line = "\(name(item)). Started it yet?"
-        case .travel: line = "\(name(item)). Booking it?"
-        case .message, .post, .reference, .other: line = "\(name(item)). Keep it or let it go?"
+        // A gig that's been and gone isn't "Saturday".
+        if item.category == .event, let due = item.dueDate, due > now {
+            return "\(name(item)) is \(day(due, from: now, calendar: calendar)). Still going?" + more
         }
-        return line + more
+        return "\(name(item)). \(question(item.category))" + more
+    }
+
+    /// The question each kind of thing gets asked.
+    static func question(_ category: ItemCategory) -> String {
+        switch category {
+        case .event: "Going?"
+        case .place: "Actually going?"
+        case .product: "Still want it?"
+        case .recipe: "Cooking it this week?"
+        case .watch: "Watching it this week?"
+        case .listen: "Given it a listen yet?"
+        case .read: "Started it yet?"
+        case .travel: "Booking it?"
+        case .message, .post, .reference, .other: "Keep it or let it go?"
+        }
+    }
+
+    /// A quiet night. "You kept Ramen Ikkyu 3 weeks ago. Actually going?"; without a name that's
+    /// safe to show, "That place you saved 3 weeks ago. Actually going?"
+    public static func resurface(_ item: NotableItem, keptAt: Date, at now: Date) -> String {
+        let ago = keptAgo(keptAt, now: now)
+        let title = item.title?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let opening = !title.isEmpty && title.count <= 40 ? "You kept \(title) \(ago)." : "\(name(item)) \(ago)."
+        return "\(opening) \(question(item.category))"
+    }
+
+    /// The first win-back when nothing's expiring: "Ramen Ikkyu is still on your list. This weekend?"
+    public static func stillOnYourList(_ item: NotableItem) -> String {
+        "\(name(item)) is still on your list. This weekend?"
+    }
+
+    /// The last win-back: "You've still got 9 things saved to do. Ramen Ikkyu is one of them."
+    public static func lateWinBack(_ item: NotableItem, kept: Int) -> String {
+        guard kept > 1 else { return "You've still got 1 thing saved to do: \(name(item))." }
+        return "You've still got \(kept) things saved to do. \(name(item)) is one of them."
+    }
+
+    /// "last week", "3 weeks ago", "2 months ago", "over a year ago".
+    static func keptAgo(_ keptAt: Date, now: Date) -> String {
+        let days = max(Int(now.timeIntervalSince(keptAt) / 86_400), 0)
+        switch days {
+        case ..<14: return "last week"
+        case ..<60: return "\(days / 7) weeks ago"
+        case ..<365: return days < 90 ? "2 months ago" : "\(days / 30) months ago"
+        default: return "over a year ago"
+        }
     }
 
     public static func expiry(_ item: NotableItem, at now: Date, calendar: Calendar) -> String {

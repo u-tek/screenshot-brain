@@ -36,7 +36,7 @@ struct SettingsScreen: View {
                                 .font(SBFont.body(16))
                                 .foregroundStyle(SBColor.ink)
                         }
-                        SmallLabel("One a night at most, and only when there's something new.")
+                        SmallLabel("One a night at most, and only when there's something worth saying.")
                     }
 
                     section("Premium") {
