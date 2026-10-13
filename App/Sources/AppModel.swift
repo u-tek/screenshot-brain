@@ -3,6 +3,7 @@ import Combine
 import Core
 import DesignSystem
 import Foundation
+import Media
 import Notifications
 import Paywall
 import Reveal
@@ -89,6 +90,10 @@ final class AppModel: ObservableObject {
     func start() async {
         // Follows purchases from launch, so a renewal or a lapse shows without opening the paywall.
         Task { await purchases.start() }
+        // Photos left behind by things marked not done after all.
+        if let names = try? services?.database.memoryPhotoNames() {
+            Task.detached(priority: .utility) { MemoryPhotos.removeUnused(keeping: names) }
+        }
         if let account, !(await AccountStore.isStillAuthorised(account)) {
             signOutLocally()
             return
@@ -291,9 +296,9 @@ final class AppModel: ObservableObject {
         }
         try services?.database.eraseAll()
         // Everything kept outside the database: thumbnails, shared-in copies, images waiting in
-        // the inbox and the widget's light. Emptied rather than removed, since the scan engine
-        // keeps these folders' paths.
-        for directory in [AppGroup.Directory.thumbnails, .shared, .inbox, .widgetLight] {
+        // the inbox, the widget's light and photos added to things done. Emptied rather than
+        // removed, since the scan engine keeps these folders' paths.
+        for directory in [AppGroup.Directory.thumbnails, .shared, .inbox, .widgetLight, .memories] {
             guard let folder = try? AppGroup.directory(directory) else { continue }
             for file in (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? [] {
                 try? FileManager.default.removeItem(at: file)

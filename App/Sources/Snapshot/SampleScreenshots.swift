@@ -48,6 +48,9 @@ enum SampleScreenshots {
         samples["sample-Crispy chilli noodles"] = noodles
         // Landscape, to show a screenshot that's the wrong shape for its card.
         samples["sample-Ramen Ikkyu"] = photo()
+        // Photos added to things done, for the did-it log.
+        samples[MemoryPhotos.identifier(for: "sample-ramen.jpg")] = ramenPhoto()
+        samples[MemoryPhotos.identifier(for: "sample-gig.jpg")] = gigPhoto()
         AssetImageLoader.samples = samples
     }
 
@@ -96,6 +99,60 @@ enum SampleScreenshots {
             .foregroundStyle(.white)
             .background(Color(white: 0.07)),
             size: CGSize(width: 390, height: 844)
+        )
+    }
+
+    /// A bowl of ramen from above, soft focus: something shaped like a phone photo of a meal.
+    private static func ramenPhoto() -> CGImage? {
+        render(
+            ZStack {
+                LinearGradient(colors: [Color(red: 0.22, green: 0.13, blue: 0.08), Color(red: 0.08, green: 0.05, blue: 0.03)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                Circle()
+                    .fill(Color(red: 0.12, green: 0.1, blue: 0.09))
+                    .frame(width: 470, height: 470)
+                    .shadow(color: .black.opacity(0.6), radius: 30, y: 20)
+                Circle()
+                    .fill(RadialGradient(colors: [Color(red: 0.98, green: 0.84, blue: 0.6), Color(red: 0.86, green: 0.6, blue: 0.32)], center: .center, startRadius: 0, endRadius: 200))
+                    .frame(width: 400, height: 400)
+                Circle()
+                    .fill(RadialGradient(colors: [Color(red: 1, green: 0.95, blue: 0.85), Color(red: 0.98, green: 0.7, blue: 0.2)], center: .center, startRadius: 0, endRadius: 50))
+                    .frame(width: 100, height: 100)
+                    .offset(x: -70, y: -50)
+                Capsule()
+                    .fill(Color(red: 0.55, green: 0.3, blue: 0.2))
+                    .frame(width: 150, height: 60)
+                    .rotationEffect(.degrees(-20))
+                    .offset(x: 80, y: 60)
+                Capsule()
+                    .fill(Color(red: 0.25, green: 0.45, blue: 0.2))
+                    .frame(width: 90, height: 18)
+                    .rotationEffect(.degrees(35))
+                    .offset(x: 10, y: -110)
+            }
+            .blur(radius: 3),
+            size: CGSize(width: 640, height: 480)
+        )
+    }
+
+    /// A gig from the crowd: a dark room, coloured stage light and heads in front.
+    private static func gigPhoto() -> CGImage? {
+        render(
+            ZStack(alignment: .bottom) {
+                Color(red: 0.04, green: 0.03, blue: 0.05)
+                RadialGradient(colors: [Color(red: 0.95, green: 0.3, blue: 0.45), .clear], center: UnitPoint(x: 0.3, y: 0.15), startRadius: 0, endRadius: 320)
+                RadialGradient(colors: [Color(red: 1, green: 0.62, blue: 0.25), .clear], center: UnitPoint(x: 0.75, y: 0.2), startRadius: 0, endRadius: 280)
+                RadialGradient(colors: [Color(white: 1, opacity: 0.9), .clear], center: UnitPoint(x: 0.52, y: 0.42), startRadius: 0, endRadius: 60)
+                HStack(alignment: .bottom, spacing: -30) {
+                    ForEach(0..<7, id: \.self) { index in
+                        Ellipse()
+                            .fill(Color(red: 0.02, green: 0.02, blue: 0.03))
+                            .frame(width: 130, height: index % 2 == 0 ? 190 : 160)
+                    }
+                }
+                .offset(y: 70)
+            }
+            .blur(radius: 2),
+            size: CGSize(width: 640, height: 480)
         )
     }
 

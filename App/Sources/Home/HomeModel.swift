@@ -2,8 +2,8 @@ import Core
 import Foundation
 import Store
 
-/// What Home and Kept show: how many screenshots are waiting to be sorted, the score, what's
-/// coming up, what's still wanted, and search.
+/// What Home, Kept and the did-it log show: how many screenshots are waiting to be sorted, the
+/// score, what's coming up, what's still wanted, what's been done, and search.
 @MainActor
 final class HomeModel: ObservableObject {
     struct Shelf: Identifiable, Hashable {
@@ -19,6 +19,8 @@ final class HomeModel: ObservableObject {
     /// Filed away without sorting: chats, posts, receipts and the rest, by kind.
     @Published private(set) var filed: [Shelf] = []
     @Published private(set) var droppedCount = 0
+    /// Everything done, newest first, kept after its screenshot is deleted.
+    @Published private(set) var doneLog: [DoneEntry] = []
     /// Screenshots waiting to be sorted (near-duplicates count once).
     @Published private(set) var toSort = 0
     @Published private(set) var results: [ScreenshotItem] = []
@@ -50,6 +52,7 @@ final class HomeModel: ObservableObject {
         shelves = Self.shelves(grouped.filter { $0.key.isIntention })
         filed = Self.shelves((try? database.filed()) ?? [:])
         droppedCount = (try? database.dropped().count) ?? 0
+        doneLog = (try? database.doneLog()) ?? []
         toSort = (try? database.triageDeck(limit: .max).count) ?? 0
         // What was found may have been decided or deleted since.
         scheduleSearch()
@@ -72,6 +75,7 @@ final class HomeModel: ObservableObject {
         model.filed = SampleData.filed.map { Shelf(category: $0.0, items: $0.1) }
         model.toSort = 24
         model.droppedCount = 12
+        model.doneLog = SampleData.doneLog
         return model
     }
 

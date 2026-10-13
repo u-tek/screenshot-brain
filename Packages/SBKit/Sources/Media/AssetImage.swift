@@ -21,6 +21,9 @@ public enum AssetImageLoader {
         if localIdentifier.hasPrefix(AppGroup.sharedIdentifierPrefix) {
             return sharedImage(localIdentifier, maxPixelSize: maxPixelSize)
         }
+        if localIdentifier.hasPrefix(MemoryPhotos.identifierPrefix) {
+            return MemoryPhotos.image(localIdentifier, maxPixelSize: maxPixelSize)
+        }
         // Touching the library without access makes iOS show its permission prompt. Only the
         // app's own pre-prompt may do that, so images just don't load until access is granted.
         let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)

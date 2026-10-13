@@ -29,6 +29,7 @@ struct MainScreen: View {
                 home: home,
                 onSort: { isSorting = true },
                 onKept: { path.append(HomeRoute.kept) },
+                onDidIt: openDidIt,
                 onSettings: { path.append(HomeRoute.settings) }
             )
             .toolbar(.hidden, for: .navigationBar)
@@ -46,8 +47,11 @@ struct MainScreen: View {
                         palette: model.palette,
                         isPremium: model.isPremium,
                         onDeleteDropped: { deleteDropped() },
-                        onReveal: openReveal
+                        onReveal: openReveal,
+                        onDidIt: openDidIt
                     )
+                case .didIt:
+                    DidItScreen(home: home, palette: model.palette, onShared: { model.analytics.track(.didItShared) })
                 case .settings:
                     SettingsScreen(onShowPlans: { showsPaywall = true })
                 }
@@ -126,6 +130,11 @@ struct MainScreen: View {
                 showsPaywall = true
             }
         }
+    }
+
+    private func openDidIt() {
+        model.analytics.track(.didItOpened)
+        path.append(HomeRoute.didIt)
     }
 
     private func openReveal(_ period: RevealPeriod) {

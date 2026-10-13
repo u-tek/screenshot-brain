@@ -34,6 +34,7 @@ extension AppDatabase {
             item.stateChangedAt = date
             item.updatedAt = date
             try item.update(db)
+            try Self.recordDone([item], in: db)
         }
     }
 
@@ -50,12 +51,16 @@ extension AppDatabase {
                     .fetchAll(db)
                     .filter { $0.id == item.id || (!$0.hasSensitiveText && !$0.isNSFWFlagged) }
             } ?? [item]
-            for var member in members {
+            // The one decided first, so it's the one the did-it log remembers.
+            var decided: [ScreenshotItem] = []
+            for var member in members.filter({ $0.id == id }) + members.filter({ $0.id != id }) {
                 member.state = state
                 member.stateChangedAt = date
                 member.updatedAt = date
                 try member.update(db)
+                decided.append(member)
             }
+            try Self.recordDone(decided, in: db)
             return members
         }
     }
@@ -70,6 +75,7 @@ extension AppDatabase {
                 item.updatedAt = date
                 try item.update(db, columns: [ScreenshotItem.Columns.state, .stateChangedAt, .updatedAt])
             }
+            try Self.recordDone(previous, in: db)
         }
     }
 

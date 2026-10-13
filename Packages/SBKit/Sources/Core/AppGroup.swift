@@ -13,6 +13,9 @@ public enum AppGroup {
         /// Screenshots shared in without photo access. The app's only copy, since there's no
         /// library asset to load them from.
         case shared = "Shared"
+        /// Photos added to things done, for the did-it log. Copies, sized down, so they show
+        /// whatever photo access the app has.
+        case memories = "Memories"
     }
 
     /// Items made from shared images use this prefix in place of a photo library identifier.

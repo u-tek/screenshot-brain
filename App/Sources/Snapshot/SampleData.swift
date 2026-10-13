@@ -55,6 +55,33 @@ enum SampleData {
         (.event, [gig, comingUp[1]]),
     ]
 
+    /// A thing done, for the did-it log.
+    static func done(_ category: ItemCategory, _ title: String, daysAgo: Double, note: String? = nil, photo: String? = nil) -> DoneEntry {
+        DoneEntry(
+            id: "done-\(title)",
+            itemID: "sample-\(title)",
+            groupKey: "sample-\(title)",
+            doneAt: now.addingTimeInterval(-daysAgo * 86_400),
+            title: title,
+            category: category,
+            isSafeToDisplay: true,
+            note: note,
+            photoName: photo
+        )
+    }
+
+    static let doneLog: [DoneEntry] = [
+        done(.place, "Ramen Ikkyu", daysAgo: 2, note: "Tonkotsu was unreal. Go on a weeknight, no queue.", photo: "sample-ramen.jpg"),
+        done(.recipe, "Crispy chilli noodles", daysAgo: 4, note: "Double the chilli crisp next time."),
+        done(.event, "Fontaines D.C. at the Metro", daysAgo: 9, photo: "sample-gig.jpg"),
+        done(.place, "Bondi to Coogee walk", daysAgo: 17),
+        done(.watch, "Past Lives", daysAgo: 26, note: "Cried. Twice."),
+        done(.product, "Salomon XT-6", daysAgo: 38),
+    ]
+
+    /// The ramen place, done, with its photo and note.
+    static let ramenDone = item(.place, "Ramen Ikkyu", daysAgo: 21, state: .done)
+
     static let filed: [(ItemCategory, [ScreenshotItem])] = [
         (.message, (0..<42).map { item(.message, "Chat \($0)", daysAgo: Double($0), state: .reference) }),
         (.post, (0..<18).map { item(.post, "Post \($0)", daysAgo: Double($0), state: .reference) }),

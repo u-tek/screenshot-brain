@@ -11,16 +11,18 @@ enum HomeRoute: Hashable {
     case category(ItemCategory)
     case filed(ItemCategory)
     case kept
+    case didIt
     case settings
 }
 
 /// Home has one job: how many screenshots are waiting, and the button that sorts them. What's
-/// been kept is one quiet line underneath; settings is the gear. The light behind is livelier the
+/// been kept and what's been done are two quiet buttons underneath; settings is the gear. The light behind is livelier the
 /// more there is to sort, and settles once it's all sorted.
 struct HomeScreen: View {
     @ObservedObject var home: HomeModel
     var onSort: () -> Void = {}
     var onKept: () -> Void = {}
+    var onDidIt: () -> Void = {}
     var onSettings: () -> Void = {}
 
     var body: some View {
@@ -69,30 +71,48 @@ struct HomeScreen: View {
         AllSorted(pick: home.nextUp)
     }
 
-    /// "17 kept · 6 done", opening Kept. Nothing at all until something's been kept.
+    /// "17 kept" opening Kept, and "6 done" opening the did-it log. Each shows once there's
+    /// something in it.
     @ViewBuilder
     private var keptLine: some View {
-        let score = home.score
-        if score.total > 0 {
-            Button(action: onKept) {
-                HStack(spacing: 8) {
-                    Text("\(score.total - score.done) kept · \(score.done) done")
-                        .sbText(.body, color: SBColor.ink)
-                    SBIconView(.arrow, size: 14)
-                        .foregroundStyle(SBColor.ink2)
-                }
-                .padding(.horizontal, 18)
-                .frame(height: 44)
-                .background(Capsule().fill(SBColor.warm(0.08)))
-                .contentShape(Capsule())
+        let kept = home.score.total - home.score.done
+        let done = home.doneLog.count
+        HStack(spacing: SBSpace.gap) {
+            if home.score.total > 0 {
+                QuietButton(title: "\(kept) kept", accessibility: "\(kept) kept. Open what you kept.", action: onKept)
             }
-            .buttonStyle(SBPressStyle())
-            .accessibilityLabel(Text("\(score.total - score.done) kept, \(score.done) done. Open what you kept."))
+            if done > 0 {
+                QuietButton(title: "\(done) done", accessibility: "\(done) done. Open what you did.", action: onDidIt)
+            }
         }
     }
 
     private var ambience: SBAmbience {
         home.toSort == 0 ? .calm : SBAmbience(energy: min(0.85, 0.4 + Double(home.toSort) / 60))
+    }
+}
+
+/// A quiet capsule under Home's count: a few words and an arrow.
+private struct QuietButton: View {
+    let title: String
+    let accessibility: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Text(title)
+                    .sbText(.body, color: SBColor.ink)
+                SBIconView(.arrow, size: 14)
+                    .foregroundStyle(SBColor.ink2)
+            }
+            .padding(.horizontal, 18)
+            .frame(height: 44)
+            .background(Capsule().fill(SBColor.warm(0.08)))
+            .contentShape(Capsule())
+        }
+        .buttonStyle(SBPressStyle())
+        .accessibilityLabel(Text(accessibility))
     }
 }
 
@@ -133,6 +153,7 @@ struct KeptScreen: View {
     var isPremium = false
     var onDeleteDropped: () -> Void = {}
     var onReveal: (RevealPeriod) -> Void = { _ in }
+    var onDidIt: () -> Void = {}
 
     var body: some View {
         VStack(spacing: 0) {
@@ -174,18 +195,33 @@ struct KeptScreen: View {
     /// Done so far, out of everything kept, and how far along that is.
     private var score: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text("\(home.score.done)")
-                    .sbText(.numL)
-                    .monospacedDigit()
-                Text("of \(home.score.total) done")
-                    .sbText(.unit, color: SBColor.ink2)
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text("\(home.score.done)")
+                        .sbText(.numL)
+                        .monospacedDigit()
+                    Text("of \(home.score.total) done")
+                        .sbText(.unit, color: SBColor.ink2)
+                }
+                ScoreTrack(done: home.score.done, total: home.score.total)
+                Text(scoreLine)
+                    .sbText(.body)
             }
-            ScoreTrack(done: home.score.done, total: home.score.total)
-            Text(scoreLine)
-                .sbText(.body)
+            .accessibilityElement(children: .combine)
+            if !home.doneLog.isEmpty {
+                Button(action: onDidIt) {
+                    HStack(spacing: 8) {
+                        Text("See what you did")
+                            .sbText(.body, color: SBColor.ink)
+                        SBIconView(.arrow, size: 14)
+                            .foregroundStyle(SBColor.ink2)
+                    }
+                    .frame(minHeight: 44)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(SBPressStyle())
+            }
         }
-        .accessibilityElement(children: .combine)
     }
 
     private var scoreLine: String {

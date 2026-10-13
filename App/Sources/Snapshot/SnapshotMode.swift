@@ -91,6 +91,20 @@ enum SnapshotGallery {
             return AnyView(NavigationStack { KeptScreen(home: .sample(), palette: palette) })
         case "item":
             return AnyView(NavigationStack { ItemDetailScreen(itemID: SampleData.gig.id, preview: SampleData.gig) })
+        case "item.done":
+            return AnyView(NavigationStack { ItemDetailScreen(itemID: SampleData.ramenDone.id, preview: SampleData.ramenDone, previewEntry: SampleData.doneLog[0]) })
+        case "memory":
+            // The did-it part of a done item's page, which sits below the fold in "item.done".
+            return AnyView(ScrollView {
+                MemorySection(entry: SampleData.doneLog[0], kind: SBKind(.place))
+                    .padding(.horizontal, SBSpace.gutter)
+                    .padding(.top, 60)
+            }
+            .sbScreen(.kind(SBKind(.place))))
+        case "didit":
+            return AnyView(NavigationStack { DidItScreen(home: .sample(), palette: palette) })
+        case "didit.share":
+            return AnyView(DidItShareSheet(month: DidItMonth.months(SampleData.doneLog)[0], palette: palette))
         case "caughtup":
             return AnyView(SortDone(left: 0, dropped: 12))
         case "sortdone":
