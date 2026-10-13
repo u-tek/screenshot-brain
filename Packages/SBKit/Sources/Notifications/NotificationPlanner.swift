@@ -67,7 +67,7 @@ public struct NotificationContext: Sendable {
 }
 
 public struct PlannedNotification: Hashable, Sendable {
-    public enum Kind: String, Codable, Sendable {
+    public enum Kind: String, Codable, CaseIterable, Sendable {
         case recap
         case expiry
         case digest

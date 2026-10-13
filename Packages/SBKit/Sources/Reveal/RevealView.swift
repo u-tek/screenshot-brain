@@ -105,7 +105,8 @@ public struct RevealView: View {
             onFinish()
             return
         }
-        Haptics.selection()
+        // The last card is the payoff; every other step is just a step.
+        if index + 1 == cards.count - 1 { Haptics.success() } else { Haptics.selection() }
         withAnimation(SBMotion.reveal) { index += 1 }
     }
 

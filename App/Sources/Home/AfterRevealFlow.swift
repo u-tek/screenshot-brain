@@ -22,6 +22,7 @@ struct AfterRevealFlow: View {
             NotificationsPrompt(palette: model.palette, recapMinutes: NightlyRecap.recapMinutes(model.answers)) {
                 Task { await model.requestNotifications() }
             } onSkip: {
+                model.analytics.track(.notificationsPrepromptSkipped)
                 model.advance(to: .paywall)
             }
         case .widgetGuide:
@@ -48,7 +49,10 @@ private struct OnboardingPaywall: View {
                     palette: model.palette,
                     items: items,
                     privacyPolicy: model.configuration.privacyPolicyURL,
-                    onClose: { model.advance(to: .widgetGuide) },
+                    onClose: {
+                        model.analytics.track(.paywallDismissed, counts: ["source": 0])
+                        model.advance(to: .widgetGuide)
+                    },
                     onPurchased: {
                         model.purchased()
                         model.advance(to: .widgetGuide)

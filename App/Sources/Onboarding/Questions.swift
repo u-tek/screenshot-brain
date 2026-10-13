@@ -26,32 +26,40 @@ struct QuestionsFlow: View {
             CountQuestion(palette: model.palette, footnote: footnote, initial: model.answers.guessedScreenshotCount ?? 150) { guess in
                 model.updateAnswers { $0.guessedScreenshotCount = guess }
                 next(after: 1)
-            } onSkip: { finish() }
+            } onSkip: { skip(1) }
         case 2:
             TopCategoryQuestion(palette: model.palette, footnote: footnote, initial: model.answers.guessedTopCategory) { category in
                 model.updateAnswers { $0.guessedTopCategory = category }
                 next(after: 2)
-            } onSkip: { finish() }
+            } onSkip: { skip(2) }
         case 3:
             DoneQuestion(palette: model.palette, footnote: footnote, initial: model.answers.guessedDoneCount) { outOfTen in
                 model.updateAnswers { $0.guessedDoneCount = outOfTen }
                 next(after: 3)
-            } onSkip: { finish() }
+            } onSkip: { skip(3) }
         default:
             WindDownQuestion(palette: model.palette, footnote: footnote, initial: model.answers.windDownMinutes ?? 21 * 60 + 30) { minutes in
                 model.updateAnswers {
                     $0.windDownMinutes = minutes
                     $0.recapMinutes = minutes
                 }
+                model.analytics.track(.onboardingQuestion, counts: ["index": 4, "skipped": 0])
                 finish()
-            } onSkip: { finish() }
+            } onSkip: { skip(4) }
         }
     }
 
     private func next(after number: Int) {
+        model.analytics.track(.onboardingQuestion, counts: ["index": number, "skipped": 0])
         withAnimation(SBMotion.settle) {
             index = number + 1
         }
+    }
+
+    /// "Skip for now" skips the rest of the questions, not just this one.
+    private func skip(_ number: Int) {
+        model.analytics.track(.onboardingQuestion, counts: ["index": number, "skipped": 1])
+        finish()
     }
 
     private func finish() {

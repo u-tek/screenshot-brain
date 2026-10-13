@@ -116,6 +116,7 @@ final class AppModel: ObservableObject {
     /// shared in.
     func becameActive() {
         AppOpens.record()
+        if step >= .home { analytics.track(.appOpened) }
         noticeWidget()
         let previous = photoAccess
         photoAccess = ScreenshotLibrary.currentAccess()
@@ -174,6 +175,28 @@ final class AppModel: ObservableObject {
             }
         }
     }
+
+    /// Asked once more, after something's been done, for someone who skipped the onboarding ask.
+    /// Only while iOS has never been asked, so it's the real prompt and never a dead end.
+    func reofferNotifications(accepted: Bool) async {
+        AppGroup.defaults()?.set(true, forKey: Self.notificationsReofferedKey)
+        guard accepted else {
+            analytics.track(.notificationsReoffered, counts: ["allowed": 0])
+            return
+        }
+        let granted = await NotificationScheduler.requestPermission()
+        analytics.track(.notificationsReoffered, counts: ["allowed": granted ? 1 : 0])
+        if granted { replanRecap() }
+    }
+
+    /// Whether the after-a-done ask should show: iOS has never been asked, and it hasn't been
+    /// offered again before.
+    func shouldReofferNotifications() async -> Bool {
+        guard AppGroup.defaults()?.bool(forKey: Self.notificationsReofferedKey) != true else { return false }
+        return await NotificationScheduler.hasNeverAsked()
+    }
+
+    private static let notificationsReofferedKey = "notifications.reoffered"
 
     /// The notifications pre-prompt: iOS's prompt, then on.
     func requestNotifications() async {

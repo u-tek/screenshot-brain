@@ -146,3 +146,45 @@ struct AllSorted: View {
         .frame(maxWidth: .infinity)
     }
 }
+
+/// Asked once, after something's been done, for someone who skipped notifications in onboarding.
+struct NudgeOffer: View {
+    let time: String
+    let onAnswer: (Bool) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Want a nudge at \(time) when something's coming up?")
+                    .sbText(.title)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("One a night, tops.")
+                    .sbText(.body)
+            }
+            .accessibilityElement(children: .combine)
+            HStack(spacing: 10) {
+                Button { onAnswer(true) } label: {
+                    Text("Yes, nudge me")
+                        .sbText(.body, color: SBColor.ground)
+                        .padding(.horizontal, 18)
+                        .frame(minHeight: 44)
+                        .background(Capsule().fill(SBColor.accent))
+                        .contentShape(Capsule())
+                }
+                .buttonStyle(SBPressStyle())
+                Button { onAnswer(false) } label: {
+                    Text("No thanks")
+                        .sbText(.body, color: SBColor.ink)
+                        .padding(.horizontal, 18)
+                        .frame(minHeight: 44)
+                        .background(Capsule().fill(SBColor.warm(0.08)))
+                        .contentShape(Capsule())
+                }
+                .buttonStyle(SBPressStyle())
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: SBRadius.tile, style: .continuous).fill(SBColor.surface))
+    }
+}

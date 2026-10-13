@@ -81,7 +81,10 @@ struct MainScreen: View {
                 palette: model.palette,
                 items: model.paywallItems(),
                 privacyPolicy: model.configuration.privacyPolicyURL,
-                onClose: { showsPaywall = false },
+                onClose: {
+                    model.analytics.track(.paywallDismissed, counts: ["source": 1])
+                    showsPaywall = false
+                },
                 onPurchased: {
                     model.purchased()
                     showsPaywall = false
@@ -182,6 +185,8 @@ struct SortSession: View {
     /// Everything decided since sorting opened, across batches.
     @State private var sorted = TriageTally()
     @State private var nextUp: NextUp?
+    /// Something was just done and notifications were skipped in onboarding: ask once more.
+    @State private var offersNudge = false
     /// How many cards a batch holds.
     static let batchSize = 30
     var onDeleteDropped: (@escaping @MainActor () -> Void) -> Void = { _ in }
@@ -200,9 +205,14 @@ struct SortSession: View {
                     dropped: dropped,
                     sorted: sorted,
                     nextUp: nextUp,
+                    nudgeAt: offersNudge ? WindDownQuestion.timeText(NightlyRecap.recapMinutes(model.answers)) : nil,
                     onKeepGoing: keepGoing,
                     onDeleteDropped: { onDeleteDropped(refreshCounts) },
                     onOpenNextUp: openNextUp,
+                    onNudge: { accepted in
+                        offersNudge = false
+                        Task { await model.reofferNotifications(accepted: accepted) }
+                    },
                     onClose: onClose
                 )
                 .transition(.opacity)
@@ -243,6 +253,9 @@ struct SortSession: View {
         if triage.isFinished {
             refreshCounts()
             isBatchOver = true
+            if sorted.done > 0 {
+                Task { offersNudge = await model.shouldReofferNotifications() }
+            }
         } else {
             onClose()
         }
@@ -263,9 +276,12 @@ struct SortDone: View {
     let dropped: Int
     var sorted = TriageTally()
     var nextUp: NextUp?
+    /// The recap time, when it's worth asking about notifications again ("9:30pm").
+    var nudgeAt: String?
     var onKeepGoing: () -> Void = {}
     var onDeleteDropped: () -> Void = {}
     var onOpenNextUp: (NextUp) -> Void = { _ in }
+    var onNudge: (Bool) -> Void = { _ in }
     var onClose: () -> Void = {}
     @Environment(\.analytics) private var analytics
 
@@ -297,7 +313,13 @@ struct SortDone: View {
                 .padding(.horizontal, 40)
             }
 
-            if let pick {
+            if let nudgeAt {
+                // Right after doing something: the moment a nudge makes sense. Takes the pick's
+                // place, so the screen still asks one thing.
+                NudgeOffer(time: nudgeAt, onAnswer: onNudge)
+                    .padding(.horizontal, SBSpace.gutter)
+                    .padding(.top, 32)
+            } else if let pick {
                 Button { onOpenNextUp(pick) } label: {
                     NextUpCard(pick: pick)
                 }

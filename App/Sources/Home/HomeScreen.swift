@@ -160,7 +160,9 @@ struct KeptScreen: View {
             SBNavHeader(title: "Kept", onLeading: { dismiss() })
             ScrollView {
                 VStack(alignment: .leading, spacing: 34) {
-                    if home.score.total > 0 {
+                    // Search first: when someone half-remembers something, it's what they came for.
+                    SearchSection(home: home)
+                    if home.score.total > 0 && !home.isSearching {
                         score
                     }
                     if home.isEmpty && !home.isSearching {
@@ -176,7 +178,6 @@ struct KeptScreen: View {
                             FiledSection(shelves: home.filed)
                         }
                     }
-                    SearchSection(home: home)
                     RevealsSection(isPremium: isPremium, palette: palette, onReveal: onReveal)
                     if home.droppedCount > 0 {
                         DroppedRow(count: home.droppedCount, action: onDeleteDropped)
@@ -224,10 +225,17 @@ struct KeptScreen: View {
         }
     }
 
+    private static let milestones = [5, 10, 25, 50, 100, 250, 500]
+
     private var scoreLine: String {
         let score = home.score
         if score.done == 0 { return "\(score.total) kept. None done yet. We can fix that." }
         if score.done == score.total { return "Everything you kept, done." }
+        if Self.milestones.contains(score.done) { return "\(score.done) done. Properly out there." }
+        // Close to the next round number: say how close.
+        if let next = Self.milestones.first(where: { $0 > score.done }), next - score.done <= 3, next <= score.total {
+            return "\(next - score.done) more to \(next) done."
+        }
         return "Drops don't count against you."
     }
 }

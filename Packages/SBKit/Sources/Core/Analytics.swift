@@ -50,6 +50,17 @@ public enum AnalyticsEvent: String, CaseIterable, Sendable {
     case nextUpShown = "nextUp.shown"
     case nextUpOpened = "nextUp.opened"
     case sortKeptGoing = "sort.keptGoing"
+
+    // Gaps in the funnel. `index` is the question's number; `skipped` is 1 for "Skip for now";
+    // `source` is 0 for onboarding and 1 for later; `kind` is a notification kind's number
+    // (see NotificationKindNumber in the app); `allowed` is 1 when iOS said yes.
+    case appOpened = "app.opened"
+    case onboardingQuestion = "onboarding.question"
+    case notificationsPrepromptSkipped = "notifications.prepromptSkipped"
+    case notificationsReoffered = "notifications.reoffered"
+    case notificationOpened = "notification.opened"
+    case paywallDismissed = "paywall.dismissed"
+    case itemMarkedDone = "item.markedDone"
 }
 
 /// Privacy-first analytics: event counts only.

@@ -14,6 +14,14 @@ struct FinishingUpScreen: View {
         total > 0 ? min(Double(read) / Double(total), 1) : 0
     }
 
+    private var stage: String {
+        switch progress {
+        case ..<0.4: "Finding the dates and **the places.**"
+        case ..<0.8: "Telling the gigs **from the recipes.**"
+        default: "Putting your Reveal **together.**"
+        }
+    }
+
     var body: some View {
         GeometryReader { proxy in
             let lens = min(proxy.size.width * 0.56, 240)
@@ -35,7 +43,12 @@ struct FinishingUpScreen: View {
                         .padding(.bottom, 10)
                     MistHeadline("Hang on. **Nearly there.**", size: 32)
                         .padding(.horizontal, 28)
-                    MistBody("Reading the last few. Your Reveal is **almost ready.**")
+                    // What it's actually doing, in the order it does it. Words, never counts.
+                    MistBody(stage)
+                        .id(stage)
+                        .transition(.opacity)
+                        .animation(SBMotion.settle, value: stage)
+                        .accessibilityAddTraits(.updatesFrequently)
                         .padding(.top, 10)
                         .padding(.horizontal, 36)
                         .padding(.bottom, 56)

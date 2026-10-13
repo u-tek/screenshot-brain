@@ -1,4 +1,5 @@
 import Core
+import Notifications
 import Store
 import SwiftUI
 import UserNotifications
@@ -51,8 +52,17 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
 
     /// Tapping tonight's notification goes where it points (the recap, an item, the paywall).
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
+        let kind = response.notification.request.content.threadIdentifier
         guard let link = response.notification.request.content.userInfo["link"] as? String, let url = URL(string: link) else { return }
+        await opened(kind: kind)
         await open(url)
+    }
+
+    /// Which kind of notification was tapped, as a number (analytics parameters are counts only).
+    @MainActor
+    private func opened(kind: String) async {
+        let number = PlannedNotification.Kind.allCases.firstIndex { $0.rawValue == kind } ?? -1
+        Analytics.telemetryDeck(appID: AppConfiguration.main.telemetryDeckAppID).track(.notificationOpened, counts: ["kind": number])
     }
 
     @MainActor
