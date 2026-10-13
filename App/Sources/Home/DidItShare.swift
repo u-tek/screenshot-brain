@@ -1,3 +1,4 @@
+import Actions
 import Core
 import DesignSystem
 import Store
@@ -96,6 +97,8 @@ struct DidItShareSheet: View {
     let month: DidItMonth
     var palette: LightPalette = .sampleTopScreenshots
     var onShared: () -> Void = {}
+    /// Rendered when Share is tapped, not before: drawing the card's light at full size is the
+    /// slow part, and the sheet should appear at once.
     @State private var image: UIImage?
 
     var body: some View {
@@ -113,15 +116,8 @@ struct DidItShareSheet: View {
                     .padding(.horizontal, 24)
                 Spacer(minLength: 12)
                 VStack(spacing: 10) {
-                    if let image {
-                        ShareLink(
-                            item: Image(uiImage: image),
-                            preview: SharePreview("What I did in \(month.name())", image: Image(uiImage: image))
-                        ) {
-                            ActionBarLabel("Share \(month.name())", systemImage: "square.and.arrow.up", palette: palette)
-                        }
-                        .buttonStyle(.plain)
-                        .simultaneousGesture(TapGesture().onEnded(onShared))
+                    ActionBar("Share \(month.name())", systemImage: "square.and.arrow.up", palette: palette) {
+                        image = DidItShareCard.render(month: month, palette: palette)
                     }
                     Button { dismiss() } label: {
                         SBChip("Not now")
@@ -134,8 +130,13 @@ struct DidItShareSheet: View {
             .frame(width: proxy.size.width, height: proxy.size.height)
         }
         .sbScreen(.calm)
-        .task {
-            image = DidItShareCard.render(month: month, palette: palette)
+        .sheet(isPresented: Binding(get: { image != nil }, set: { if !$0 { image = nil } })) {
+            if let image {
+                ActivitySheet(items: [image]) { shared in
+                    if shared { onShared() }
+                }
+                .presentationDetents([.medium, .large])
+            }
         }
     }
 }
