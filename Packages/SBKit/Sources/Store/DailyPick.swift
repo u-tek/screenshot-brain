@@ -17,13 +17,19 @@ public struct DailyPick: Hashable, Sendable {
         calendar: Calendar = .current,
         reroll: Int = 0
     ) -> DailyPick? {
-        let ranked = candidates(kept, now: now)
-            .map { (item: $0, fit: fit($0, now: now, calendar: calendar)) }
-            .sorted { $0.fit.score == $1.fit.score ? $0.item.id < $1.item.id : $0.fit.score > $1.fit.score }
-            .prefix(shortlist)
+        var scored: [(item: ScreenshotItem, fit: Fit)] = []
+        for item in candidates(kept, now: now) {
+            scored.append((item, fit(item, now: now, calendar: calendar)))
+        }
+        scored.sort { a, b in
+            if a.fit.score != b.fit.score { return a.fit.score > b.fit.score }
+            return a.item.id < b.item.id
+        }
+        let ranked = Array(scored.prefix(shortlist))
         guard !ranked.isEmpty else { return nil }
-        let day = calendar.ordinality(of: .day, in: .era, for: now) ?? 0
-        let chosen = ranked[ranked.startIndex + (day + max(reroll, 0)) % ranked.count]
+        let day: Int = calendar.ordinality(of: .day, in: .era, for: now) ?? 0
+        let index: Int = (day + max(reroll, 0)) % ranked.count
+        let chosen = ranked[index]
         return DailyPick(item: chosen.item, reason: chosen.fit.reason)
     }
 
@@ -69,13 +75,18 @@ public struct DailyPick: Hashable, Sendable {
             reasons.append((3, "Made for \(season.rawValue)."))
         }
         let kept = item.stateChangedAt ?? item.createdAt
-        let weeks = Int(now.timeIntervalSince(kept) / (7 * 86_400))
+        let weeks = Int(now.timeIntervalSince(kept) / 604_800.0)
         if weeks >= 3 {
             reasons.append((min(weeks / 2, 3), "Kept since \(monthName(kept, calendar: calendar)). Still want it?"))
         }
 
-        let total = reasons.reduce(0) { $0 + $1.score }
-        let line = reasons.max { $0.score < $1.score }?.line ?? "One you saved. Still want it?"
+        var total = 0
+        var best: (score: Int, line: String)?
+        for reason in reasons {
+            total += reason.score
+            if best == nil || reason.score > best!.score { best = reason }
+        }
+        let line = best?.line ?? "One you saved. Still want it?"
         return Fit(score: total, reason: line)
     }
 
@@ -133,9 +144,11 @@ public struct DailyPick: Hashable, Sendable {
 
         func matches(_ item: ScreenshotItem) -> Bool {
             let body = String((item.extractedText ?? "").prefix(400))
-            let text = "\(item.title ?? "") \(body)".lowercased()
-            let tokens = Set(text.split { !$0.isLetter }.map(String.init))
-            return words.contains { tokens.contains($0) }
+            let title: String = item.title ?? ""
+            let text: String = (title + " " + body).lowercased()
+            let pieces = text.split(whereSeparator: { !$0.isLetter })
+            let tokens: Set<String> = Set(pieces.map { String($0) })
+            return words.contains(where: { tokens.contains($0) })
         }
     }
 }
@@ -164,18 +177,26 @@ public enum WeekendPlan {
     ) -> [ScreenshotItem] {
         let end = weekendEnd(after: now, calendar: calendar)
         let candidates = DailyPick.candidates(kept, now: now)
-        let dated = candidates
-            .filter { item in item.dueDate.map { $0 <= end } ?? false }
-            .sorted { ($0.dueDate ?? .distantFuture) < ($1.dueDate ?? .distantFuture) }
-        let outings = candidates
-            .filter { $0.dueDate == nil && [.place, .event, .travel].contains($0.category) }
-            .sorted { ($0.stateChangedAt ?? $0.createdAt) < ($1.stateChangedAt ?? $1.createdAt) }
+        let outingKinds: Set<ItemCategory> = [.place, .event, .travel]
+        var dated: [ScreenshotItem] = []
+        var outings: [ScreenshotItem] = []
+        for item in candidates {
+            if let due = item.dueDate {
+                if due <= end { dated.append(item) }
+            } else if outingKinds.contains(item.category) {
+                outings.append(item)
+            }
+        }
+        dated.sort { a, b in (a.dueDate ?? .distantFuture) < (b.dueDate ?? .distantFuture) }
+        outings.sort { a, b in (a.stateChangedAt ?? a.createdAt) < (b.stateChangedAt ?? b.createdAt) }
         // Dated things stay put; a swap rotates the undated ones.
-        var plan = Array(dated.prefix(size))
-        if !outings.isEmpty, plan.count < size {
-            let shift = max(reroll, 0) * (size - plan.count) % outings.count
-            let rotated = Array(outings[shift...] + outings[..<shift])
-            plan += rotated.prefix(size - plan.count)
+        var plan: [ScreenshotItem] = Array(dated.prefix(size))
+        let room = size - plan.count
+        if !outings.isEmpty, room > 0 {
+            let shift: Int = (max(reroll, 0) * room) % outings.count
+            var rotated: [ScreenshotItem] = Array(outings[shift...])
+            rotated.append(contentsOf: outings[..<shift])
+            plan.append(contentsOf: rotated.prefix(room))
         }
         return plan.count >= 2 ? plan : []
     }

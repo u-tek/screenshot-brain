@@ -269,12 +269,15 @@ public enum NotificationPlanner {
             guard let due = item.dueDate, named(item) else { return false }
             return due > fireAt && due <= end
         }
+        let outingKinds: Set<ItemCategory> = [.place, .event, .travel]
         let outings = context.keptItems.filter { item in
-            named(item) && item.dueDate == nil && [.place, .event, .travel].contains(item.category)
+            guard item.dueDate == nil, outingKinds.contains(item.category) else { return false }
+            return named(item)
         }
         var plan: [NotableItem] = []
-        for item in dated + outings where plan.count < 2 && !plan.contains(where: { $0.id == item.id }) {
-            plan.append(item)
+        for item in dated + outings {
+            guard plan.count < 2 else { break }
+            if !plan.contains(where: { $0.id == item.id }) { plan.append(item) }
         }
         return plan
     }
@@ -402,7 +405,12 @@ public enum NotificationCopy {
             let when = day(due, from: now, calendar: calendar)
             return when == "tonight" || when == "tomorrow" ? "\(name(item)) \(when)" : "\(name(item)) on \(when)"
         }
-        let list = parts.count > 1 ? parts.dropLast().joined(separator: ", ") + ", and " + parts[parts.count - 1] : parts.first ?? ""
+        let list: String
+        if parts.count > 1, let last = parts.last {
+            list = parts.dropLast().joined(separator: ", ") + ", and " + last
+        } else {
+            list = parts.first ?? ""
+        }
         return "This weekend, from your saves: \(list)."
     }
 
