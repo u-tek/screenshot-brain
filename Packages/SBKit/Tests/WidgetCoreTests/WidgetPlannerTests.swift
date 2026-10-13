@@ -71,7 +71,12 @@ import Testing
         let timeline = WidgetTimeline(database: database, defaults: defaults)
         _ = timeline.build(access: .unlocked, now: now, commit: false)
         #expect(WidgetSchedule.load(defaults).isEmpty)
-        #expect(timeline.build(access: .unlocked, now: now.addingTimeInterval(7_200)).entries.count == 2)
+        // Nothing was marked surfaced, so both are still to come (and a nudge, with so little kept).
+        let titles = timeline.build(access: .unlocked, now: now.addingTimeInterval(7_200)).entries.compactMap { entry -> String? in
+            if case .item(let item) = entry.card { return item.title }
+            return nil
+        }
+        #expect(titles == ["a", "b"])
     }
 
     @Test func nothingShowsTwiceInADay() throws {
