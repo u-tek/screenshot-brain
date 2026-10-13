@@ -263,9 +263,9 @@ final class AppModel: ObservableObject {
         }
         try services?.database.eraseAll()
         // Everything kept outside the database: thumbnails, shared-in copies, images waiting in
-        // the inbox and the widget's light. Emptied rather than removed, since the scan engine
-        // keeps these folders' paths.
-        for directory in [AppGroup.Directory.thumbnails, .shared, .inbox, .widgetLight] {
+        // the inbox, the widget's light and photos added to things done. Emptied rather than
+        // removed, since the scan engine keeps these folders' paths.
+        for directory in [AppGroup.Directory.thumbnails, .shared, .inbox, .widgetLight, .memories] {
             guard let folder = try? AppGroup.directory(directory) else { continue }
             for file in (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? [] {
                 try? FileManager.default.removeItem(at: file)

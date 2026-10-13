@@ -33,6 +33,12 @@ public enum AnalyticsEvent: String, CaseIterable, Sendable {
     case actionCopyIngredients = "action.copyIngredients"
     case actionSend = "action.send"
 
+    // The did-it log
+    case didItOpened = "didIt.opened"
+    case didItPhotoAdded = "didIt.photoAdded"
+    case didItNoteAdded = "didIt.noteAdded"
+    case didItShared = "didIt.shared"
+
     // Money
     case paywallShown = "paywall.shown"
     case trialStarted = "purchase.trialStarted"

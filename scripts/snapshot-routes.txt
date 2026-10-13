@@ -24,6 +24,10 @@ score
 home
 kept
 item
+item.done
+memory
+didit
+didit.share
 sortdone
 caughtup
 settings

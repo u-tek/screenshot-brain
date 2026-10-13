@@ -2,6 +2,7 @@ import Actions
 import Core
 import DesignSystem
 import Media
+import PhotosUI
 import Store
 import SwiftUI
 import Triage
@@ -18,10 +19,13 @@ struct ItemDetailScreen: View {
     @State private var showsEventEditor = false
     @State private var sendItems: [Any]?
     @State private var note: String?
+    /// The did-it log's entry, once it's done.
+    @State private var entry: DoneEntry?
     let itemID: String
     var onChange: () -> Void = {}
     /// Shown instead of loading from the database (design snapshots).
     var preview: ScreenshotItem?
+    var previewEntry: DoneEntry?
 
     var body: some View {
         ZStack {
@@ -34,6 +38,7 @@ struct ItemDetailScreen: View {
         .toolbar(.hidden, for: .navigationBar)
         .task {
             item = preview ?? (try? model.services?.database.item(id: itemID))
+            entry = previewEntry ?? (try? model.services?.database.doneEntry(forItem: itemID))
             isMissing = item == nil
         }
         .sheet(isPresented: $showsEventEditor) {
@@ -121,18 +126,28 @@ struct ItemDetailScreen: View {
                     .clipShape(RoundedRectangle(cornerRadius: SBRadius.tile, style: .continuous))
 
                     // What to do, then done, then the details: everything in the page's flow, so
-                    // nothing floats over text.
-                    actions(item)
-
-                    primaryAction(item)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 4)
+                    // nothing floats over text. Once it's done, what happened comes straight after
+                    // "Done", where the button was.
+                    if item.state == .done, let entry {
+                        primaryAction(item)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 4)
+                        MemorySection(entry: entry, kind: kind, onChange: memoryChanged)
+                            .transition(.opacity)
+                        actions(item)
+                    } else {
+                        actions(item)
+                        primaryAction(item)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 4)
+                    }
 
                     DataRows(rows(item))
                 }
                 .padding(.horizontal, SBSpace.gutter)
                 .padding(.bottom, 40)
             }
+            .scrollDismissesKeyboard(.interactively)
 
             // A note after an action ("In your calendar.") floats briefly at the bottom.
             if let note {
@@ -260,8 +275,15 @@ struct ItemDetailScreen: View {
         _ = try? database.decide(state, forItem: item.id)
         withAnimation(SBMotion.snappy) {
             self.item = try? database.item(id: item.id)
+            entry = try? database.doneEntry(forItem: item.id)
         }
         model.itemsChanged()
+        onChange()
+    }
+
+    /// A photo or note added: show it, and let Home's log know.
+    private func memoryChanged(_ updated: DoneEntry) {
+        withAnimation(SBMotion.snappy) { entry = updated }
         onChange()
     }
 
