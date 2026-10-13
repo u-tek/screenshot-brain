@@ -17,6 +17,7 @@ struct ItemDetailScreen: View {
     @State private var item: ScreenshotItem?
     @State private var isMissing = false
     @State private var showsEventEditor = false
+    @State private var showsCookMode = false
     @State private var sendItems: [Any]?
     @State private var note: String?
     /// The did-it log's entry, once it's done.
@@ -26,6 +27,8 @@ struct ItemDetailScreen: View {
     /// Shown instead of loading from the database (design snapshots).
     var preview: ScreenshotItem?
     var previewEntry: DoneEntry?
+    /// Opens the plans, for the premium-only "Cook it" when it isn't on yet.
+    var onShowPlans: () -> Void = {}
 
     var body: some View {
         ZStack {
@@ -51,6 +54,14 @@ struct ItemDetailScreen: View {
                     }
                 }
                 .ignoresSafeArea()
+            }
+        }
+        .fullScreenCover(isPresented: $showsCookMode) {
+            if let item {
+                CookModeScreen(item: item) {
+                    Haptics.done()
+                    decide(.done, item)
+                }
             }
         }
         .sheet(isPresented: Binding(get: { sendItems != nil }, set: { if !$0 { sendItems = nil } })) {
@@ -231,7 +242,34 @@ struct ItemDetailScreen: View {
                     }
                 }
             }
+            if item.category == .recipe {
+                cookButton(kind: kind)
+            }
         }
+    }
+
+    /// "Cook it": step-by-step cook mode. Premium; the lock shows until it's on.
+    private func cookButton(kind: SBKind) -> some View {
+        let isPremium = model.isPremium
+        return Button {
+            Haptics.selection()
+            if isPremium {
+                showsCookMode = true
+            } else {
+                onShowPlans()
+            }
+        } label: {
+            SBScenarioLabel("Cook it", icon: .system("flame"), color: kind.core)
+                .overlay(alignment: .trailing) {
+                    if !isPremium {
+                        SBIconView(.system("lock"), size: 16)
+                            .foregroundStyle(SBColor.ink2)
+                            .padding(.trailing, 16)
+                    }
+                }
+        }
+        .buttonStyle(SBPressStyle())
+        .accessibilityLabel(Text(isPremium ? "Cook it" : "Cook it, Premium"))
     }
 
     private func decisionMenu(_ item: ScreenshotItem) -> some View {
