@@ -6,6 +6,8 @@ import SwiftUI
 /// ring up past it, one at a time. The two rings turn idly in opposite directions.
 struct WelcomeScreen: View {
     var palette: LightPalette = .sampleTopScreenshots
+    /// For someone back on a new phone. Nil hides it.
+    var onSignIn: (() -> Void)?
     var onContinue: () -> Void = {}
     @State private var showsText = false
     @State private var showsAction = false
@@ -26,11 +28,23 @@ struct WelcomeScreen: View {
             }
             .opacity(showsText ? 1 : 0)
             .offset(y: showsText ? 0 : 18)
-            ActionBar("Show me", palette: palette, action: onContinue)
-                .padding(.horizontal, 8)
-                .padding(.bottom, 8)
-                .opacity(showsAction ? 1 : 0)
-                .offset(y: showsAction ? 0 : 24)
+            VStack(spacing: 4) {
+                ActionBar("Show me", palette: palette, action: onContinue)
+                    .padding(.horizontal, 8)
+                if let onSignIn {
+                    Button(action: onSignIn) {
+                        Text("I've used it before")
+                            .sbText(.body, color: SBColor.ink2)
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint(Text("Sign in to pick up where you left off"))
+                }
+            }
+            .padding(.bottom, 8)
+            .opacity(showsAction ? 1 : 0)
+            .offset(y: showsAction ? 0 : 24)
         }
         .padding(.horizontal, 24)
         .background {

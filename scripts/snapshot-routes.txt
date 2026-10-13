@@ -3,6 +3,7 @@
 # store.* routes are App Store screenshots (iPhone 16 Pro Max only, into design/appstore).
 welcome
 signin
+signin.returning
 photoaccess
 sharein
 question1

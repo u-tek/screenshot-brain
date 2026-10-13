@@ -38,12 +38,16 @@ struct RootView: View {
     private func screen(for step: OnboardingStep) -> some View {
         switch step {
         case .pitch:
-            WelcomeScreen(palette: model.palette) {
-                model.finishPitch()
-            }
+            WelcomeScreen(
+                palette: model.palette,
+                // Test builds can't use Sign in with Apple, so there's nothing to come back to.
+                onSignIn: model.configuration.allowsLocalAccount ? nil : { model.signInFromPitch() },
+                onContinue: { model.finishPitch() }
+            )
         case .signIn:
             SignInScreen(
                 palette: model.palette,
+                isReturning: model.isSigningInFirst,
                 allowsLocal: model.configuration.allowsLocalAccount,
                 onLocal: { model.continueOnThisPhone() },
                 onResult: { result in model.handleSignIn(result) }

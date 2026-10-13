@@ -56,9 +56,11 @@ enum SnapshotGallery {
         let palette = LightPalette.sampleTopScreenshots
         switch route {
         case "welcome":
-            return AnyView(WelcomeScreen())
+            return AnyView(WelcomeScreen(onSignIn: {}))
         case "signin":
             return AnyView(SignInScreen())
+        case "signin.returning":
+            return AnyView(SignInScreen(isReturning: true))
         case "photoaccess":
             return AnyView(PhotoAccessPrompt())
         case "sharein":
