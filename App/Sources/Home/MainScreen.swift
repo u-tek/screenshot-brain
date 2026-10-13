@@ -158,7 +158,7 @@ struct SortSession: View {
     /// Everything decided since sorting opened, across batches.
     @State private var sorted = TriageTally()
     @State private var nextUp: NextUp?
-    /// How many cards a batch holds (AppModel.sortCards).
+    /// How many cards a batch holds.
     static let batchSize = 30
     var onDeleteDropped: (@escaping @MainActor () -> Void) -> Void = { _ in }
     var onClose: () -> Void = {}

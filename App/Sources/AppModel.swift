@@ -459,7 +459,7 @@ final class AppModel: ObservableObject {
 
     /// The next 30 screenshots to sort from Home: everything waiting, newest first.
     func sortCards() -> [TriageCard] {
-        (try? services?.database.triageDeck(limit: 30)) ?? []
+        (try? services?.database.triageDeck(limit: SortSession.batchSize)) ?? []
     }
 
     /// How many screenshots are waiting to be sorted.
