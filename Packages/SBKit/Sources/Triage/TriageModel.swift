@@ -1,6 +1,7 @@
 import Core
 import Foundation
 import Store
+import os
 
 /// A triage decision. Right is still want, up is done, left is drop.
 public enum TriageDecision: String, CaseIterable, Sendable {
@@ -44,7 +45,7 @@ public final class TriageModel: ObservableObject {
     @Published public private(set) var cards: [TriageCard]
     @Published public private(set) var position = 0
     @Published public private(set) var tally = TriageTally()
-    private var history: [(decision: TriageDecision, previous: [ScreenshotItem])] = []
+    private var history: [(decision: TriageDecision, previous: [ScreenshotItem], count: Int)] = []
     private let database: AppDatabase?
     private let onDecision: (TriageDecision) -> Void
 
@@ -73,9 +74,22 @@ public final class TriageModel: ObservableObject {
 
     public func decide(_ decision: TriageDecision) {
         guard let card = current else { return }
-        let previous = (try? database?.decide(decision.state, forItem: card.item.id)) ?? [card.item]
-        history.append((decision, previous))
-        tally.count(decision, by: 1)
+        let previous: [ScreenshotItem]
+        if let database {
+            // A failed write decides nothing: stay on the card.
+            do {
+                previous = try database.decide(decision.state, forItem: card.item.id)
+            } catch {
+                Log.app.error("Couldn't save a decision: \(error.localizedDescription, privacy: .public)")
+                return
+            }
+        } else {
+            previous = [card.item]
+        }
+        // Every screenshot in a group counts.
+        let count = max(previous.count, 1)
+        history.append((decision, previous, count))
+        tally.count(decision, by: count)
         position += 1
         onDecision(decision)
     }
@@ -83,7 +97,7 @@ public final class TriageModel: ObservableObject {
     public func undo() {
         guard let last = history.popLast() else { return }
         try? database?.undoDecision(restoring: last.previous)
-        tally.count(last.decision, by: -1)
+        tally.count(last.decision, by: -last.count)
         position = max(position - 1, 0)
     }
 }

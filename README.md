@@ -76,6 +76,7 @@ Dependencies run one way: `Core` ← `Store` / `Safety` ← `ScanEngine` and the
 ## Privacy rules the code relies on
 
 - Screenshots, extracted text and detected entities stay on the device. The database and thumbnails live in the App Group container and are excluded from device backups. Only metadata (item states keyed by a hash of the Photos cloud identifier, onboarding answers, the recap time) syncs through the user's private CloudKit database.
+- The did-it log (things done, with the photos and notes people add) stays on the device too. Each entry keeps its own copy of the item's title and kind, so it outlives the screenshot; photos are sized-down copies in the App Group's `Memories` folder. The share card lists only things that are safe to display, with no sensitive text.
 - Notifications name an item only when it's safe to display; anything else is described by its category.
 - Analytics are event counts only. `Analytics.track` accepts integer parameters, so content can't be sent by accident.
 - An item is not safe to display until the Safety module says so. `ScreenshotItem.isSafeToDisplay` defaults to `false`.

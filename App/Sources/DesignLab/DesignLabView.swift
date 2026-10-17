@@ -1,3 +1,4 @@
+#if DEBUG
 import Core
 import DesignSystem
 import SwiftUI
@@ -238,3 +239,4 @@ private struct SurfacesPage: View {
         .padding(.top, 12)
     }
 }
+#endif

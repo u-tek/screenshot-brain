@@ -11,17 +11,23 @@ enum HomeRoute: Hashable {
     case category(ItemCategory)
     case filed(ItemCategory)
     case kept
+    case didIt
     case settings
+    case smartShelf(SmartShelf)
+    case weeklyShop
 }
 
 /// Home has one job: how many screenshots are waiting, and the button that sorts them. What's
-/// been kept is one quiet line underneath; settings is the gear. The light behind is livelier the
+/// been kept and what's been done are two quiet buttons underneath; settings is the gear. The light behind is livelier the
 /// more there is to sort, and settles once it's all sorted.
 struct HomeScreen: View {
     @ObservedObject var home: HomeModel
     var onSort: () -> Void = {}
     var onKept: () -> Void = {}
+    var onDidIt: () -> Void = {}
     var onSettings: () -> Void = {}
+    var isPremium = false
+    var onShowPlans: () -> Void = {}
 
     var body: some View {
         VStack(spacing: 0) {
@@ -64,42 +70,53 @@ struct HomeScreen: View {
         .frame(maxWidth: .infinity)
     }
 
+    /// Not a dead end: once it's all sorted, one thing from what's been kept to go and do.
     private var allSorted: some View {
-        VStack(spacing: 12) {
-            Text("All sorted.")
-                .sbText(.large)
-            Text("New screenshots land here as you take them.")
-                .sbText(.body)
-                .multilineTextAlignment(.center)
-        }
-        .padding(.horizontal, 40)
-        .frame(maxWidth: .infinity)
+        AllSorted(pick: home.nextUp, weekend: home.weekendPlan, isPremium: isPremium, onAnother: { home.pickAnother() }, onShowPlans: onShowPlans)
     }
 
-    /// "17 kept · 6 done", opening Kept. Nothing at all until something's been kept.
+    /// "17 kept" opening Kept, and "6 done" opening the did-it log. Each shows once there's
+    /// something in it.
     @ViewBuilder
     private var keptLine: some View {
-        let score = home.score
-        if score.total > 0 {
-            Button(action: onKept) {
-                HStack(spacing: 8) {
-                    Text("\(score.total - score.done) kept · \(score.done) done")
-                        .sbText(.body, color: SBColor.ink)
-                    SBIconView(.arrow, size: 14)
-                        .foregroundStyle(SBColor.ink2)
-                }
-                .padding(.horizontal, 18)
-                .frame(height: 44)
-                .background(Capsule().fill(SBColor.warm(0.08)))
-                .contentShape(Capsule())
+        let kept = home.score.total - home.score.done
+        let done = home.doneLog.count
+        HStack(spacing: SBSpace.gap) {
+            if home.score.total > 0 {
+                QuietButton(title: "\(kept) kept", accessibility: "\(kept) kept. Open what you kept.", action: onKept)
             }
-            .buttonStyle(SBPressStyle())
-            .accessibilityLabel(Text("\(score.total - score.done) kept, \(score.done) done. Open what you kept."))
+            if done > 0 {
+                QuietButton(title: "\(done) done", accessibility: "\(done) done. Open what you did.", action: onDidIt)
+            }
         }
     }
 
     private var ambience: SBAmbience {
         home.toSort == 0 ? .calm : SBAmbience(energy: min(0.85, 0.4 + Double(home.toSort) / 60))
+    }
+}
+
+/// A quiet capsule under Home's count: a few words and an arrow.
+private struct QuietButton: View {
+    let title: String
+    let accessibility: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Text(title)
+                    .sbText(.body, color: SBColor.ink)
+                SBIconView(.arrow, size: 14)
+                    .foregroundStyle(SBColor.ink2)
+            }
+            .padding(.horizontal, 18)
+            .frame(height: 44)
+            .background(Capsule().fill(SBColor.warm(0.08)))
+            .contentShape(Capsule())
+        }
+        .buttonStyle(SBPressStyle())
+        .accessibilityLabel(Text(accessibility))
     }
 }
 
@@ -128,7 +145,6 @@ struct StartSortingButton: View {
         }
         .buttonStyle(SBPressStyle())
         .padding(.horizontal, 32)
-        .accessibilityLabel(Text(title))
     }
 }
 
@@ -141,13 +157,19 @@ struct KeptScreen: View {
     var isPremium = false
     var onDeleteDropped: () -> Void = {}
     var onReveal: (RevealPeriod) -> Void = { _ in }
+    var onDidIt: () -> Void = {}
+    var onShowPlans: () -> Void = {}
+    var onSmartShelf: (SmartShelf) -> Void = { _ in }
+    var onWeeklyShop: () -> Void = {}
 
     var body: some View {
         VStack(spacing: 0) {
             SBNavHeader(title: "Kept", onLeading: { dismiss() })
             ScrollView {
                 VStack(alignment: .leading, spacing: 34) {
-                    if home.score.total > 0 {
+                    // Search first: when someone half-remembers something, it's what they came for.
+                    SearchSection(home: home)
+                    if home.score.total > 0 && !home.isSearching {
                         score
                     }
                     if home.isEmpty && !home.isSearching {
@@ -159,11 +181,21 @@ struct KeptScreen: View {
                         if !home.shelves.isEmpty {
                             StillWantSection(shelves: home.shelves)
                         }
+                        if !home.isSearching {
+                            let smart = home.smartShelves
+                            if !smart.isEmpty {
+                                SmartShelvesSection(shelves: smart, isPremium: isPremium, palette: palette, onLocked: onShowPlans, open: onSmartShelf)
+                            }
+                            if !home.keptRecipes.isEmpty {
+                                WeeklyShopRow(recipes: home.keptRecipes.count, isPremium: isPremium) {
+                                    isPremium ? onWeeklyShop() : onShowPlans()
+                                }
+                            }
+                        }
                         if !home.filed.isEmpty {
                             FiledSection(shelves: home.filed)
                         }
                     }
-                    SearchSection(home: home)
                     RevealsSection(isPremium: isPremium, palette: palette, onReveal: onReveal)
                     if home.droppedCount > 0 {
                         DroppedRow(count: home.droppedCount, action: onDeleteDropped)
@@ -182,24 +214,46 @@ struct KeptScreen: View {
     /// Done so far, out of everything kept, and how far along that is.
     private var score: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text("\(home.score.done)")
-                    .sbText(.numL)
-                    .monospacedDigit()
-                Text("of \(home.score.total) done")
-                    .sbText(.unit, color: SBColor.ink2)
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text("\(home.score.done)")
+                        .sbText(.numL)
+                        .monospacedDigit()
+                    Text("of \(home.score.total) done")
+                        .sbText(.unit, color: SBColor.ink2)
+                }
+                ScoreTrack(done: home.score.done, total: home.score.total)
+                Text(scoreLine)
+                    .sbText(.body)
             }
-            ScoreTrack(done: home.score.done, total: home.score.total)
-            Text(scoreLine)
-                .sbText(.body)
+            .accessibilityElement(children: .combine)
+            if !home.doneLog.isEmpty {
+                Button(action: onDidIt) {
+                    HStack(spacing: 8) {
+                        Text("See what you did")
+                            .sbText(.body, color: SBColor.ink)
+                        SBIconView(.arrow, size: 14)
+                            .foregroundStyle(SBColor.ink2)
+                    }
+                    .frame(minHeight: 44)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(SBPressStyle())
+            }
         }
-        .accessibilityElement(children: .combine)
     }
+
+    private static let milestones = [5, 10, 25, 50, 100, 250, 500]
 
     private var scoreLine: String {
         let score = home.score
         if score.done == 0 { return "\(score.total) kept. None done yet. We can fix that." }
         if score.done == score.total { return "Everything you kept, done." }
+        if Self.milestones.contains(score.done) { return "\(score.done) done. Properly out there." }
+        // Close to the next round number: say how close.
+        if let next = Self.milestones.first(where: { $0 > score.done }), next - score.done <= 3, next <= score.total {
+            return "\(next - score.done) more to \(next) done."
+        }
         return "Drops don't count against you."
     }
 }
@@ -310,15 +364,7 @@ private struct StillWantSection: View {
 
     private func detail(_ shelf: HomeModel.Shelf) -> String {
         let oldest = shelf.items.first.map { ($0.stateChangedAt ?? $0.createdAt).formatted(.relative(presentation: .numeric, unitsStyle: .narrow)) } ?? ""
-        return "\(shelf.items.count) KEPT · OLDEST \(oldest.uppercased())"
-    }
-
-    private func palette(_ shelf: HomeModel.Shelf) -> LightPalette {
-        // The tile glows with the colours of the oldest safe thing on the shelf.
-        if let item = shelf.items.first(where: \.isSafeToDisplay) {
-            return .item(category: item.category, colors: item.palette, isSafeToDisplay: true)
-        }
-        return .category(shelf.category)
+        return "\(shelf.items.count) kept, oldest \(oldest)"
     }
 }
 
@@ -352,7 +398,7 @@ private struct SearchSection: View {
             HStack(spacing: 10) {
                 SBIconView(.search, size: 18)
                     .foregroundStyle(SBColor.ink2)
-                TextField("Wifi password, that address, the recipe…", text: $home.query)
+                TextField(home.meaningSearchEnabled ? "That cosy place, the gig in March…" : "Wifi password, that address, the recipe…", text: $home.query)
                     .font(SBFont.body(16))
                     .foregroundStyle(SBColor.ink)
                     .focused($focused)
@@ -478,9 +524,43 @@ private struct DroppedRow: View {
                 SBChip("Delete")
             }
             .buttonStyle(SBPressStyle())
+            .accessibilityLabel(Text(count == 1 ? "Delete 1 dropped screenshot from Photos" : "Delete \(count) dropped screenshots from Photos"))
         }
         .padding(18)
         .background(RoundedRectangle(cornerRadius: SBRadius.tile, style: .continuous).fill(SBColor.surface))
+    }
+}
+
+/// The way into this week's shop: tick the recipes you'll cook, get one list. Premium.
+private struct WeeklyShopRow: View {
+    let recipes: Int
+    let isPremium: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("This week's shop")
+                        .sbText(.title)
+                    Text(recipes == 1 ? "One list from the recipe you kept" : "One list from the \(recipes) recipes you kept")
+                        .sbText(.body)
+                }
+                Spacer()
+                if isPremium {
+                    SBIconView(.system("chevron.right"), size: 14)
+                        .foregroundStyle(SBColor.ink2)
+                } else {
+                    SBChip("Premium")
+                }
+            }
+            .padding(18)
+            .background(RoundedRectangle(cornerRadius: SBRadius.tile, style: .continuous).fill(SBColor.surface))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(SBPressStyle())
+        .accessibilityElement(children: .combine)
+        .accessibilityHint(Text(isPremium ? "Opens this week's shop" : "Shows the plans"))
     }
 }
 

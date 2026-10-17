@@ -14,4 +14,11 @@ import Testing
         #expect(annual.actionTitle == "Start my free week")
         #expect(PlanOption(kind: .lifetime, price: "$79.99").priceLine == "$79.99 once")
     }
+
+    @Test func placeholderPricesAreDashesNotMadeUpPrices() {
+        for plan in PlanOption.placeholders {
+            #expect(plan.price == PlanOption.noPrice)
+            #expect(plan.trialDays == nil)
+        }
+    }
 }

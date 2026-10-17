@@ -6,8 +6,17 @@ import Foundation
 public struct EntityDetector: Sendable {
     public init() {}
 
-    public func entities(in text: String) -> [DetectedEntity] {
-        dataDetectorEntities(in: text)
+    /// - Parameters:
+    ///   - capturedAt: When the screenshot was taken. `NSDataDetector` reads "tomorrow" and "Friday"
+    ///     against today, so once a screenshot is more than a day old the dates that depend on
+    ///     the day it was read are dropped rather than guessed.
+    ///   - now: Today, for that comparison.
+    public func entities(in text: String, capturedAt: Date? = nil, now: Date = Date()) -> [DetectedEntity] {
+        var found = dataDetectorEntities(in: text)
+        if let capturedAt, now.timeIntervalSince(capturedAt) > 86_400 {
+            found.removeAll { $0.kind == .date && Self.isRelativeDate($0.text) }
+        }
+        return found
             + prices(in: text)
             + matches(of: Self.ratingPattern, in: text).map { DetectedEntity(kind: .rating, text: $0) }
             + matches(of: Self.reviewCountPattern, in: text).map { DetectedEntity(kind: .reviewCount, text: $0) }
@@ -39,10 +48,18 @@ public struct EntityDetector: Sendable {
         }
     }
 
+    /// A date said relative to the day it was written: "tomorrow", "tonight", "next Friday",
+    /// "in 3 days", "this weekend".
+    static func isRelativeDate(_ text: String) -> Bool {
+        let pattern = #"(?i)\b(?:today|tonight|tomorrow|yesterday|now|this|next|last|coming|in\s+\d+\s+(?:minutes?|hours?|days?|weeks?|months?)|\d+\s+(?:minutes?|hours?|days?|weeks?|months?)\s+ago)\b"#
+        return text.range(of: pattern, options: .regularExpression) != nil
+    }
+
     // MARK: Prices
 
+    /// Separators inside a price are spaces, never line breaks: "$25\n128 reviews" is not 25128.
     static let pricePattern =
-        #"(?:(?:CA|A|NZ|US|C)?\$|€|£|¥|₹)\s?\d{1,3}(?:[.,\s]\d{3})*(?:[.,]\d{2})?|\b\d{1,3}(?:[.,\s]\d{3})*(?:[.,]\d{2})?\s?(?:€|\b(?:kr|AUD|USD|EUR|GBP|NZD|CAD)\b)|\b(?:AUD|USD|EUR|GBP|NZD|CAD)\s?\d{1,3}(?:[,\s]\d{3})*(?:\.\d{2})?"#
+        #"(?:(?:CA|A|NZ|US|C)?\$|€|£|¥|₹)[ \x{00A0}]?\d{1,3}(?:[., \x{00A0}\x{202F}]\d{3})*(?:[.,]\d{2})?|\b\d{1,3}(?:[., \x{00A0}\x{202F}]\d{3})*(?:[.,]\d{2})?[ \x{00A0}]?(?:€|\b(?:kr|AUD|USD|EUR|GBP|NZD|CAD)\b)|\b(?:AUD|USD|EUR|GBP|NZD|CAD)[ \x{00A0}]?\d{1,3}(?:[, \x{00A0}\x{202F}]\d{3})*(?:\.\d{2})?"#
 
     private func prices(in text: String) -> [DetectedEntity] {
         matches(of: Self.pricePattern, in: text).map { matched in
@@ -96,13 +113,13 @@ public struct EntityDetector: Sendable {
 
 extension DetectedEntity {
     /// True when a detected date names a day (a weekday, a month, or a numeric date), not just a
-    /// time of day like a chat timestamp.
+    /// time of day like a chat timestamp. Whole words only ("month" isn't Mon, "satisfied" isn't
+    /// Sat), and "today" doesn't count: a chat's "Today 9:41" says nothing about which day.
     public var namesADay: Bool {
         guard kind == .date else { return false }
         let lowered = text.lowercased()
-        let dayWords = ["mon", "tue", "wed", "thu", "fri", "sat", "sun", "today", "tomorrow", "tonight",
-                        "jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]
-        if dayWords.contains(where: { lowered.contains($0) }) { return true }
+        let dayWords = #"\b(?:mon(?:day)?|tue(?:s(?:day)?)?|wed(?:nesday)?|thu(?:r(?:s(?:day)?)?)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?|tomorrow|tonight|jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b"#
+        if lowered.range(of: dayWords, options: .regularExpression) != nil { return true }
         return lowered.range(of: #"\d{1,4}[/.-]\d{1,2}"#, options: .regularExpression) != nil
     }
 }

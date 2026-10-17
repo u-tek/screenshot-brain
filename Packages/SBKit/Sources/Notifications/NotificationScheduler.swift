@@ -26,6 +26,11 @@ public enum NotificationScheduler {
         return settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional
     }
 
+    /// iOS has never shown its prompt, so asking now gets the real thing.
+    public static func hasNeverAsked() async -> Bool {
+        await UNUserNotificationCenter.current().notificationSettings().authorizationStatus == .notDetermined
+    }
+
     /// Replaces whatever was pending with `plan` (or with nothing).
     public static func schedule(_ plan: PlannedNotification?, calendar: Calendar = .current) async {
         let center = UNUserNotificationCenter.current()

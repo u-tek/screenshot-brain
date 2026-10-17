@@ -140,19 +140,28 @@ public enum ExpiryPolicy {
 // MARK: - Grouping
 
 /// Near-duplicates: screenshots taken within about a minute of each other with overlapping text.
+///
+/// Grouped items are decided, dropped and deleted together, so this is conservative: both
+/// screenshots need real text, and most of the words of either must be in the other.
 public enum Grouper {
     public static let window: TimeInterval = 60
-    public static let minimumOverlap = 0.5
+    /// Share of the words of both screenshots together (Jaccard) that they must have in common.
+    public static let minimumOverlap = 0.6
+    /// Fewer words than this isn't enough to say two screenshots are the same.
+    public static let minimumWords = 6
 
     public struct Member: Hashable, Sendable {
         public var id: String
         public var createdAt: Date
         public var words: Set<String>
+        /// The group it's already in, when it has been grouped before.
+        public var groupID: String?
 
-        public init(id: String, createdAt: Date, words: Set<String>) {
+        public init(id: String, createdAt: Date, words: Set<String>, groupID: String? = nil) {
             self.id = id
             self.createdAt = createdAt
             self.words = words
+            self.groupID = groupID
         }
     }
 
@@ -164,7 +173,7 @@ public enum Grouper {
             for previous in sorted[..<index].reversed() {
                 guard member.createdAt.timeIntervalSince(previous.createdAt) <= window else { break }
                 guard overlap(member.words, previous.words) >= minimumOverlap else { continue }
-                let groupID = groupOf[previous.id] ?? "group-\(previous.id)"
+                let groupID = groupOf[previous.id] ?? previous.groupID ?? "group-\(previous.id)"
                 groupOf[previous.id] = groupID
                 groupOf[member.id] = groupID
                 break
@@ -173,9 +182,10 @@ public enum Grouper {
         return groupOf
     }
 
+    /// Jaccard similarity of two word sets: 0 unless both have enough words.
     static func overlap(_ a: Set<String>, _ b: Set<String>) -> Double {
-        guard !a.isEmpty, !b.isEmpty else { return 0 }
-        return Double(a.intersection(b).count) / Double(min(a.count, b.count))
+        guard a.count >= minimumWords, b.count >= minimumWords else { return 0 }
+        return Double(a.intersection(b).count) / Double(a.union(b).count)
     }
 }
 

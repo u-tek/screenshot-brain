@@ -71,12 +71,12 @@ struct ShareConfirmation: View {
                     SmallLabel("Saving")
                     MistHeadline("Just a **second.**", size: 26)
                 }
+                // Always there, so a slow or stuck save can be dismissed.
                 Button(action: onClose) {
-                    Chip("Done", closable: true)
+                    Chip(status.isDone ? "Done" : "Cancel", closable: true)
                 }
                 .buttonStyle(.plain)
                 .padding(.top, 6)
-                .disabled(!status.isDone)
             }
             .padding(28)
             .frame(maxWidth: .infinity)

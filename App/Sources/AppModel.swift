@@ -3,6 +3,7 @@ import Combine
 import Core
 import DesignSystem
 import Foundation
+import Media
 import Notifications
 import Paywall
 import Reveal
@@ -32,6 +33,10 @@ final class AppModel: ObservableObject {
     @Published private(set) var isScanning = false
     /// Set when a scan is asked for while one is running, so it runs again straight after.
     private var scanAgain = false
+    private var scanTask: Task<Void, Never>?
+    /// Set by the first progress report of a scan: until then the scan's counts are stale.
+    private var scanHasReported = false
+    private var isDeletingAccount = false
     @Published private(set) var story: RevealStory?
     /// Where a widget tap asked to go, for Home to pick up.
     @Published var pendingLink: AppLink?
@@ -85,12 +90,21 @@ final class AppModel: ObservableObject {
     func start() async {
         // Follows purchases from launch, so a renewal or a lapse shows without opening the paywall.
         Task { await purchases.start() }
+        // Photos left behind by things marked not done after all.
+        if let names = try? services?.database.memoryPhotoNames() {
+            Task.detached(priority: .utility) { MemoryPhotos.removeUnused(keeping: names) }
+        }
         if let account, !(await AccountStore.isStillAuthorised(account)) {
             signOutLocally()
             return
         }
+        // Sync runs on its own, so a slow iCloud never holds up the scan.
         if account != nil {
-            await syncNow()
+            Task {
+                await syncNow()
+                // Progress synced from another phone may be past photo access.
+                resolveResume()
+            }
         }
         resolveResume()
         if step > .signIn {
@@ -102,6 +116,7 @@ final class AppModel: ObservableObject {
     /// shared in.
     func becameActive() {
         AppOpens.record()
+        if step >= .home { analytics.track(.appOpened) }
         noticeWidget()
         let previous = photoAccess
         photoAccess = ScreenshotLibrary.currentAccess()
@@ -150,11 +165,44 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// The recap time changed in Settings: tonight's notification moves with it.
+    func replanRecap() {
+        guard let services, step >= .home else { return }
+        let answers = self.answers
+        Task {
+            await SharedAccess.hold("Plan tonight's recap") {
+                await NightlyRecap.replan(services: services, answers: answers)
+            }
+        }
+    }
+
+    /// Asked once more, after something's been done, for someone who skipped the onboarding ask.
+    /// Only while iOS has never been asked, so it's the real prompt and never a dead end.
+    func reofferNotifications(accepted: Bool) async {
+        AppGroup.defaults()?.set(true, forKey: Self.notificationsReofferedKey)
+        guard accepted else {
+            analytics.track(.notificationsReoffered, counts: ["allowed": 0])
+            return
+        }
+        let granted = await NotificationScheduler.requestPermission()
+        analytics.track(.notificationsReoffered, counts: ["allowed": granted ? 1 : 0])
+        if granted { replanRecap() }
+    }
+
+    /// Whether the after-a-done ask should show: iOS has never been asked, and it hasn't been
+    /// offered again before.
+    func shouldReofferNotifications() async -> Bool {
+        guard AppGroup.defaults()?.bool(forKey: Self.notificationsReofferedKey) != true else { return false }
+        return await NotificationScheduler.hasNeverAsked()
+    }
+
+    private static let notificationsReofferedKey = "notifications.reoffered"
+
     /// The notifications pre-prompt: iOS's prompt, then on.
     func requestNotifications() async {
         let granted = await NotificationScheduler.requestPermission()
         analytics.track(granted ? .notificationsAllowed : .notificationsDeclined)
-        advance(to: .widgetGuide)
+        advance(to: .paywall)
     }
 
     var hasPhotoAccess: Bool {
@@ -255,6 +303,14 @@ final class AppModel: ObservableObject {
 
     /// Account deletion: iCloud data, the Sign in with Apple token, and everything on the device.
     func deleteAccount() async throws {
+        isDeletingAccount = true
+        defer { isDeletingAccount = false }
+        // Nothing may sync or scan into the database while it's being emptied.
+        syncTask?.cancel()
+        syncTask = nil
+        scanAgain = false
+        scanTask?.cancel()
+        await scanTask?.value
         if let sync, syncsToCloud {
             try await sync.deleteEverything()
         }
@@ -263,15 +319,17 @@ final class AppModel: ObservableObject {
         }
         try services?.database.eraseAll()
         // Everything kept outside the database: thumbnails, shared-in copies, images waiting in
-        // the inbox and the widget's light. Emptied rather than removed, since the scan engine
-        // keeps these folders' paths.
-        for directory in [AppGroup.Directory.thumbnails, .shared, .inbox, .widgetLight] {
+        // the inbox, the widget's light and photos added to things done. Emptied rather than
+        // removed, since the scan engine keeps these folders' paths.
+        for directory in [AppGroup.Directory.thumbnails, .shared, .inbox, .widgetLight, .memories] {
             guard let folder = try? AppGroup.directory(directory) else { continue }
             for file in (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? [] {
                 try? FileManager.default.removeItem(at: file)
             }
         }
         NotificationScheduler.reset()
+        AppGroup.defaults()?.removeObject(forKey: Self.widgetAddedKey)
+        AppGroup.defaults()?.removeObject(forKey: "app.lastOpenedAt")
         WidgetCenter.shared.reloadAllTimelines()
         AccountStore.delete()
         account = nil
@@ -308,50 +366,18 @@ final class AppModel: ObservableObject {
     /// Reads new library screenshots (with photo access) and anything shared in through the
     /// share extension (with or without it).
     func startScan() {
-        guard let services else { return }
+        guard let services, !isDeletingAccount else { return }
         guard !isScanning else {
             // Something arrived mid-scan (pictures picked or shared): read it straight after.
             scanAgain = true
             return
         }
         isScanning = true
+        scanHasReported = false
         let hasPhotoAccess = hasPhotoAccess
-        Task {
-            do {
-                let baseline = try await Task.detached(priority: .userInitiated) { () -> Int in
-                    if hasPhotoAccess {
-                        try services.pipeline.discover()
-                        try services.database.applyPendingRemoteStates()
-                    }
-                    // Screenshots read before the categories last changed are sorted into the
-                    // new ones (chats out of reference into messages, say).
-                    try services.pipeline.reclassifyIfNeeded()
-                    return try services.database.processedCount()
-                }.value
-                screenshotsRead = baseline
-                screenshotsFound = baseline
-
-                let shared = try await services.pipeline.importShared(progress: progressReporter(base: baseline))
-                if shared > 0 {
-                    analytics.track(.screenshotsShared, counts: ["screenshots": shared])
-                    if step == .photoAccess {
-                        advanceAfterPhotoAccess()
-                    }
-                }
-                if hasPhotoAccess {
-                    let afterShared = try services.database.processedCount()
-                    try await services.pipeline.readPending(includeBackfill: true, progress: progressReporter(base: afterShared))
-                }
-                analytics.track(.scanCompleted, counts: ["screenshots": screenshotsFound])
-            } catch {
-                Log.scan.error("Scan failed: \(error.localizedDescription, privacy: .public)")
-            }
-            isScanning = false
-            moveOnIfReady()
-            refreshPalette()
-            scheduleSync()
-            if let services = self.services {
-                await WidgetRefresher.refresh(services: services)
+        scanTask = Task {
+            await SharedAccess.hold("Read screenshots") {
+                await self.runScan(services: services, hasPhotoAccess: hasPhotoAccess)
             }
             if scanAgain {
                 scanAgain = false
@@ -360,12 +386,54 @@ final class AppModel: ObservableObject {
         }
     }
 
+    private func runScan(services: AppServices, hasPhotoAccess: Bool) async {
+        do {
+            let baseline = try await Task.detached(priority: .userInitiated) { () -> Int in
+                if hasPhotoAccess {
+                    try services.pipeline.discover()
+                    try services.database.applyPendingRemoteStates()
+                }
+                // Screenshots read before the categories last changed are sorted into the
+                // new ones (chats out of reference into messages, say).
+                try services.pipeline.reclassifyIfNeeded()
+                return try services.database.processedCount()
+            }.value
+            screenshotsRead = baseline
+            screenshotsFound = baseline
+
+            let shared = try await services.pipeline.importShared(progress: progressReporter(base: baseline))
+            if shared > 0 {
+                analytics.track(.screenshotsShared, counts: ["screenshots": shared])
+                if step == .photoAccess {
+                    advanceAfterPhotoAccess()
+                }
+            }
+            if hasPhotoAccess {
+                let afterShared = try await Task.detached(priority: .userInitiated) {
+                    try services.database.processedCount()
+                }.value
+                try await services.pipeline.readPending(includeBackfill: true, progress: progressReporter(base: afterShared))
+            }
+            analytics.track(.scanCompleted, counts: ["screenshots": screenshotsFound])
+        } catch {
+            Log.scan.error("Scan failed: \(error.localizedDescription, privacy: .public)")
+        }
+        isScanning = false
+        moveOnIfReady()
+        refreshPalette()
+        scheduleSync()
+        await WidgetRefresher.refresh(services: services)
+    }
+
     /// Progress from one scan run, counted on top of what earlier runs read.
     private func progressReporter(base: Int) -> @Sendable (ScanProgress) -> Void {
         { progress in
             Task { @MainActor in
-                self.screenshotsRead = base + progress.read
-                self.screenshotsFound = base + progress.total
+                // A late or out-of-order report never moves the counts back.
+                guard self.isScanning else { return }
+                self.scanHasReported = true
+                self.screenshotsRead = max(self.screenshotsRead, base + progress.read)
+                self.screenshotsFound = max(self.screenshotsFound, base + progress.total)
                 // Every 24 screenshots, let the light take on the user's colours.
                 if progress.read > 0, progress.read % 24 == 0 { self.refreshPalette() }
                 self.moveOnIfReady()
@@ -376,7 +444,7 @@ final class AppModel: ObservableObject {
     /// The Reveal can start once the facts are known (timestamps, straight from discovery) and
     /// enough screenshots have been read for category claims to mean something.
     var isReadyForReveal: Bool {
-        !isScanning || screenshotsRead >= min(screenshotsFound, 120)
+        !isScanning || (scanHasReported && screenshotsRead >= min(screenshotsFound, 120))
     }
 
     /// After the last question: straight to the Reveal, or a moment's wait while the scan
@@ -459,7 +527,7 @@ final class AppModel: ObservableObject {
 
     /// The next 30 screenshots to sort from Home: everything waiting, newest first.
     func sortCards() -> [TriageCard] {
-        (try? services?.database.triageDeck(limit: 30)) ?? []
+        (try? services?.database.triageDeck(limit: SortSession.batchSize)) ?? []
     }
 
     /// How many screenshots are waiting to be sorted.
@@ -487,7 +555,7 @@ final class AppModel: ObservableObject {
         analytics.track(.triageCompleted, counts: ["kept": tally.kept, "done": tally.done, "dropped": tally.dropped])
         scheduleSync()
         if let services {
-            Task { await WidgetRefresher.refresh(services: services) }
+            Task { await SharedAccess.hold("Refresh the widget") { await WidgetRefresher.refresh(services: services) } }
         }
     }
 
@@ -499,7 +567,7 @@ final class AppModel: ObservableObject {
     func itemsChanged() {
         scheduleSync()
         if let services {
-            Task { await WidgetRefresher.refresh(services: services) }
+            Task { await SharedAccess.hold("Refresh the widget") { await WidgetRefresher.refresh(services: services) } }
         }
     }
 
@@ -538,7 +606,7 @@ final class AppModel: ObservableObject {
 
     private func syncNow() async {
         guard let sync, syncsToCloud else { return }
-        await sync.sync()
+        await SharedAccess.hold("Sync progress") { await sync.sync() }
         if var synced = try? services?.database.onboardingAnswers(), synced.step > answers.step {
             if let resumeStep {
                 // Still asking for photo access on this phone: stay there, and carry on to the

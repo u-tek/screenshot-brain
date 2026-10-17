@@ -46,8 +46,6 @@ private typealias Col = ScreenshotItem.Columns
 // MARK: - Discovery and processing
 
 extension AppDatabase {
-    /// Records screenshots found in the library. Known assets are left alone. Returns how many were new.
-    @discardableResult
     /// Local identifiers already recorded for screenshots created after `date`.
     public func knownAssetIDs(createdAfter date: Date) throws -> Set<String> {
         try reader.read { db in
@@ -59,6 +57,8 @@ extension AppDatabase {
         }
     }
 
+    /// Records screenshots found in the library. Known assets are left alone. Returns how many were new.
+    @discardableResult
     public func recordDiscovered(_ screenshots: [DiscoveredScreenshot], now: Date = Date()) throws -> Int {
         try writer.write { db in
             var inserted = 0
@@ -105,26 +105,132 @@ extension AppDatabase {
             for item in items {
                 try item.save(db)
             }
+            // Read (or read again) after being done: the did-it log catches up.
+            try Self.recordDone(items.filter { $0.state == .done }, in: db)
         }
     }
 
-    /// Records groups of near-duplicates: one `ItemGroup` per group, the newest item representing it.
+    /// Saves what a read produced, onto the row as it is now. The row may have changed while the
+    /// screenshot was being read (a decision, the widget showing it, a state arriving from
+    /// another device, grouping), so those fields stay as they are in the database and only the
+    /// analysis is written. An unreviewed item that turns out to be nothing to do is filed away.
+    public func saveReadResults(_ results: [ScreenshotItem]) throws {
+        try writer.write { db in
+            for result in results {
+                guard let live = try ScreenshotItem.fetchOne(db, key: result.id) else { continue }
+                var merged = result
+                merged.state = live.state
+                merged.stateChangedAt = live.stateChangedAt
+                merged.lastSurfacedAt = live.lastSurfacedAt
+                merged.groupID = live.groupID
+                merged.cloudID = live.cloudID ?? result.cloudID
+                merged.updatedAt = max(live.updatedAt, result.updatedAt)
+                if live.state == .unreviewed, !merged.isNSFWFlagged,
+                   merged.hasSensitiveText || !merged.category.isActionable {
+                    merged.state = .reference
+                }
+                try merged.update(db)
+            }
+        }
+    }
+
+    /// Saves new categories (and what follows from them) onto the rows as they are now, leaving
+    /// everything else alone. Returns how many changed. Items still waiting to be sorted that turn
+    /// out to be nothing to do are filed away; items that were filed away automatically (never
+    /// decided by hand or on another device) and now are something to do go back to waiting.
+    @discardableResult
+    public func saveReclassified(_ items: [ScreenshotItem], now: Date = Date()) throws -> Int {
+        try writer.write { db in
+            var changed = 0
+            for item in items {
+                guard var live = try ScreenshotItem.fetchOne(db, key: item.id),
+                      !live.isNSFWFlagged,
+                      live.category != item.category
+                else { continue }
+                let wasFiledAutomatically = live.state == .reference && live.stateChangedAt == nil && !live.category.isActionable
+                live.category = item.category
+                live.confidence = item.confidence
+                live.dueDate = item.dueDate
+                live.expiresAt = item.expiresAt
+                live.reviewAt = item.reviewAt
+                live.isSafeToDisplay = item.isSafeToDisplay
+                if live.state == .unreviewed, !live.category.isActionable {
+                    live.state = .reference
+                } else if wasFiledAutomatically, live.category.isActionable, !live.hasSensitiveText {
+                    live.state = .unreviewed
+                }
+                live.updatedAt = now
+                try live.update(db)
+                changed += 1
+            }
+            return changed
+        }
+    }
+
+    /// Records groups of near-duplicates: one `ItemGroup` per group, the newest item representing
+    /// it. Members that were already in the group (found again as neighbours) are counted too.
     public func saveGroups(_ groups: [String: [ScreenshotItem]], now: Date = Date()) throws {
         try writer.write { db in
             for (groupID, members) in groups where members.count > 1 {
-                let sorted = members.sorted { $0.createdAt > $1.createdAt }
-                try ItemGroup(
-                    id: groupID,
-                    createdAt: sorted.last?.createdAt ?? now,
-                    representativeItemID: sorted.first?.id,
-                    itemCount: members.count,
-                    updatedAt: now
-                ).save(db)
+                // The group first: items refer to it.
+                var group = try ItemGroup.fetchOne(db, key: groupID)
+                    ?? ItemGroup(id: groupID, createdAt: now, representativeItemID: members.first?.id, itemCount: members.count, updatedAt: now)
+                try group.save(db)
                 for member in members {
-                    guard var item = try ScreenshotItem.fetchOne(db, key: member.id) else { continue }
-                    item.groupID = groupID
-                    try item.update(db)
+                    _ = try ScreenshotItem
+                        .filter(Col.id == member.id)
+                        .updateAll(db, Col.groupID.set(to: groupID))
                 }
+                let all = try ScreenshotItem
+                    .filter(Col.groupID == groupID)
+                    .order(Col.createdAt.desc)
+                    .fetchAll(db)
+                guard let newest = all.first, let oldest = all.last else { continue }
+                group.createdAt = oldest.createdAt
+                group.representativeItemID = newest.id
+                group.itemCount = all.count
+                group.updatedAt = now
+                try group.save(db)
+            }
+        }
+    }
+
+    /// Read screenshots still waiting to be sorted that were taken in `range`: the neighbours a
+    /// freshly read screenshot may turn out to be a near-duplicate of.
+    public func unreviewedItems(createdBetween range: ClosedRange<Date>, limit: Int = 200) throws -> [ScreenshotItem] {
+        try reader.read { db in
+            try ScreenshotItem
+                .filter(Col.processedAt != nil)
+                .filter(Col.isNSFWFlagged == false)
+                .filter(Col.state == ItemState.unreviewed.rawValue)
+                .filter(Col.createdAt >= range.lowerBound && Col.createdAt <= range.upperBound)
+                .limit(limit)
+                .fetchAll(db)
+        }
+    }
+
+    /// Local identifiers of screenshots created after `date` whose cloud identifier isn't known yet.
+    public func assetIDsWithoutCloudID(createdAfter date: Date) throws -> [String] {
+        try reader.read { db in
+            try ScreenshotItem
+                .select(Col.assetLocalID)
+                .filter(Col.cloudID == nil)
+                .filter(Col.createdAt > date)
+                .asRequest(of: String.self)
+                .fetchAll(db)
+        }
+    }
+
+    /// Fills in cloud identifiers (by local identifier) that weren't available when the
+    /// screenshots were found. Touches `updatedAt` so a decision made meanwhile is pushed.
+    public func setCloudIDs(_ cloudIDs: [String: String], now: Date = Date()) throws {
+        guard !cloudIDs.isEmpty else { return }
+        try writer.write { db in
+            for (assetLocalID, cloudID) in cloudIDs {
+                _ = try ScreenshotItem
+                    .filter(Col.assetLocalID == assetLocalID)
+                    .filter(Col.cloudID == nil)
+                    .updateAll(db, Col.cloudID.set(to: cloudID), Col.updatedAt.set(to: now))
             }
         }
     }
@@ -187,6 +293,16 @@ extension AppDatabase {
             try state.save(db)
         }
     }
+
+    /// Notes that a scan finished, without touching the rest of the scan state.
+    public func markScanned(at date: Date) throws {
+        try writer.write { db in
+            var state = try ScanState.fetchOne(db, key: ScanState.singletonID) ?? ScanState()
+            state.lastScanAt = date
+            state.updatedAt = date
+            try state.save(db)
+        }
+    }
 }
 
 // MARK: - Display surfaces
@@ -220,10 +336,12 @@ extension AppDatabase {
 
     /// A later recap: screenshots saved since the last one, then a few older ones still waiting.
     public func recapDeck(newSince: Date, olderLimit: Int = 5, limit: Int = 30) throws -> [TriageCard] {
-        let waiting = try triageCandidates()
-        let fresh = Self.foldGroups(waiting.filter { $0.createdAt >= newSince }, limit: limit)
-        let older = Self.foldGroups(waiting.filter { $0.createdAt < newSince }, limit: olderLimit)
-        return fresh + older
+        // Near-duplicates fold first, so a group spanning the cut-off is one card, not two. The
+        // newest item of a group stands for it.
+        let cards = Self.foldGroups(try triageCandidates(), limit: Int.max)
+        let fresh = cards.filter { $0.item.createdAt >= newSince }.prefix(limit)
+        let older = cards.filter { $0.item.createdAt < newSince }.prefix(olderLimit)
+        return Array(fresh) + Array(older)
     }
 
     /// How many cards the next recap would show.
@@ -232,10 +350,12 @@ extension AppDatabase {
     }
 
     public func markRecapped(at date: Date = Date()) throws {
-        var state = try scanState()
-        state.lastRecapAt = date
-        state.updatedAt = date
-        try save(state)
+        try writer.write { db in
+            var state = try ScanState.fetchOne(db, key: ScanState.singletonID) ?? ScanState()
+            state.lastRecapAt = date
+            state.updatedAt = date
+            try state.save(db)
+        }
     }
 
     private func triageCandidates() throws -> [ScreenshotItem] {
@@ -256,20 +376,26 @@ extension AppDatabase {
     /// `includeSurfaced` counts what's already been shown today too (how much there is in all).
     public func widgetCandidates(now: Date, calendar: Calendar = .current, limit: Int = 12, includeSurfaced: Bool = false) throws -> [ScreenshotItem] {
         let startOfDay = calendar.startOfDay(for: now)
-        let items = try reader.read { db in
-            var request = ScreenshotItem
-                .filter(Col.isSafeToDisplay == true)
-                .filter(Col.isNSFWFlagged == false)
-                .filter(Col.hasSensitiveText == false)
-                .filter(Col.thumbnailPath != nil)
-                .filter([ItemState.unreviewed.rawValue, ItemState.stillWant.rawValue].contains(Col.state))
-                .filter(Col.expiresAt == nil || Col.expiresAt > now)
-            if !includeSurfaced {
-                request = request.filter(Col.lastSurfacedAt == nil || Col.lastSurfacedAt < startOfDay)
-            }
-            return try request.fetchAll(db)
+        // Ordered and limited in SQL (the same order as `widgetOrder`), so the widget reads only
+        // the rows it can show.
+        var sql = "SELECT * FROM screenshotItem"
+            + " WHERE isSafeToDisplay = 1 AND isNSFWFlagged = 0 AND hasSensitiveText = 0"
+            + " AND thumbnailPath IS NOT NULL AND state IN (?, ?)"
+            + " AND (expiresAt IS NULL OR expiresAt > ?)"
+        var arguments: [(any DatabaseValueConvertible)?] = [ItemState.unreviewed.rawValue, ItemState.stillWant.rawValue, now]
+        if !includeSurfaced {
+            sql += " AND (lastSurfacedAt IS NULL OR lastSurfacedAt < ?)"
+            arguments.append(startOfDay)
         }
-        return Array(items.sorted(by: Self.widgetOrder).prefix(limit))
+        sql += " ORDER BY (state = ?) DESC, (expiresAt IS NULL) ASC, expiresAt ASC, COALESCE(stateChangedAt, createdAt) ASC"
+        sql += " LIMIT ?"
+        arguments.append(ItemState.unreviewed.rawValue)
+        arguments.append(max(limit, 0))
+        let query = sql
+        let values = arguments
+        return try reader.read { db in
+            try ScreenshotItem.fetchAll(db, sql: query, arguments: StatementArguments(values))
+        }
     }
 
     public func markSurfaced(ids: [String], at date: Date) throws {
@@ -374,6 +500,8 @@ extension AppDatabase {
         try reader.read { db in
             try ScreenshotItem
                 .filter(Col.isSafeToDisplay == true)
+                .filter(Col.isNSFWFlagged == false)
+                .filter(Col.hasSensitiveText == false)
                 .filter([ItemState.unreviewed.rawValue, ItemState.stillWant.rawValue].contains(Col.state))
                 .order(Col.createdAt.asc)
                 .fetchOne(db)
@@ -390,10 +518,23 @@ extension AppDatabase {
         }
     }
 
-    /// Forgets items whose assets were deleted from the library.
-    public func deleteItems(assetLocalIDs: [String]) throws {
-        _ = try writer.write { db in
-            try ScreenshotItem.filter(assetLocalIDs.contains(Col.assetLocalID)).deleteAll(db)
+    /// Forgets items whose assets were deleted from the library, and their thumbnails.
+    /// `thumbnailDirectory` defaults to the App Group's thumbnails.
+    public func deleteItems(assetLocalIDs: [String], thumbnailDirectory: URL? = nil) throws {
+        let thumbnails: [String] = try writer.write { db in
+            let matching = ScreenshotItem.filter(assetLocalIDs.contains(Col.assetLocalID))
+            let paths = try matching
+                .select(Col.thumbnailPath)
+                .filter(Col.thumbnailPath != nil)
+                .asRequest(of: String.self)
+                .fetchAll(db)
+            _ = try matching.deleteAll(db)
+            return paths
+        }
+        guard !thumbnails.isEmpty, let directory = thumbnailDirectory ?? (try? AppGroup.directory(.thumbnails)) else { return }
+        for path in thumbnails {
+            let name = URL(fileURLWithPath: path).lastPathComponent
+            try? FileManager.default.removeItem(at: directory.appendingPathComponent(name))
         }
     }
 

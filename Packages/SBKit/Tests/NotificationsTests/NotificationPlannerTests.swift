@@ -23,7 +23,8 @@ import Testing
         weekDone: Int = 0,
         lastOpened: Date? = nil,
         trialEndsAt: Date? = nil,
-        history: NotificationHistory = NotificationHistory()
+        history: NotificationHistory = NotificationHistory(),
+        kept: [NotableItem] = []
     ) -> NotificationContext {
         NotificationContext(
             now: now,
@@ -35,8 +36,13 @@ import Testing
             lastOpenedAt: lastOpened ?? now,
             trialEndsAt: trialEndsAt,
             doneCount: 6,
-            history: history
+            history: history,
+            keptItems: kept
         )
+    }
+
+    private func kept(_ title: String?, _ category: ItemCategory = .place, daysAgo: Double, from date: Date, id: String? = nil) -> NotableItem {
+        NotableItem(id: id ?? title ?? "kept", title: title, category: category, dueDate: nil, keptAt: date.addingTimeInterval(-daysAgo * 86_400))
     }
 
     private func gig(dueInDays days: Double, from date: Date, id: String = "gig") -> NotableItem {
@@ -85,7 +91,43 @@ import Testing
     @Test func trialReminderOnDayFive() throws {
         let plan = try #require(NotificationPlanner.plan(context(now: start, trialEndsAt: start.addingTimeInterval(2 * 86_400 + 3_600)), calendar: calendar))
         #expect(plan.kind == .trialReminder)
-        #expect(plan.body == "Your widget trial ends in 2 days. You've ticked off 6 things.")
+        #expect(plan.body == "Your free week of Premium ends in 2 days. You've ticked off 6 things.")
+    }
+
+    @Test func trialReminderSaysTomorrowForOneDay() throws {
+        let plan = try #require(NotificationPlanner.plan(context(now: start, trialEndsAt: calendar.date(from: DateComponents(year: 2026, month: 10, day: 8, hour: 12))), calendar: calendar))
+        #expect(plan.body == "Your free week of Premium ends tomorrow. You've ticked off 6 things.")
+    }
+
+    @Test func aRecapDoesNotBlockTheLaterExpiryNudge() throws {
+        let item = NotableItem(id: "gig", title: nil, category: .event, dueDate: start.addingTimeInterval(1.8 * 86_400))
+        let recap = try #require(NotificationPlanner.plan(context(now: start, new: [item]), calendar: calendar))
+        #expect(recap.kind == .recap)
+        var history = NotificationHistory()
+        history.record(recap, calendar: calendar)
+        let later = start.addingTimeInterval(86_400)
+        let nudge = try #require(NotificationPlanner.plan(context(now: later, dated: [item], history: history), calendar: calendar))
+        #expect(nudge.kind == .expiry)
+    }
+
+    @Test func movingTheRecapTimeNeverMakesTwoInADay() throws {
+        let item = NotableItem(id: "a", title: nil, category: .place, dueDate: nil)
+        let first = try #require(NotificationPlanner.plan(context(now: start, new: [item]), calendar: calendar))
+        var history = NotificationHistory()
+        history.record(first, calendar: calendar)
+        // The recap time moves later the same day: the next one waits for tomorrow.
+        var moved = context(now: start, new: [item], history: history)
+        moved.recapMinutes = 23 * 60
+        let second = try #require(NotificationPlanner.plan(moved, calendar: calendar))
+        #expect(!calendar.isDate(second.fireAt, inSameDayAs: first.fireAt))
+    }
+
+    @Test func oldSavedHistoryStillLoads() throws {
+        let json = #"{"nudgedItemIDs":["a"],"trialReminderSent":true}"#
+        let history = try JSONDecoder().decode(NotificationHistory.self, from: Data(json.utf8))
+        #expect(history.nudgedItemIDs == ["a"])
+        #expect(history.trialReminderSent)
+        #expect(history.lastPlannedAt == nil)
     }
 
     @Test func winBackOnceThenSilence() throws {
@@ -100,6 +142,88 @@ import Testing
         #expect(NotificationPlanner.plan(context(now: later, dated: [gig(dueInDays: 1.5, from: later, id: "other")], lastOpened: awayWeek, history: history), calendar: calendar) == nil)
         // A month away: nothing, whatever's expiring.
         #expect(NotificationPlanner.plan(context(now: start, dated: [gig(dueInDays: 1, from: start)], lastOpened: start.addingTimeInterval(-31 * 86_400)), calendar: calendar) == nil)
+    }
+
+    @Test func winBackBringsBackSomethingKeptThenOnceMoreThenSilence() throws {
+        let lastOpened = start.addingTimeInterval(-8 * 86_400)
+        let list = [kept("Ramen Ikkyu", daysAgo: 30, from: start), kept("Salomon XT-6", .product, daysAgo: 20, from: start)]
+        let first = try #require(NotificationPlanner.plan(context(now: start, lastOpened: lastOpened, kept: list), calendar: calendar))
+        #expect(first.kind == .winBack)
+        #expect(first.body == "Ramen Ikkyu is still on your list. This weekend?")
+        var history = NotificationHistory()
+        history.record(first, calendar: calendar)
+
+        // Nothing more until three weeks away.
+        let nextDay = start.addingTimeInterval(86_400)
+        #expect(NotificationPlanner.plan(context(now: nextDay, lastOpened: lastOpened, history: history, kept: list), calendar: calendar) == nil)
+
+        let threeWeeks = lastOpened.addingTimeInterval(21 * 86_400)
+        let second = try #require(NotificationPlanner.plan(context(now: threeWeeks, lastOpened: lastOpened, history: history, kept: list), calendar: calendar))
+        #expect(second.kind == .lateWinBack)
+        #expect(second.body == "You've still got 2 things saved to do. Salomon XT-6 is one of them.")
+        history.record(second, calendar: calendar)
+
+        // Then silence, until they're back.
+        let later = threeWeeks.addingTimeInterval(2 * 86_400)
+        let more = list + [kept("Crispy chilli noodles", .recipe, daysAgo: 40, from: later)]
+        #expect(NotificationPlanner.plan(context(now: later, lastOpened: lastOpened, history: history, kept: more), calendar: calendar) == nil)
+    }
+
+    @Test func quietNightBringsBackTheThingKeptLongest() throws {
+        let list = [kept("Ramen Ikkyu", daysAgo: 21, from: start), kept("Salomon XT-6", .product, daysAgo: 10, from: start)]
+        let plan = try #require(NotificationPlanner.plan(context(now: start, kept: list), calendar: calendar))
+        #expect(plan.kind == .resurface)
+        #expect(plan.body == "You kept Ramen Ikkyu 3 weeks ago. Actually going?")
+        #expect(plan.link == "screenshotbrain://item/Ramen Ikkyu")
+    }
+
+    @Test func quietNightsResurfaceAtMostEveryThirdNight() throws {
+        let list = [kept("Ramen Ikkyu", daysAgo: 21, from: start), kept("Salomon XT-6", .product, daysAgo: 10, from: start)]
+        var history = NotificationHistory()
+        let first = try #require(NotificationPlanner.plan(context(now: start, kept: list), calendar: calendar))
+        history.record(first, calendar: calendar)
+        for day in 1...2 {
+            let now = start.addingTimeInterval(Double(day) * 86_400)
+            #expect(NotificationPlanner.plan(context(now: now, history: history, kept: list), calendar: calendar) == nil)
+        }
+        let third = start.addingTimeInterval(3 * 86_400)
+        let next = try #require(NotificationPlanner.plan(context(now: third, history: history, kept: list), calendar: calendar))
+        // Never the same thing twice.
+        #expect(next.body == "You kept Salomon XT-6 last week. Still want it?")
+    }
+
+    @Test func resurfacingWaitsAWeekAndGivesWayToAnythingNew() throws {
+        #expect(NotificationPlanner.plan(context(now: start, kept: [kept("Ramen Ikkyu", daysAgo: 3, from: start)]), calendar: calendar) == nil)
+        let list = [kept("Ramen Ikkyu", daysAgo: 21, from: start)]
+        let plan = try #require(NotificationPlanner.plan(context(now: start, new: [NotableItem(id: "n", title: nil, category: .recipe, dueDate: nil)], kept: list), calendar: calendar))
+        #expect(plan.kind == .recap)
+    }
+
+    @Test func resurfacingNeverNamesWhatIsNotSafeToShow() throws {
+        let plan = try #require(NotificationPlanner.plan(context(now: start, kept: [kept(nil, .recipe, daysAgo: 70, from: start, id: "r")]), calendar: calendar))
+        #expect(plan.body == "That recipe you saved 2 months ago. Cooking it this week?")
+    }
+
+    @Test func thursdayEveningIsTheWeekendPlan() throws {
+        let thursday = start.addingTimeInterval(86_400)
+        let saturday = calendar.date(from: DateComponents(year: 2026, month: 10, day: 10, hour: 20))!
+        let fontaines = NotableItem(id: "f", title: "Fontaines D.C.", category: .event, dueDate: saturday)
+        let list = [kept("Ramen Ikkyu", daysAgo: 21, from: thursday), kept("Tate Modern late", daysAgo: 5, from: thursday)]
+        let plan = try #require(NotificationPlanner.plan(context(now: thursday, dated: [fontaines], kept: list), calendar: calendar))
+        #expect(plan.kind == .weekendPlan)
+        #expect(plan.body == "This weekend, from your saves: Fontaines D.C. on Saturday, and Ramen Ikkyu.")
+        #expect(plan.link == "screenshotbrain://home")
+
+        // One thing isn't a plan: the night goes on as usual.
+        let one = try #require(NotificationPlanner.plan(context(now: thursday, kept: [list[0]]), calendar: calendar))
+        #expect(one.kind == .resurface)
+
+        // Not on other nights, and not twice in a week.
+        #expect(NotificationPlanner.plan(context(now: start, kept: list), calendar: calendar)?.kind != .weekendPlan)
+        var history = NotificationHistory()
+        history.record(plan, calendar: calendar)
+        let laterThursday = thursday.addingTimeInterval(3_600)
+        #expect(NotificationPlanner.plan(context(now: laterThursday, dated: [fontaines], history: history, kept: list), calendar: calendar)?.kind != .weekendPlan)
     }
 
     @Test func sundayDigest() throws {

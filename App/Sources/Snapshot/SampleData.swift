@@ -6,6 +6,13 @@ import Store
 enum SampleData {
     /// 9:41, like the status bar in the snapshots.
     static let now = Calendar.current.date(bySettingHour: 9, minute: 41, second: 0, of: Date()) ?? Date()
+    /// The start of the Tuesday of this week, for screens that change with the day.
+    static let tuesday: Date = {
+        let calendar = Calendar.current
+        let start = calendar.startOfDay(for: now)
+        let back = (calendar.component(.weekday, from: start) - 3 + 7) % 7
+        return calendar.date(byAdding: .day, value: -back, to: start) ?? start
+    }()
 
     static func item(
         _ category: ItemCategory,
@@ -54,6 +61,33 @@ enum SampleData {
         (.recipe, (0..<4).map { item(.recipe, "Recipe \($0)", daysAgo: 60 - Double($0)) }),
         (.event, [gig, comingUp[1]]),
     ]
+
+    /// A thing done, for the did-it log.
+    static func done(_ category: ItemCategory, _ title: String, daysAgo: Double, note: String? = nil, photo: String? = nil) -> DoneEntry {
+        DoneEntry(
+            id: "done-\(title)",
+            itemID: "sample-\(title)",
+            groupKey: "sample-\(title)",
+            doneAt: now.addingTimeInterval(-daysAgo * 86_400),
+            title: title,
+            category: category,
+            isSafeToDisplay: true,
+            note: note,
+            photoName: photo
+        )
+    }
+
+    static let doneLog: [DoneEntry] = [
+        done(.place, "Ramen Ikkyu", daysAgo: 2, note: "Tonkotsu was unreal. Go on a weeknight, no queue.", photo: "sample-ramen.jpg"),
+        done(.recipe, "Crispy chilli noodles", daysAgo: 4, note: "Double the chilli crisp next time."),
+        done(.event, "Fontaines D.C. at the Metro", daysAgo: 9, photo: "sample-gig.jpg"),
+        done(.place, "Bondi to Coogee walk", daysAgo: 17),
+        done(.watch, "Past Lives", daysAgo: 26, note: "Cried. Twice."),
+        done(.product, "Salomon XT-6", daysAgo: 38),
+    ]
+
+    /// The ramen place, done, with its photo and note.
+    static let ramenDone = item(.place, "Ramen Ikkyu", daysAgo: 21, state: .done)
 
     static let filed: [(ItemCategory, [ScreenshotItem])] = [
         (.message, (0..<42).map { item(.message, "Chat \($0)", daysAgo: Double($0), state: .reference) }),

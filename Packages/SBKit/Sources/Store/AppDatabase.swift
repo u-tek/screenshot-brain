@@ -193,6 +193,11 @@ extension AppDatabase {
             }
         }
 
+        migrator.registerMigration("v5") { db in
+            // The did-it log: everything done, kept after its screenshot is deleted.
+            try createDoneLog(db)
+        }
+
         return migrator
     }
 

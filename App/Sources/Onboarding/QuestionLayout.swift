@@ -15,6 +15,7 @@ struct QuestionLayout<Answer: View>: View {
     var onSkip: (() -> Void)?
     let onNext: () -> Void
     @ViewBuilder let answer: () -> Answer
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         GeometryReader { proxy in
@@ -24,7 +25,7 @@ struct QuestionLayout<Answer: View>: View {
                 LightField(light, drifts: true)
                     .ignoresSafeArea()
 
-                VStack(spacing: 0) {
+                let content = VStack(spacing: 0) {
                     Group {
                         if let onSkip {
                             Button(action: onSkip) {
@@ -61,7 +62,16 @@ struct QuestionLayout<Answer: View>: View {
                         .padding(.horizontal, 12)
                         .padding(.bottom, 8)
                 }
-                .frame(width: proxy.size.width, height: proxy.size.height)
+
+                if dynamicTypeSize.isAccessibilitySize {
+                    // Large text outgrows the screen: scroll, so the action stays reachable.
+                    ScrollView {
+                        content.frame(width: proxy.size.width, alignment: .top)
+                            .frame(minHeight: proxy.size.height)
+                    }
+                } else {
+                    content.frame(width: proxy.size.width, height: proxy.size.height)
+                }
             }
         }
     }

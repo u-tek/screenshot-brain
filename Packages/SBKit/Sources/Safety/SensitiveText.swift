@@ -22,12 +22,21 @@ public enum SensitiveTextDetector {
 
     // MARK: Card numbers
 
-    /// 13 to 19 digits, optionally grouped with spaces or dashes, that pass the Luhn check.
+    /// 13 to 19 digits that pass the Luhn check, grouped with spaces or dashes or not. Every run
+    /// of groups is tried, so a card number followed by its expiry or CVV on the same line
+    /// ("4111 1111 1111 1111 04/29", "... 123") is still found.
     static func containsCardNumber(_ text: String) -> Bool {
-        for match in matches(of: #"(?<!\d)(?:\d[ -]?){12,18}\d(?!\d)"#, in: text) {
-            let digits = match.filter(\.isNumber)
-            if (13...19).contains(digits.count), luhnValid(digits) {
-                return true
+        for run in matches(of: #"(?<!\d)\d+(?:[ -]\d+)*(?!\d)"#, in: text) {
+            let groups = run.split(whereSeparator: { $0 == " " || $0 == "-" }).map(String.init)
+            for start in groups.indices {
+                var digits = ""
+                for group in groups[start...] {
+                    digits += group
+                    if digits.count > 19 { break }
+                    if digits.count >= 13, luhnValid(digits) {
+                        return true
+                    }
+                }
             }
         }
         return false

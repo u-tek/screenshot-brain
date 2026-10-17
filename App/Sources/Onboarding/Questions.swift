@@ -26,32 +26,40 @@ struct QuestionsFlow: View {
             CountQuestion(palette: model.palette, footnote: footnote, initial: model.answers.guessedScreenshotCount ?? 150) { guess in
                 model.updateAnswers { $0.guessedScreenshotCount = guess }
                 next(after: 1)
-            } onSkip: { finish() }
+            } onSkip: { skip(1) }
         case 2:
             TopCategoryQuestion(palette: model.palette, footnote: footnote, initial: model.answers.guessedTopCategory) { category in
                 model.updateAnswers { $0.guessedTopCategory = category }
                 next(after: 2)
-            } onSkip: { finish() }
+            } onSkip: { skip(2) }
         case 3:
             DoneQuestion(palette: model.palette, footnote: footnote, initial: model.answers.guessedDoneCount) { outOfTen in
                 model.updateAnswers { $0.guessedDoneCount = outOfTen }
                 next(after: 3)
-            } onSkip: { finish() }
+            } onSkip: { skip(3) }
         default:
-            WindDownQuestion(palette: model.palette, footnote: footnote, initial: model.answers.windDownMinutes ?? 22 * 60) { minutes in
+            WindDownQuestion(palette: model.palette, footnote: footnote, initial: model.answers.windDownMinutes ?? 21 * 60 + 30) { minutes in
                 model.updateAnswers {
                     $0.windDownMinutes = minutes
                     $0.recapMinutes = minutes
                 }
+                model.analytics.track(.onboardingQuestion, counts: ["index": 4, "skipped": 0])
                 finish()
-            } onSkip: { finish() }
+            } onSkip: { skip(4) }
         }
     }
 
     private func next(after number: Int) {
+        model.analytics.track(.onboardingQuestion, counts: ["index": number, "skipped": 0])
         withAnimation(SBMotion.settle) {
             index = number + 1
         }
+    }
+
+    /// "Skip for now" skips the rest of the questions, not just this one.
+    private func skip(_ number: Int) {
+        model.analytics.track(.onboardingQuestion, counts: ["index": number, "skipped": 1])
+        finish()
     }
 
     private func finish() {
@@ -91,7 +99,7 @@ struct CountQuestion: View {
 
     var body: some View {
         QuestionLayout(
-            label: "Question 1",
+            label: "Question 1 of 4",
             headline: "How many **screenshots** do you reckon you took?",
             subtext: "Just the last two months. **No peeking.**",
             light: .sweep(palette),
@@ -131,7 +139,7 @@ struct TopCategoryQuestion: View {
 
     var body: some View {
         QuestionLayout(
-            label: "Question 2",
+            label: "Question 2 of 4",
             headline: "What do you save **the most?**",
             subtext: "Go with your gut.",
             light: .sweep(palette.reversed).mirrored(),
@@ -181,7 +189,7 @@ struct DoneQuestion: View {
 
     var body: some View {
         QuestionLayout(
-            label: "Question 3",
+            label: "Question 3 of 4",
             headline: "How many of those have you **actually done?**",
             subtext: "The restaurants, the gigs, the recipes. **Honestly.**",
             light: .sweep(palette.reversed),
@@ -213,7 +221,7 @@ struct WindDownQuestion: View {
 
     var body: some View {
         QuestionLayout(
-            label: "Question 4",
+            label: "Question 4 of 4",
             headline: "What time do you **wind down?**",
             subtext: "That's when your recap turns up. One a night, tops.",
             light: .sweep(palette).mirrored(),

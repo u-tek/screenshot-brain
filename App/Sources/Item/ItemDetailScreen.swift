@@ -2,6 +2,7 @@ import Actions
 import Core
 import DesignSystem
 import Media
+import PhotosUI
 import Store
 import SwiftUI
 import Triage
@@ -16,12 +17,18 @@ struct ItemDetailScreen: View {
     @State private var item: ScreenshotItem?
     @State private var isMissing = false
     @State private var showsEventEditor = false
+    @State private var showsCookMode = false
     @State private var sendItems: [Any]?
     @State private var note: String?
+    /// The did-it log's entry, once it's done.
+    @State private var entry: DoneEntry?
     let itemID: String
     var onChange: () -> Void = {}
     /// Shown instead of loading from the database (design snapshots).
     var preview: ScreenshotItem?
+    var previewEntry: DoneEntry?
+    /// Opens the plans, for the premium-only "Cook it" when it isn't on yet.
+    var onShowPlans: () -> Void = {}
 
     var body: some View {
         ZStack {
@@ -34,6 +41,7 @@ struct ItemDetailScreen: View {
         .toolbar(.hidden, for: .navigationBar)
         .task {
             item = preview ?? (try? model.services?.database.item(id: itemID))
+            entry = previewEntry ?? (try? model.services?.database.doneEntry(forItem: itemID))
             isMissing = item == nil
         }
         .sheet(isPresented: $showsEventEditor) {
@@ -46,6 +54,14 @@ struct ItemDetailScreen: View {
                     }
                 }
                 .ignoresSafeArea()
+            }
+        }
+        .fullScreenCover(isPresented: $showsCookMode) {
+            if let item {
+                CookModeScreen(item: item) {
+                    Haptics.done()
+                    decide(.done, item)
+                }
             }
         }
         .sheet(isPresented: Binding(get: { sendItems != nil }, set: { if !$0 { sendItems = nil } })) {
@@ -121,18 +137,28 @@ struct ItemDetailScreen: View {
                     .clipShape(RoundedRectangle(cornerRadius: SBRadius.tile, style: .continuous))
 
                     // What to do, then done, then the details: everything in the page's flow, so
-                    // nothing floats over text.
-                    actions(item)
-
-                    primaryAction(item)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 4)
+                    // nothing floats over text. Once it's done, what happened comes straight after
+                    // "Done", where the button was.
+                    if item.state == .done, let entry {
+                        primaryAction(item)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 4)
+                        MemorySection(entry: entry, kind: kind, onChange: memoryChanged)
+                            .transition(.opacity)
+                        actions(item)
+                    } else {
+                        actions(item)
+                        primaryAction(item)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 4)
+                    }
 
                     DataRows(rows(item))
                 }
                 .padding(.horizontal, SBSpace.gutter)
                 .padding(.bottom, 40)
             }
+            .scrollDismissesKeyboard(.interactively)
 
             // A note after an action ("In your calendar.") floats briefly at the bottom.
             if let note {
@@ -216,7 +242,35 @@ struct ItemDetailScreen: View {
                     }
                 }
             }
+            if item.category == .recipe {
+                cookButton(kind: kind)
+            }
         }
+    }
+
+    /// "Cook it": step-by-step cook mode. Premium; the lock shows until it's on.
+    private func cookButton(kind: SBKind) -> some View {
+        let isPremium = model.isPremium
+        return Button {
+            Haptics.selection()
+            if isPremium {
+                model.analytics.track(.cookModeOpened)
+                showsCookMode = true
+            } else {
+                onShowPlans()
+            }
+        } label: {
+            SBScenarioLabel("Cook it", icon: .system("flame"), color: kind.core)
+                .overlay(alignment: .trailing) {
+                    if !isPremium {
+                        SBIconView(.system("lock"), size: 16)
+                            .foregroundStyle(SBColor.ink2)
+                            .padding(.trailing, 16)
+                    }
+                }
+        }
+        .buttonStyle(SBPressStyle())
+        .accessibilityLabel(Text(isPremium ? "Cook it" : "Cook it, Premium"))
     }
 
     private func decisionMenu(_ item: ScreenshotItem) -> some View {
@@ -260,8 +314,30 @@ struct ItemDetailScreen: View {
         _ = try? database.decide(state, forItem: item.id)
         withAnimation(SBMotion.snappy) {
             self.item = try? database.item(id: item.id)
+            entry = try? database.doneEntry(forItem: item.id)
         }
         model.itemsChanged()
+        onChange()
+        if state == .done, item.state != .done {
+            model.analytics.track(.itemMarkedDone)
+            flash(Self.doneLine(monthCount: Self.doneThisMonth((try? database.doneLog()) ?? [])))
+        }
+    }
+
+    /// How many things were done this calendar month, this one included.
+    static func doneThisMonth(_ log: [DoneEntry], now: Date = Date(), calendar: Calendar = .current) -> Int {
+        log.filter { calendar.isDate($0.doneAt, equalTo: now, toGranularity: .month) }.count
+    }
+
+    /// "Done." the first time in a month, then a running count. No streaks: it's the month's tally,
+    /// and it starts again quietly on the 1st.
+    static func doneLine(monthCount: Int) -> String {
+        monthCount <= 1 ? "Done. First one this month." : "Done. That's \(monthCount) this month."
+    }
+
+    /// A photo or note added: show it, and let Home's log know.
+    private func memoryChanged(_ updated: DoneEntry) {
+        withAnimation(SBMotion.snappy) { entry = updated }
         onChange()
     }
 
@@ -286,6 +362,10 @@ struct ItemDetailScreen: View {
             }
         case .ingredients:
             let lines = Ingredients.lines(in: item.extractedText ?? "")
+            guard !lines.isEmpty else {
+                flash("Couldn't find any ingredients.")
+                return
+            }
             UIPasteboard.general.string = lines.joined(separator: "\n")
             model.analytics.track(.actionCopyIngredients)
             Haptics.success()

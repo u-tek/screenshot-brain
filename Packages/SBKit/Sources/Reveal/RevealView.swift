@@ -63,13 +63,16 @@ public struct RevealView: View {
             GeometryReader { proxy in
                 Color.clear
                     .contentShape(Rectangle())
-                    .onTapGesture(coordinateSpace: .local) { location in
-                        if location.x < proxy.size.width / 3 {
-                            back()
-                        } else {
-                            advance()
+                    // onTapGesture(coordinateSpace:) is iOS 17; this reads the same on iOS 16.
+                    .gesture(
+                        SpatialTapGesture().onEnded { tap in
+                            if tap.location.x < proxy.size.width / 3 {
+                                back()
+                            } else {
+                                advance()
+                            }
                         }
-                    }
+                    )
             }
             .accessibilityHidden(true)
 
@@ -102,7 +105,8 @@ public struct RevealView: View {
             onFinish()
             return
         }
-        Haptics.selection()
+        // The last card is the payoff; every other step is just a step.
+        if index + 1 == cards.count - 1 { Haptics.success() } else { Haptics.selection() }
         withAnimation(SBMotion.reveal) { index += 1 }
     }
 

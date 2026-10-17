@@ -9,7 +9,18 @@ import UIKit
 /// Decides whether a screenshot contains nudity. Runs on every screenshot before anything can be
 /// displayed; a flagged item never appears anywhere.
 public protocol NudityScreening: Sendable {
+    /// True when the image must be treated as nudity. An image that couldn't be screened counts
+    /// as flagged: fail closed.
     func isFlagged(_ image: CGImage) async -> Bool
+    /// Like `isFlagged`, but nil when the screen couldn't decide (a detector error). Callers
+    /// that can try again later should leave the screenshot unread rather than guess.
+    func isFlaggedIfKnown(_ image: CGImage) async -> Bool?
+}
+
+extension NudityScreening {
+    public func isFlaggedIfKnown(_ image: CGImage) async -> Bool? {
+        await isFlagged(image)
+    }
 }
 
 /// On-device screening: LOVOO's NSFWDetector (a 17 kB Core ML model, BSD-3-Clause), plus Apple's
@@ -29,10 +40,23 @@ public final class OnDeviceNudityScreen: NudityScreening, @unchecked Sendable {
     public init() {}
 
     public func isFlagged(_ image: CGImage) async -> Bool {
-        if let confidence = await nsfwConfidence(image), confidence >= Self.threshold {
+        await isFlaggedIfKnown(image) ?? true
+    }
+
+    public func isFlaggedIfKnown(_ image: CGImage) async -> Bool? {
+        let confidence = await nsfwConfidence(image)
+        if let confidence, confidence >= Self.threshold {
             return true
         }
-        return await sensitiveContentAnalysisFlags(image)
+        let analysis = await sensitiveContentAnalysisFlags(image)
+        if analysis == true {
+            return true
+        }
+        // Either screen failing means nothing was ruled out.
+        if confidence == nil || analysis == nil {
+            return nil
+        }
+        return false
     }
 
     private func nsfwConfidence(_ image: CGImage) async -> Float? {
@@ -59,7 +83,8 @@ public final class OnDeviceNudityScreen: NudityScreening, @unchecked Sendable {
         return created
     }
 
-    private func sensitiveContentAnalysisFlags(_ image: CGImage) async -> Bool {
+    /// Nil when the analysis was on but failed. Off (the user hasn't opted in) is a plain no.
+    private func sensitiveContentAnalysisFlags(_ image: CGImage) async -> Bool? {
         #if canImport(SensitiveContentAnalysis)
         if #available(iOS 17.0, *) {
             let analyzer = SCSensitivityAnalyzer()
@@ -67,7 +92,7 @@ public final class OnDeviceNudityScreen: NudityScreening, @unchecked Sendable {
             do {
                 return try await analyzer.analyzeImage(image).isSensitive
             } catch {
-                return false
+                return nil
             }
         }
         #endif

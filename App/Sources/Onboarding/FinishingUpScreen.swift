@@ -8,9 +8,18 @@ struct FinishingUpScreen: View {
     var palette: LightPalette = .sampleTopScreenshots
     var read: Int = 0
     var total: Int = 0
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private var progress: Double {
         total > 0 ? min(Double(read) / Double(total), 1) : 0
+    }
+
+    private var stage: String {
+        switch progress {
+        case ..<0.4: "Finding the dates and **the places.**"
+        case ..<0.8: "Telling the gigs **from the recipes.**"
+        default: "Putting your Reveal **together.**"
+        }
     }
 
     var body: some View {
@@ -21,7 +30,7 @@ struct FinishingUpScreen: View {
                 LightField(.sweep(palette).shifted(down: 0.12), drifts: true)
                     .ignoresSafeArea()
 
-                VStack(spacing: 0) {
+                let content = VStack(spacing: 0) {
                     Spacer()
                     ZStack {
                         LensOrbit(diameter: lens * 1.22, dotAngle: -.pi / 2 + progress * 2 * .pi)
@@ -34,12 +43,26 @@ struct FinishingUpScreen: View {
                         .padding(.bottom, 10)
                     MistHeadline("Hang on. **Nearly there.**", size: 32)
                         .padding(.horizontal, 28)
-                    MistBody("Reading the last few. Your Reveal is **almost ready.**")
+                    // What it's actually doing, in the order it does it. Words, never counts.
+                    MistBody(stage)
+                        .id(stage)
+                        .transition(.opacity)
+                        .animation(SBMotion.settle, value: stage)
+                        .accessibilityAddTraits(.updatesFrequently)
                         .padding(.top, 10)
                         .padding(.horizontal, 36)
                         .padding(.bottom, 56)
                 }
-                .frame(width: proxy.size.width, height: proxy.size.height)
+
+                if dynamicTypeSize.isAccessibilitySize {
+                    // Large text outgrows the screen: scroll, so the action stays reachable.
+                    ScrollView {
+                        content.frame(width: proxy.size.width, alignment: .top)
+                            .frame(minHeight: proxy.size.height)
+                    }
+                } else {
+                    content.frame(width: proxy.size.width, height: proxy.size.height)
+                }
             }
         }
     }

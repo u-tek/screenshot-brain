@@ -21,6 +21,9 @@ public enum AssetImageLoader {
         if localIdentifier.hasPrefix(AppGroup.sharedIdentifierPrefix) {
             return sharedImage(localIdentifier, maxPixelSize: maxPixelSize)
         }
+        if localIdentifier.hasPrefix(MemoryPhotos.identifierPrefix) {
+            return MemoryPhotos.image(localIdentifier, maxPixelSize: maxPixelSize)
+        }
         // Touching the library without access makes iOS show its permission prompt. Only the
         // app's own pre-prompt may do that, so images just don't load until access is granted.
         let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
@@ -133,9 +136,16 @@ public struct AssetImage: View {
     public var body: some View {
         FittedImage(image: image, contentMode: contentMode, alignment: alignment, backdrop: backdrop, insets: insets, cornerRadius: cornerRadius)
             .task(id: localIdentifier) {
+                // A different screenshot: the last one's picture must not linger while this loads.
+                if image != nil || backdrop != nil {
+                    image = nil
+                    backdrop = nil
+                }
                 let loaded = await AssetImageLoader.image(
                     localIdentifier: localIdentifier, maxPixelSize: maxPixelSize, allowsNetwork: allowsNetwork, backdrop: showsBackdrop
                 )
+                // The view moved on (or went away) while this loaded: don't put a stale picture in.
+                guard !Task.isCancelled else { return }
                 withAnimation(.easeOut(duration: 0.25)) {
                     image = loaded.image
                     backdrop = loaded.backdrop
@@ -202,10 +212,26 @@ public struct ThumbnailImage: View {
         self.url = url
     }
 
+    /// Decoded thumbnails, so a body that runs again doesn't read and decode the file again.
+    private nonisolated(unsafe) static let cache: NSCache<NSURL, CGImage> = {
+        let cache = NSCache<NSURL, CGImage>()
+        cache.countLimit = 120
+        return cache
+    }()
+
+    private static func image(at url: URL) -> CGImage? {
+        let key = url as NSURL
+        if let cached = cache.object(forKey: key) {
+            return cached
+        }
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let image = CGImageSourceCreateImageAtIndex(source, 0, nil)
+        else { return nil }
+        cache.setObject(image, forKey: key)
+        return image
+    }
+
     public var body: some View {
-        let image = url
-            .flatMap { CGImageSourceCreateWithURL($0 as CFURL, nil) }
-            .flatMap { CGImageSourceCreateImageAtIndex($0, 0, nil) }
-        FittedImage(image: image)
+        FittedImage(image: url.flatMap { Self.image(at: $0) })
     }
 }

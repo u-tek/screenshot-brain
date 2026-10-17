@@ -81,7 +81,7 @@ public struct CategoryClassifier: Sendable {
     static func signals(text: RecognizedText, entities: [DetectedEntity]) -> [Signal] {
         let body = text.fullText.lowercased()
         func has(_ words: [String]) -> Bool {
-            words.contains { body.contains($0) }
+            words.contains { containsWord(body, $0) }
         }
         func count(_ kind: DetectedEntity.Kind) -> Int {
             entities.filter { $0.kind == kind }.count
@@ -114,7 +114,7 @@ public struct CategoryClassifier: Sendable {
         // Watch, listen, read and travel: the services and words of each, and more weight when
         // several turn up together.
         func words(_ category: ItemCategory, _ list: [String], strong: [String], name: String) {
-            let hits = list.filter { body.contains($0) }.count
+            let hits = list.filter { containsWord(body, $0) }.count
             if hits > 0 { signals.append(Signal(category, "\(name) words", 1)) }
             if hits >= 3 { signals.append(Signal(category, "many \(name) words", 0.75)) }
             if has(strong) { signals.append(Signal(category, "\(name) service", 0.5)) }
@@ -131,7 +131,7 @@ public struct CategoryClassifier: Sendable {
         if chatTimestampCount(text) >= 3 { signals.append(Signal(.message, "chat timestamps", 1)) }
         if has(Words.chat) { signals.append(Signal(.message, "messaging words", 1)) }
         if hasChatBubbles(text) { signals.append(Signal(.message, "chat bubbles", 1)) }
-        if Words.email.filter({ body.contains($0) }).count >= 2 { signals.append(Signal(.message, "email headers", 1.5)) }
+        if Words.email.filter({ containsWord(body, $0) }).count >= 2 { signals.append(Signal(.message, "email headers", 1.5)) }
 
         // Post: a social feed's words, handles and hashtags.
         if has(Words.social) { signals.append(Signal(.post, "social words", 1)) }
@@ -146,15 +146,57 @@ public struct CategoryClassifier: Sendable {
         if has(Words.receipt) { signals.append(Signal(.reference, "receipt", 1)) }
         if count(.transit) > 0 { signals.append(Signal(.reference, "transit details", 0.5)) }
 
-        // Little text: Vision's image labels, as a weak fallback.
+        // Little text: Vision's image labels, as a weak fallback. A few labels of one kind (a plate,
+        // a dish, a meal) are still one hint, so each category speaks once.
+        var labelled: Set<ItemCategory> = []
         for label in text.imageLabels {
-            if Words.foodLabels.contains(where: { label.contains($0) }) { signals.append(Signal(.recipe, "looks like food", 0.75)) }
-            if Words.productLabels.contains(where: { label.contains($0) }) { signals.append(Signal(.product, "looks like a product", 0.75)) }
-            if Words.placeLabels.contains(where: { label.contains($0) }) { signals.append(Signal(.place, "looks like a place", 0.75)) }
-            if Words.eventLabels.contains(where: { label.contains($0) }) { signals.append(Signal(.event, "looks like a gig", 0.75)) }
+            if Words.foodLabels.contains(where: { label.contains($0) }), labelled.insert(.recipe).inserted {
+                signals.append(Signal(.recipe, "looks like food", 0.75))
+            }
+            if Words.productLabels.contains(where: { label.contains($0) }), labelled.insert(.product).inserted {
+                signals.append(Signal(.product, "looks like a product", 0.75))
+            }
+            if Words.placeLabels.contains(where: { label.contains($0) }), labelled.insert(.place).inserted {
+                signals.append(Signal(.place, "looks like a place", 0.75))
+            }
+            if Words.eventLabels.contains(where: { label.contains($0) }), labelled.insert(.event).inserted {
+                signals.append(Signal(.event, "looks like a gig", 0.75))
+            }
         }
         return signals
     }
+
+    /// Whether `phrase` is in `body` as whole words, so "gig" isn't in "gigabyte", "tour" isn't in
+    /// "tourist", "total" isn't in "totally" and "bake" isn't in "bakery". A single word may still
+    /// take an ending ("tickets", "baked", "touring"). Both are lowercased.
+    static func containsWord(_ body: String, _ phrase: String) -> Bool {
+        guard let first = phrase.first, let last = phrase.last else { return false }
+        let isSingleWord = phrase.allSatisfy { $0.isLetter || $0.isNumber }
+        let needsStart = first.isLetter || first.isNumber
+        let needsEnd = last.isLetter || last.isNumber
+        var searchRange = body.startIndex..<body.endIndex
+        while let found = body.range(of: phrase, range: searchRange) {
+            var startsAWord = true
+            if needsStart, found.lowerBound > body.startIndex {
+                let before = body[body.index(before: found.lowerBound)]
+                startsAWord = !(before.isLetter || before.isNumber)
+            }
+            if startsAWord {
+                if !needsEnd { return true }
+                var ending = ""
+                var index = found.upperBound
+                while index < body.endIndex, body[index].isLetter || body[index].isNumber {
+                    ending.append(body[index])
+                    index = body.index(after: index)
+                }
+                if ending.isEmpty || (isSingleWord && Self.endings.contains(ending)) { return true }
+            }
+            searchRange = body.index(after: found.lowerBound)..<body.endIndex
+        }
+        return false
+    }
+
+    private static let endings: Set<String> = ["s", "es", "d", "ed", "ing"]
 
     static func ingredientLineCount(_ text: RecognizedText) -> Int {
         text.lines.filter { line in

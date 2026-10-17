@@ -3,6 +3,7 @@ import Foundation
 import Testing
 @testable import ScanEngine
 import Safety
+import Store
 
 /// Builds recognised text from lines, top to bottom, the way Vision reports them.
 func screenshot(_ lines: [String], codes: Int = 0, labels: [String] = []) -> RecognizedText {
@@ -224,6 +225,44 @@ enum Fixtures {
         let result = classify(screenshot(["Sat"], labels: ["concert", "stage", "crowd"]))
         #expect(result.signals.contains { $0.name == "looks like a gig" })
     }
+
+    @Test func imageLabelsSpeakOncePerCategory() {
+        let result = classify(screenshot(["Sat"], labels: ["concert", "stage", "crowd", "festival"]))
+        #expect(result.signals.filter { $0.name == "looks like a gig" }.count == 1)
+        let food = classify(screenshot([], labels: ["food", "dish", "meal", "dessert"]))
+        #expect(food.signals.filter { $0.name == "looks like food" }.count == 1)
+    }
+
+    @Test func keywordsMatchWholeWords() {
+        // The false positives: a word inside a longer, unrelated one.
+        #expect(!CategoryClassifier.containsWord("a 2 gigabyte plan", "gig"))
+        #expect(!CategoryClassifier.containsWord("tourist information", "tour"))
+        #expect(!CategoryClassifier.containsWord("totally fine", "total"))
+        #expect(!CategoryClassifier.containsWord("the bakery on main", "bake"))
+        #expect(!CategoryClassifier.containsWord("medicine and advice", "dice"))
+        // The real thing, with the endings a word takes.
+        #expect(CategoryClassifier.containsWord("fri gig at the enmore", "gig"))
+        #expect(CategoryClassifier.containsWord("world tour 2026", "tour"))
+        #expect(CategoryClassifier.containsWord("touring now", "tour"))
+        #expect(CategoryClassifier.containsWord("subtotal 12.00\ntotal 13.20", "total"))
+        #expect(CategoryClassifier.containsWord("bake for 20 minutes", "bake"))
+        #expect(CategoryClassifier.containsWord("baked salmon", "bake"))
+        #expect(CategoryClassifier.containsWord("roll the dice", "dice"))
+        #expect(CategoryClassifier.containsWord("get your tickets", "ticket"))
+        // Phrases with punctuation or a trailing space.
+        #expect(CategoryClassifier.containsWord("from: jess", "from:"))
+        #expect(CategoryClassifier.containsWord("gate 12", "gate "))
+        #expect(CategoryClassifier.containsWord("cocktail bar · $$", "bar ·"))
+        #expect(!CategoryClassifier.containsWord("candle holder", "dle h"))
+    }
+
+    @Test func aWordInsideAnotherDoesntMakeASignal() {
+        let text = screenshot(["Totally fine", "Tourist info", "Gigabyte plans", "Take your medicine"])
+        let names = CategoryClassifier.signals(text: text, entities: []).map(\.name)
+        #expect(!names.contains("ticket or venue words"))
+        #expect(!names.contains("receipt"))
+        #expect(!names.contains("method words"))
+    }
 }
 
 @Suite struct EntityTests {
@@ -262,6 +301,46 @@ enum Fixtures {
         #expect(DetectedEntity(kind: .date, text: "14/11/2026").namesADay)
         #expect(!DetectedEntity(kind: .date, text: "9:41").namesADay)
     }
+
+    @Test func daysAreWholeWords() {
+        #expect(DetectedEntity(kind: .date, text: "Sat").namesADay)
+        #expect(DetectedEntity(kind: .date, text: "Sunday 5pm").namesADay)
+        #expect(DetectedEntity(kind: .date, text: "Tomorrow 8pm").namesADay)
+        #expect(DetectedEntity(kind: .date, text: "14 September").namesADay)
+        #expect(!DetectedEntity(kind: .date, text: "Maybe 8pm").namesADay)
+        #expect(!DetectedEntity(kind: .date, text: "Satisfied 8pm").namesADay)
+        #expect(!DetectedEntity(kind: .date, text: "Month 9:41").namesADay)
+    }
+
+    @Test func todayWithATimeIsNotANamedDay() {
+        #expect(!DetectedEntity(kind: .date, text: "Today 9:41").namesADay)
+        #expect(!DetectedEntity(kind: .date, text: "today at 8pm").namesADay)
+        #expect(DetectedEntity(kind: .date, text: "Today, Fri 14 Nov").namesADay)
+    }
+
+    @Test func aThousandsSeparatorNeverCrossesALine() {
+        let prices = EntityDetector().entities(in: "$25\n128 reviews").filter { $0.kind == .price }
+        #expect(prices.compactMap(\.amount) == [25])
+        let spaced = EntityDetector().entities(in: "Now $1 299.00").filter { $0.kind == .price }
+        #expect(spaced.compactMap(\.amount) == [Decimal(string: "1299.00")!])
+    }
+
+    @Test func relativeDatesAreRecognised() {
+        #expect(EntityDetector.isRelativeDate("Tomorrow 8pm"))
+        #expect(EntityDetector.isRelativeDate("next Friday"))
+        #expect(EntityDetector.isRelativeDate("in 3 days"))
+        #expect(!EntityDetector.isRelativeDate("Fri 14 Nov, 8pm"))
+    }
+
+    @Test func relativeDatesFromAnOldScreenshotAreDropped() {
+        let now = Date(timeIntervalSince1970: 1_760_000_000)
+        let old = EntityDetector().entities(in: "Doors tomorrow at 8pm", capturedAt: now.addingTimeInterval(-10 * 86_400), now: now)
+        #expect(!old.contains { $0.kind == .date })
+        let fresh = EntityDetector().entities(in: "Doors tomorrow at 8pm", capturedAt: now.addingTimeInterval(-3_600), now: now)
+        #expect(fresh.contains { $0.kind == .date })
+        let dated = EntityDetector().entities(in: "Fri 14 Nov, 8pm", capturedAt: now.addingTimeInterval(-10 * 86_400), now: now)
+        #expect(dated.contains { $0.kind == .date })
+    }
 }
 
 @Suite struct ExpiryTests {
@@ -298,7 +377,7 @@ enum Fixtures {
     private let start = Date(timeIntervalSince1970: 1_760_000_000)
 
     @Test func nearDuplicatesWithinAMinuteGroup() {
-        let words: Set<String> = ["middle", "kids", "enmore", "theatre", "tickets"]
+        let words: Set<String> = ["middle", "kids", "enmore", "theatre", "tickets", "newtown", "friday"]
         let groups = Grouper.groups(for: [
             .init(id: "a", createdAt: start, words: words),
             .init(id: "b", createdAt: start.addingTimeInterval(30), words: words.union(["doors"])),
@@ -311,10 +390,40 @@ enum Fixtures {
 
     @Test func differentScreenshotsTakenTogetherDontGroup() {
         let groups = Grouper.groups(for: [
-            .init(id: "a", createdAt: start, words: ["pasta", "lemon", "garlic"]),
-            .init(id: "b", createdAt: start.addingTimeInterval(10), words: ["sneakers", "size", "bag"]),
+            .init(id: "a", createdAt: start, words: ["pasta", "lemon", "garlic", "olive", "spaghetti", "parmesan"]),
+            .init(id: "b", createdAt: start.addingTimeInterval(10), words: ["sneakers", "size", "bag", "delivery", "afterpay", "select"]),
         ])
         #expect(groups.isEmpty)
+    }
+
+    @Test func screenshotsWithLittleTextDontGroup() {
+        let words: Set<String> = ["lol", "same", "mood"]
+        let groups = Grouper.groups(for: [
+            .init(id: "a", createdAt: start, words: words),
+            .init(id: "b", createdAt: start.addingTimeInterval(5), words: words),
+        ])
+        #expect(groups.isEmpty)
+    }
+
+    @Test func aSmallScreenshotInsideABigOneDoesntGroup() {
+        // All of the small one's words are in the big one, but the big one is mostly other things.
+        let small: Set<String> = ["middle", "kids", "enmore", "theatre", "tickets", "friday"]
+        let big = small.union(["alpha", "bravo", "charlie", "delta", "echo", "foxtrot", "golf", "hotel", "india", "juliet"])
+        let groups = Grouper.groups(for: [
+            .init(id: "a", createdAt: start, words: small),
+            .init(id: "b", createdAt: start.addingTimeInterval(10), words: big),
+        ])
+        #expect(groups.isEmpty)
+    }
+
+    @Test func aNeighbourKeepsItsExistingGroup() {
+        let words: Set<String> = ["middle", "kids", "enmore", "theatre", "tickets", "newtown", "friday"]
+        let groups = Grouper.groups(for: [
+            .init(id: "old", createdAt: start, words: words, groupID: "group-first"),
+            .init(id: "new", createdAt: start.addingTimeInterval(20), words: words),
+        ])
+        #expect(groups["old"] == "group-first")
+        #expect(groups["new"] == "group-first")
     }
 }
 
@@ -333,5 +442,112 @@ enum Fixtures {
         var text = screenshot(["9:41", "small caption", "Middle Kids", "details"])
         text.lines[2].box.size.height = 0.2
         #expect(TitleExtractor.title(from: text) == "Middle Kids")
+    }
+}
+
+@Suite struct ReclassifyTests {
+    private let now = Date(timeIntervalSince1970: 1_760_000_000)
+
+    private func pipeline() throws -> ScanPipeline {
+        try ScanPipeline(database: .inMemory(), thumbnailDirectory: nil)
+    }
+
+    private func gigItem(category: ItemCategory, state: ItemState, stateChangedAt: Date? = nil) -> ScreenshotItem {
+        let text = Fixtures.gig.fullText
+        return ScreenshotItem(
+            assetLocalID: UUID().uuidString,
+            createdAt: now.addingTimeInterval(-86_400),
+            category: category,
+            confidence: 0.3,
+            entities: EntityDetector().entities(in: text),
+            state: state,
+            extractedText: text,
+            stateChangedAt: stateChangedAt,
+            updatedAt: now,
+            processedAt: now
+        )
+    }
+
+    @Test func filedAwayItemsThatBecomeSomethingToDoGoBackToWaiting() throws {
+        let pipeline = try pipeline()
+        let item = gigItem(category: .other, state: .reference)
+        try pipeline.database.save(item)
+
+        #expect(try pipeline.reclassify([item], now: now) == 1)
+
+        let saved = try #require(try pipeline.database.item(id: item.id))
+        #expect(saved.category == .event)
+        #expect(saved.state == .unreviewed)
+        #expect(saved.stateChangedAt == nil)
+    }
+
+    @Test func itemsFiledByHandStayFiled() throws {
+        let pipeline = try pipeline()
+        let item = gigItem(category: .other, state: .reference, stateChangedAt: now)
+        try pipeline.database.save(item)
+
+        #expect(try pipeline.reclassify([item], now: now) == 1)
+
+        let saved = try #require(try pipeline.database.item(id: item.id))
+        #expect(saved.category == .event)
+        #expect(saved.state == .reference)
+    }
+
+    @Test func aDecisionMadeMeanwhileSurvives() throws {
+        let pipeline = try pipeline()
+        let stale = gigItem(category: .other, state: .unreviewed)
+        try pipeline.database.save(stale)
+        try pipeline.database.setState(.done, forItem: stale.id, at: now)
+
+        #expect(try pipeline.reclassify([stale], now: now) == 1)
+
+        let saved = try #require(try pipeline.database.item(id: stale.id))
+        #expect(saved.category == .event)
+        #expect(saved.state == .done)
+        #expect(saved.stateChangedAt == now)
+    }
+
+    @Test func aThingToDoThatNoLongerReadsLikeOneBecomesOther() throws {
+        let pipeline = try pipeline()
+        let text = "Total chaos at the bakery today\nsomething about a gigabyte and a tourist\nnothing else here to see really"
+        let item = ScreenshotItem(
+            assetLocalID: UUID().uuidString,
+            createdAt: now,
+            category: .product,
+            confidence: 0.9,
+            state: .unreviewed,
+            expiresAt: now.addingTimeInterval(86_400),
+            isSafeToDisplay: true,
+            thumbnailPath: "x.jpg",
+            extractedText: text,
+            updatedAt: now,
+            processedAt: now
+        )
+        try pipeline.database.save(item)
+
+        #expect(try pipeline.reclassify([item], now: now) == 1)
+
+        let saved = try #require(try pipeline.database.item(id: item.id))
+        #expect(saved.category == .other)
+        #expect(saved.state == .reference)
+        #expect(saved.isSafeToDisplay == false)
+    }
+
+    @Test func aScreenshotWithLittleTextKeepsItsCategory() throws {
+        // Image labels aren't kept, so with little text the old category may have come from them.
+        let pipeline = try pipeline()
+        let item = ScreenshotItem(
+            assetLocalID: UUID().uuidString,
+            createdAt: now,
+            category: .recipe,
+            confidence: 0.6,
+            state: .unreviewed,
+            extractedText: "Sat",
+            updatedAt: now,
+            processedAt: now
+        )
+        try pipeline.database.save(item)
+        #expect(try pipeline.reclassify([item], now: now) == 0)
+        #expect(try pipeline.database.item(id: item.id)?.category == .recipe)
     }
 }

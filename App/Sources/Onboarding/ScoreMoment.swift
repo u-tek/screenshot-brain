@@ -36,6 +36,8 @@ struct ScoreMoment: View {
             }
             .padding(.horizontal, 24)
         }
+        // The first score is the first payoff: let it land.
+        .onAppear { Haptics.success() }
     }
 
     private var headline: String {

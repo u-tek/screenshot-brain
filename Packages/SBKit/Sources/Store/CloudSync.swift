@@ -83,19 +83,49 @@ public actor CloudSync {
         if let answers = try database.onboardingAnswers(), answers.updatedAt > since {
             records.append(record(for: answers))
         }
-        var failed = 0
+        var retryable = 0
+        var rejected = 0
         for start in stride(from: 0, to: records.count, by: 300) {
             let batch = Array(records[start..<min(start + 300, records.count)])
             let (saved, _) = try await cloud.modifyRecords(saving: batch, deleting: [], savePolicy: .changedKeys, atomically: false)
-            failed += saved.values.filter { if case .failure = $0 { true } else { false } }.count
+            for result in saved.values {
+                guard case .failure(let error) = result else { continue }
+                if let cloudError = error as? CKError, cloudError.code == .zoneNotFound || cloudError.code == .userDeletedZone {
+                    throw cloudError
+                }
+                if Self.isRetryable(error) {
+                    retryable += 1
+                } else {
+                    rejected += 1
+                }
+            }
         }
-        // Some records didn't save: keep the watermark, so they go again next time.
-        guard failed == 0 else {
-            Log.sync.error("\(failed) records didn't sync; retrying next time")
+        // Some records couldn't save for now: keep the watermark, so they go again next time.
+        guard retryable == 0 else {
+            Log.sync.error("\(retryable) records didn't sync; retrying next time")
             return
+        }
+        // A record the server will never accept must not hold the watermark back forever: it is
+        // skipped, and goes again if it changes.
+        if rejected > 0 {
+            Log.sync.error("\(rejected) records were rejected and skipped")
         }
         state.lastPushAt = started
         try database.save(state)
+    }
+
+    /// Whether a record that failed to save is worth trying again: connectivity, throttling and
+    /// account problems pass; a record the server rejects doesn't.
+    static func isRetryable(_ error: any Error) -> Bool {
+        guard let error = error as? CKError else { return true }
+        switch error.code {
+        case .networkUnavailable, .networkFailure, .serviceUnavailable, .requestRateLimited, .zoneBusy,
+             .notAuthenticated, .serverResponseLost, .quotaExceeded, .operationCancelled, .internalError,
+             .limitExceeded, .changeTokenExpired:
+            return true
+        default:
+            return error.retryAfterSeconds != nil
+        }
     }
 
     private func record(for item: ScreenshotItem) -> CKRecord? {

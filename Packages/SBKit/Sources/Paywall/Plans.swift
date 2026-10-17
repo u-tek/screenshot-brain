@@ -25,6 +25,9 @@ public struct PlanOption: Identifiable, Hashable, Sendable {
 
     public var id: Kind { kind }
 
+    /// Shown in place of a price that hasn't arrived from the App Store.
+    public static let noPrice = "–"
+
     public var title: String {
         switch kind {
         case .annual: "Yearly"

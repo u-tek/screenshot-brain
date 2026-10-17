@@ -2,6 +2,7 @@ import Core
 import DesignSystem
 import Paywall
 import Store
+import StoreKit
 import SwiftUI
 
 /// Recap time, premium, the privacy statement, the account. Opened from the gear on Home.
@@ -11,13 +12,18 @@ struct SettingsScreen: View {
     @State private var confirmsDelete = false
     @State private var isDeleting = false
     @State private var deleteFailed = false
+    #if DEBUG
     @State private var showsDebug = false
+    #endif
+    @State private var isRestoring = false
     @State private var restoreMessage: String?
+    @State private var managesSubscription = false
     var onShowPlans: () -> Void = {}
 
     var body: some View {
         VStack(spacing: 0) {
             SBNavHeader(onLeading: { dismiss() })
+                .manageSubscriptionsSheet(isPresented: $managesSubscription)
             ScrollView {
                 VStack(alignment: .leading, spacing: 26) {
                     VStack(alignment: .leading, spacing: 8) {
@@ -33,7 +39,7 @@ struct SettingsScreen: View {
                                 .font(SBFont.body(16))
                                 .foregroundStyle(SBColor.ink)
                         }
-                        SmallLabel("One a night at most, and only when there's something new.")
+                        SmallLabel("One a night at most, and only when there's something worth saying.")
                     }
 
                     section("Premium") {
@@ -43,13 +49,22 @@ struct SettingsScreen: View {
                                 .font(SBFont.body(16, weight: .semibold))
                                 .foregroundStyle(SBColor.ink)
                                 .buttonStyle(.plain)
+                        } else {
+                            // Cancelling is as easy as starting: Apple's own sheet, right here.
+                            Button("Manage or cancel subscription") { managesSubscription = true }
+                                .font(SBFont.body(16))
+                                .foregroundStyle(SBColor.ink)
+                                .buttonStyle(.plain)
                         }
                         Button("Restore purchases") {
                             guard model.purchases.isAvailable else {
                                 restoreMessage = "Purchases aren't set up in this build."
                                 return
                             }
+                            guard !isRestoring else { return }
+                            isRestoring = true
                             Task {
+                                defer { isRestoring = false }
                                 do {
                                     let restored = try await model.purchases.restore()
                                     restoreMessage = restored ? "Restored." : "Nothing to restore on this Apple ID."
@@ -61,6 +76,7 @@ struct SettingsScreen: View {
                         .font(SBFont.body(16))
                         .foregroundStyle(SBColor.ink)
                         .buttonStyle(.plain)
+                        .disabled(isRestoring)
                         if let restoreMessage {
                             SmallLabel(restoreMessage)
                         }
@@ -121,9 +137,11 @@ struct SettingsScreen: View {
         }
         .sbScreen(.calm)
         .toolbar(.hidden, for: .navigationBar)
+        #if DEBUG
         .sheet(isPresented: $showsDebug) {
             DebugMenu()
         }
+        #endif
         .confirmationDialog("Delete your account?", isPresented: $confirmsDelete, titleVisibility: .visible) {
             Button("Delete everything", role: .destructive) {
                 isDeleting = true
@@ -153,6 +171,7 @@ struct SettingsScreen: View {
         } set: { date in
             let parts = Calendar.current.dateComponents([.hour, .minute], from: date)
             model.updateAnswers { $0.recapMinutes = (parts.hour ?? 21) * 60 + (parts.minute ?? 0) }
+            model.replanRecap()
         }
     }
 

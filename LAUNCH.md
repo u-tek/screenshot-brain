@@ -87,6 +87,9 @@ Event names are in `Packages/SBKit/Sources/Core/Analytics.swift`.
 | Widget added on day 0 | `widget.added` with `day = 0` ÷ onboarding completions |
 | Recap open rate | `recap.opened` ÷ notifications scheduled |
 | Actions per user per week | `action.*` per active user |
+| Did-it log opened | `didIt.opened` per active user per week |
+| Memories added | (`didIt.photoAdded` + `didIt.noteAdded`) ÷ things done |
+| Did-it cards shared | `didIt.shared` per active user per month |
 | Day 1 / 7 / 30 retention | TelemetryDeck retention |
 | Trial starts and conversions | `purchase.trialStarted`, `purchase.completed`; RevenueCat |
 

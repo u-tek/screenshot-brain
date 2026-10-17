@@ -53,6 +53,22 @@ public struct PaywallView: View {
         purchases.plans.isEmpty ? PlanOption.placeholders : purchases.plans
     }
 
+    /// False until the App Store's prices have arrived; until then nothing can be bought.
+    private var pricesLoaded: Bool {
+        !purchases.plans.isEmpty
+    }
+
+    private var pricesLine: String {
+        if !purchases.isAvailable { return "Purchases aren't set up in this build." }
+        return purchases.plansFailed ? "Couldn't get prices from the App Store." : "Getting prices from the App Store…"
+    }
+
+    private var actionTitle: String {
+        if isBusy { return "One moment…" }
+        if pricesLoaded { return selected.actionTitle }
+        return purchases.plansFailed ? "Prices unavailable" : "Getting prices…"
+    }
+
     private var selected: PlanOption {
         let kind = selection ?? purchases.defaultPlan
         return plans.first { $0.kind == kind } ?? plans[0]
@@ -73,6 +89,7 @@ public struct PaywallView: View {
                             Chip("Restore purchases")
                         }
                         .buttonStyle(.plain)
+                        .disabled(isBusy)
                         Spacer()
                         Button(action: onClose) {
                             Chip("Not now", closable: true)
@@ -111,7 +128,7 @@ public struct PaywallView: View {
                     }
                     .padding(.horizontal, 20)
 
-                    Text(message ?? selected.terms)
+                    Text(message ?? (pricesLoaded ? selected.terms : pricesLine))
                         .font(SBFont.body(12))
                         .foregroundStyle(SBColor.inkSecondary)
                         .multilineTextAlignment(.center)
@@ -119,9 +136,19 @@ public struct PaywallView: View {
                         .padding(.horizontal, 32)
                         .padding(.vertical, compact ? 6 : 10)
 
-                    ActionBar(isBusy ? "One moment…" : selected.actionTitle, palette: palette, action: buy)
+                    if !pricesLoaded, purchases.isAvailable, purchases.plansFailed {
+                        Button("Try again") {
+                            Task { await purchases.loadPlans() }
+                        }
+                        .font(SBFont.body(13, weight: .semibold))
+                        .foregroundStyle(SBColor.ink)
+                        .buttonStyle(.plain)
+                        .padding(.bottom, 6)
+                    }
+
+                    ActionBar(actionTitle, palette: palette, action: buy)
                         .padding(.horizontal, 12)
-                        .disabled(isBusy)
+                        .disabled(isBusy || !pricesLoaded)
 
                     HStack(spacing: 16) {
                         Button("Terms") { openURL(Self.terms) }
@@ -148,19 +175,26 @@ public struct PaywallView: View {
             message = "Purchases aren't set up in this build."
             return
         }
-        // The prices on screen are placeholders until the App Store's arrive.
-        guard !purchases.plans.isEmpty else {
-            message = "Still getting prices from the App Store. Try again in a moment."
-            Task { await purchases.loadPlans() }
+        // The prices on screen are dashes until the App Store's arrive.
+        guard pricesLoaded, !isBusy else {
+            if !pricesLoaded {
+                message = "Still getting prices from the App Store. Try again in a moment."
+                Task { await purchases.loadPlans() }
+            }
             return
         }
         isBusy = true
         Task {
             defer { isBusy = false }
             do {
-                if try await purchases.purchase(selected.kind) {
+                switch try await purchases.purchase(selected.kind) {
+                case .purchased:
                     Haptics.success()
                     onPurchased()
+                case .pending:
+                    message = "Waiting for approval."
+                case .cancelled:
+                    break
                 }
             } catch {
                 message = "That didn't go through. Try again in a moment."
@@ -173,6 +207,7 @@ public struct PaywallView: View {
             message = "Purchases aren't set up in this build."
             return
         }
+        guard !isBusy else { return }
         isBusy = true
         Task {
             defer { isBusy = false }
@@ -191,11 +226,12 @@ public struct PaywallView: View {
 }
 
 extension PlanOption {
-    /// Shown while the App Store's prices load (and in design snapshots).
+    /// Shown while the App Store's prices load (and in design snapshots): dashes, never a made-up
+    /// price. Buying is off until the real ones arrive.
     public static let placeholders = [
-        PlanOption(kind: .annual, price: "$39.99", trialDays: 7, weeklyEquivalent: "$0.77 a week"),
-        PlanOption(kind: .weekly, price: "$4.99"),
-        PlanOption(kind: .lifetime, price: "$79.99"),
+        PlanOption(kind: .annual, price: PlanOption.noPrice),
+        PlanOption(kind: .weekly, price: PlanOption.noPrice),
+        PlanOption(kind: .lifetime, price: PlanOption.noPrice),
     ]
 }
 
@@ -204,6 +240,17 @@ private struct PlanCard: View {
     let isSelected: Bool
     let palette: LightPalette
     let action: () -> Void
+
+    private var accessibilityText: String {
+        var parts = [plan.title, plan.price == PlanOption.noPrice ? "price loading" : plan.priceLine]
+        if let trialDays = plan.trialDays {
+            parts.append("\(trialDays) days free")
+        }
+        if let weekly = plan.weeklyEquivalent {
+            parts.append(weekly)
+        }
+        return parts.joined(separator: ", ")
+    }
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: 22, style: .continuous)
@@ -248,7 +295,7 @@ private struct PlanCard: View {
             .overlay(shape.strokeBorder(SBColor.accent.opacity(isSelected ? 0.7 : 0), lineWidth: 1))
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(Text("\(plan.title), \(plan.priceLine)"))
+        .accessibilityLabel(Text(accessibilityText))
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }

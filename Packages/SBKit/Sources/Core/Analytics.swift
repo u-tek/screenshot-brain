@@ -33,11 +33,42 @@ public enum AnalyticsEvent: String, CaseIterable, Sendable {
     case actionCopyIngredients = "action.copyIngredients"
     case actionSend = "action.send"
 
+    // The did-it log
+    case didItOpened = "didIt.opened"
+    case didItPhotoAdded = "didIt.photoAdded"
+    case didItNoteAdded = "didIt.noteAdded"
+    case didItShared = "didIt.shared"
+
     // Money
     case paywallShown = "paywall.shown"
     case trialStarted = "purchase.trialStarted"
     case purchaseCompleted = "purchase.completed"
     case purchaseRestored = "purchase.restored"
+
+    // Coming back: what shows once it's all sorted, and carrying on past a batch. `from` is 0 for
+    // Home and 1 for the end of a sort; `dated` is 1 when the pick has a date coming up.
+    case nextUpShown = "nextUp.shown"
+    case nextUpOpened = "nextUp.opened"
+    case sortKeptGoing = "sort.keptGoing"
+
+    // Gaps in the funnel. `index` is the question's number; `skipped` is 1 for "Skip for now";
+    // `source` is 0 for onboarding and 1 for later; `kind` is a notification kind's number
+    // (see NotificationKindNumber in the app); `allowed` is 1 when iOS said yes.
+    case appOpened = "app.opened"
+    case onboardingQuestion = "onboarding.question"
+    case notificationsPrepromptSkipped = "notifications.prepromptSkipped"
+    case notificationsReoffered = "notifications.reoffered"
+    case notificationOpened = "notification.opened"
+    case paywallDismissed = "paywall.dismissed"
+    case itemMarkedDone = "item.markedDone"
+
+    // Suggestions, all from what's been kept. `premium` is 1 for a Premium user (free taps go to
+    // the plans); `count` is how many things the weekend plan holds.
+    case pickRerolled = "pick.rerolled"
+    case weekendPlanShown = "weekendPlan.shown"
+    case smartShelfOpened = "smartShelf.opened"
+    case weeklyShopOpened = "weeklyShop.opened"
+    case cookModeOpened = "cookMode.opened"
 }
 
 /// Privacy-first analytics: event counts only.

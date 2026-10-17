@@ -66,6 +66,7 @@ extension AppDatabase {
                 item.stateChangedAt = changedAt
                 // Keep updatedAt as is, so the change isn't pushed straight back.
                 try item.update(db)
+                try Self.recordDone([item], in: db)
             } else {
                 try PendingRemoteState(cloudID: cloudID, state: state, stateChangedAt: changedAt).save(db)
             }
@@ -81,6 +82,7 @@ extension AppDatabase {
                     item.state = pending.state
                     item.stateChangedAt = pending.stateChangedAt
                     try item.update(db)
+                    try Self.recordDone([item], in: db)
                 }
                 try pending.delete(db)
             }
@@ -108,13 +110,15 @@ extension AppDatabase {
         }
     }
 
-    /// Removes everything on this device: items, groups, answers, snapshots and sync state.
+    /// Removes everything on this device: items, groups, answers, snapshots, the did-it log and
+    /// sync state.
     /// Used by account deletion.
     public func eraseAll() throws {
         try writer.write { db in
             for table in [ScreenshotItem.databaseTableName, ItemGroup.databaseTableName, OnboardingAnswers.databaseTableName,
                           ScoreSnapshot.databaseTableName, RevealSnapshot.databaseTableName, AccuracyRecord.databaseTableName,
-                          ScanState.databaseTableName, SyncState.databaseTableName, PendingRemoteState.databaseTableName] {
+                          ScanState.databaseTableName, SyncState.databaseTableName, PendingRemoteState.databaseTableName,
+                          DoneEntry.databaseTableName] {
                 try db.execute(sql: "DELETE FROM \(table)")
             }
         }

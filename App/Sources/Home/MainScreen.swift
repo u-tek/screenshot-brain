@@ -16,6 +16,7 @@ struct MainScreen: View {
     @State private var deleteError: String?
     @State private var showsPaywall = false
     @State private var reveal: RevealStory?
+    @State private var isBuilding = false
     @Environment(\.scenePhase) private var scenePhase
 
     init(database: AppDatabase?) {
@@ -28,13 +29,16 @@ struct MainScreen: View {
                 home: home,
                 onSort: { isSorting = true },
                 onKept: { path.append(HomeRoute.kept) },
-                onSettings: { path.append(HomeRoute.settings) }
+                onDidIt: openDidIt,
+                onSettings: { path.append(HomeRoute.settings) },
+                isPremium: model.isPremium,
+                onShowPlans: { showsPaywall = true }
             )
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: HomeRoute.self) { route in
                 switch route {
                 case .item(let id):
-                    ItemDetailScreen(itemID: id) { home.reload() }
+                    ItemDetailScreen(itemID: id, onChange: { home.reload() }, onShowPlans: { showsPaywall = true })
                 case .category(let category):
                     CategoryScreen(category: category, items: home.shelves.first { $0.category == category }?.items ?? [])
                 case .filed(let category):
@@ -45,14 +49,34 @@ struct MainScreen: View {
                         palette: model.palette,
                         isPremium: model.isPremium,
                         onDeleteDropped: { deleteDropped() },
-                        onReveal: openReveal
+                        onReveal: openReveal,
+                        onDidIt: openDidIt,
+                        onShowPlans: { showsPaywall = true },
+                        onSmartShelf: { shelf in
+                            model.analytics.track(.smartShelfOpened)
+                            path.append(HomeRoute.smartShelf(shelf))
+                        },
+                        onWeeklyShop: {
+                            model.analytics.track(.weeklyShopOpened)
+                            path.append(HomeRoute.weeklyShop)
+                        }
                     )
+                case .didIt:
+                    DidItScreen(home: home, palette: model.palette, onShared: { model.analytics.track(.didItShared) })
                 case .settings:
                     SettingsScreen(onShowPlans: { showsPaywall = true })
+                case .smartShelf(let shelf):
+                    SmartShelfScreen(shelf: shelf, items: home.smartShelves.first { $0.0 == shelf }?.1 ?? [])
+                case .weeklyShop:
+                    WeeklyShopScreen(items: home.keptRecipes)
                 }
             }
         }
-        .onAppear { home.reload() }
+        .onAppear {
+            home.meaningSearchEnabled = model.isPremium
+            home.reload()
+        }
+        .onChange(of: model.isPremium) { home.meaningSearchEnabled = $0 }
         .onChange(of: model.isScanning) { scanning in
             if !scanning { home.reload() }
         }
@@ -63,6 +87,7 @@ struct MainScreen: View {
             follow(link)
         }
         .onAppear { follow(model.pendingLink) }
+        .environment(\.analytics, model.analytics)
         .fullScreenCover(isPresented: $isSorting, onDismiss: { home.reload() }) {
             SortSession(onDeleteDropped: deleteDropped) {
                 isSorting = false
@@ -75,7 +100,10 @@ struct MainScreen: View {
                 palette: model.palette,
                 items: model.paywallItems(),
                 privacyPolicy: model.configuration.privacyPolicyURL,
-                onClose: { showsPaywall = false },
+                onClose: {
+                    model.analytics.track(.paywallDismissed, counts: ["source": 1])
+                    showsPaywall = false
+                },
                 onPurchased: {
                     model.purchased()
                     showsPaywall = false
@@ -99,20 +127,36 @@ struct MainScreen: View {
     private func follow(_ link: AppLink?) {
         guard let link else { return }
         model.pendingLink = nil
+        // Covers can't stack: close whatever is up first, and present the next one a tick later
+        // (after the dismissal, if there was one).
+        let hadCover = isSorting || showsPaywall || reveal != nil
+        isSorting = false
+        showsPaywall = false
+        reveal = nil
         switch link {
         case .item(let id):
-            isSorting = false
             path = NavigationPath()
             path.append(HomeRoute.item(id))
         case .recap:
             path = NavigationPath()
-            isSorting = true
+            Task {
+                if hadCover { try? await Task.sleep(nanoseconds: 500_000_000) }
+                isSorting = true
+            }
         case .home:
-            isSorting = false
             path = NavigationPath()
         case .paywall:
-            showsPaywall = true
+            guard !model.isPremium else { return }
+            Task {
+                if hadCover { try? await Task.sleep(nanoseconds: 500_000_000) }
+                showsPaywall = true
+            }
         }
+    }
+
+    private func openDidIt() {
+        model.analytics.track(.didItOpened)
+        path.append(HomeRoute.didIt)
     }
 
     private func openReveal(_ period: RevealPeriod) {
@@ -120,8 +164,11 @@ struct MainScreen: View {
             showsPaywall = true
             return
         }
+        guard !isBuilding else { return }
+        isBuilding = true
         Task {
             reveal = await model.buildReveal(period)
+            isBuilding = false
         }
     }
 
@@ -146,13 +193,21 @@ struct MainScreen: View {
 }
 
 /// Sorting, from Home: the pile 30 at a time, newest first. "Finish later" goes straight back;
-/// finishing a batch shows how it went, with what's left and the dropped ones to clear.
+/// finishing a batch shows how it went, with what's left and the dropped ones to clear, and once
+/// it's all sorted, one thing to go and do.
 struct SortSession: View {
     @EnvironmentObject private var model: AppModel
     @State private var triage: TriageModel?
     @State private var isBatchOver = false
     @State private var left = 0
     @State private var dropped = 0
+    /// Everything decided since sorting opened, across batches.
+    @State private var sorted = TriageTally()
+    @State private var nextUp: NextUp?
+    /// Something was just done and notifications were skipped in onboarding: ask once more.
+    @State private var offersNudge = false
+    /// How many cards a batch holds.
+    static let batchSize = 30
     var onDeleteDropped: (@escaping @MainActor () -> Void) -> Void = { _ in }
     var onClose: () -> Void = {}
 
@@ -167,8 +222,16 @@ struct SortSession: View {
                 SortDone(
                     left: left,
                     dropped: dropped,
-                    onKeepGoing: startBatch,
+                    sorted: sorted,
+                    nextUp: nextUp,
+                    nudgeAt: offersNudge ? WindDownQuestion.timeText(NightlyRecap.recapMinutes(model.answers)) : nil,
+                    onKeepGoing: keepGoing,
                     onDeleteDropped: { onDeleteDropped(refreshCounts) },
+                    onOpenNextUp: openNextUp,
+                    onNudge: { accepted in
+                        offersNudge = false
+                        Task { await model.reofferNotifications(accepted: accepted) }
+                    },
                     onClose: onClose
                 )
                 .transition(.opacity)
@@ -190,11 +253,28 @@ struct SortSession: View {
         refreshCounts()
     }
 
+    private func keepGoing() {
+        model.analytics.track(.sortKeptGoing, counts: ["left": left])
+        startBatch()
+    }
+
+    /// Closes sorting and opens the pick over Home, the same way a widget link does.
+    private func openNextUp(_ pick: NextUp) {
+        model.analytics.track(.nextUpOpened, counts: ["from": 1, "dated": pick.isDated])
+        model.pendingLink = .item(pick.item.id)
+    }
+
     private func finish(_ triage: TriageModel) {
         model.finishRecap(triage.tally)
+        sorted.kept += triage.tally.kept
+        sorted.done += triage.tally.done
+        sorted.dropped += triage.tally.dropped
         if triage.isFinished {
             refreshCounts()
             isBatchOver = true
+            if sorted.done > 0 {
+                Task { offersNudge = await model.shouldReofferNotifications() }
+            }
         } else {
             onClose()
         }
@@ -203,17 +283,30 @@ struct SortSession: View {
     private func refreshCounts() {
         left = model.toSortCount()
         dropped = model.droppedCount()
+        nextUp = left == 0 ? NextUp.pick(from: model.services?.database) : nil
     }
 }
 
-/// The end of a batch: all sorted (or how many are left), a way to clear the dropped ones from
-/// Photos, and back to Home.
+/// The end of a batch: how many were just sorted and where they went, then either how many are
+/// left (with "Keep going") or, once it's all sorted, one thing kept to go and do. Plus a way to
+/// clear the dropped ones from Photos, and back to Home.
 struct SortDone: View {
     let left: Int
     let dropped: Int
+    var sorted = TriageTally()
+    var nextUp: NextUp?
+    /// The recap time, when it's worth asking about notifications again ("9:30pm").
+    var nudgeAt: String?
     var onKeepGoing: () -> Void = {}
     var onDeleteDropped: () -> Void = {}
+    var onOpenNextUp: (NextUp) -> Void = { _ in }
+    var onNudge: (Bool) -> Void = { _ in }
     var onClose: () -> Void = {}
+    @Environment(\.analytics) private var analytics
+
+    private var sortedCount: Int { sorted.kept + sorted.done + sorted.dropped }
+    /// The pick only shows once the pile's gone, so "Keep going" stays the one thing to do.
+    private var pick: NextUp? { left == 0 ? nextUp : nil }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -226,14 +319,36 @@ struct SortDone: View {
 
             Spacer()
 
-            VStack(spacing: 12) {
-                Text(left > 0 ? "Nice." : "All sorted.")
-                    .sbText(.large)
-                Text(left > 0 ? (left == 1 ? "1 more to sort." : "\(left) more to sort.") : "New screenshots land here as you take them.")
-                    .sbText(.body)
-                    .multilineTextAlignment(.center)
+            if sortedCount > 0 {
+                tally
+            } else {
+                VStack(spacing: 12) {
+                    Text(left > 0 ? "Nice." : "All sorted.")
+                        .sbText(.large)
+                    Text(left > 0 ? moreToSort : "New screenshots land here as you take them.")
+                        .sbText(.body)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.horizontal, 40)
             }
-            .padding(.horizontal, 40)
+
+            if let nudgeAt {
+                // Right after doing something: the moment a nudge makes sense. Takes the pick's
+                // place, so the screen still asks one thing.
+                NudgeOffer(time: nudgeAt, onAnswer: onNudge)
+                    .padding(.horizontal, SBSpace.gutter)
+                    .padding(.top, 32)
+            } else if let pick {
+                Button { onOpenNextUp(pick) } label: {
+                    NextUpCard(pick: pick)
+                }
+                .buttonStyle(SBPressStyle())
+                .padding(.horizontal, SBSpace.gutter)
+                .padding(.top, 32)
+                .onAppear {
+                    analytics.track(.nextUpShown, counts: ["from": 1, "dated": pick.isDated])
+                }
+            }
 
             Spacer()
 
@@ -259,6 +374,49 @@ struct SortDone: View {
             .padding(.bottom, 28)
         }
         .sbScreen(left > 0 ? SBAmbience(energy: 0.55) : .calm)
+        .onAppear {
+            // Clearing the whole pile is the moment worth feeling.
+            if sortedCount > 0, left == 0 { Haptics.success() }
+        }
+    }
+
+    /// "12 sorted", where they went, and what's left: the same big number as Home's pile.
+    private var tally: some View {
+        VStack(spacing: 0) {
+            Text("\(sortedCount)")
+                .sbText(.numXL)
+                .monospacedDigit()
+            Text("sorted")
+                .sbText(.unit, color: SBColor.ink2)
+                .padding(.top, 6)
+            Text(breakdown)
+                .sbText(.body, color: SBColor.ink)
+                .padding(.top, 18)
+            Text(left > 0 ? moreToSort : "That's the lot. All sorted.")
+                .sbText(.body)
+                .padding(.top, 6)
+        }
+        .multilineTextAlignment(.center)
+        .padding(.horizontal, 40)
+        .accessibilityElement(children: .combine)
+    }
+
+    /// "4 still want · 2 done · 6 dropped", leaving out the empty ones.
+    private var breakdown: String {
+        [
+            sorted.kept > 0 ? "\(sorted.kept) still want" : nil,
+            sorted.done > 0 ? "\(sorted.done) done" : nil,
+            sorted.dropped > 0 ? "\(sorted.dropped) dropped" : nil,
+        ]
+        .compactMap { $0 }
+        .joined(separator: " · ")
+    }
+
+    /// When one more batch clears the pile, say so: being close is the reason to carry on.
+    private var moreToSort: String {
+        if left == 1 { return "1 more to sort." }
+        if left <= SortSession.batchSize { return "\(left) left. One more go clears it." }
+        return "\(left) more to sort."
     }
 }
 
@@ -291,5 +449,9 @@ struct CategoryScreen: View {
         }
         .sbScreen(.kind(SBKind(category)))
         .toolbar(.hidden, for: .navigationBar)
+        // The last one was decided: nothing left to show here.
+        .onChange(of: items.isEmpty) { isEmpty in
+            if isEmpty { dismiss() }
+        }
     }
 }

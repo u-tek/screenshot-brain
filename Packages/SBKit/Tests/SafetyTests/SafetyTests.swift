@@ -18,6 +18,20 @@ import Testing
         #expect(SensitiveTextDetector.findings(in: "Card 4111-1111-1111-1111").contains(.cardNumber))
     }
 
+    @Test func findsCardNumbersFollowedByAnExpiryOrCVV() {
+        #expect(SensitiveTextDetector.findings(in: "4111 1111 1111 1111 04/29").contains(.cardNumber))
+        #expect(SensitiveTextDetector.findings(in: "Card 4111 1111 1111 1111 123").contains(.cardNumber))
+        #expect(SensitiveTextDetector.findings(in: "4111-1111-1111-1111 04/29 123").contains(.cardNumber))
+        #expect(SensitiveTextDetector.findings(in: "4111111111111111 04/29").contains(.cardNumber))
+        #expect(SensitiveTextDetector.findings(in: "Amex 3782 822463 10005 1234").contains(.cardNumber))
+        #expect(SensitiveTextDetector.findings(in: "Ref 99 4111 1111 1111 1111").contains(.cardNumber))
+    }
+
+    @Test func aNumberOnTheNextLineIsNotPartOfTheCard() {
+        #expect(!SensitiveTextDetector.findings(in: "Order 1234 5678 1234 5678\n04").contains(.cardNumber))
+        #expect(!SensitiveTextDetector.findings(in: "Order 1234 5678 1234 5678 04/29 shipped").contains(.cardNumber))
+    }
+
     @Test func ignoresNumbersThatFailLuhn() {
         #expect(!SensitiveTextDetector.findings(in: "Order 1234 5678 1234 5678 shipped").contains(.cardNumber))
         #expect(!SensitiveTextDetector.findings(in: "Call 0412 345 678").contains(.cardNumber))

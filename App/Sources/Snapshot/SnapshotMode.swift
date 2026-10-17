@@ -91,6 +91,20 @@ enum SnapshotGallery {
             return AnyView(NavigationStack { KeptScreen(home: .sample(), palette: palette) })
         case "item":
             return AnyView(NavigationStack { ItemDetailScreen(itemID: SampleData.gig.id, preview: SampleData.gig) })
+        case "item.done":
+            return AnyView(NavigationStack { ItemDetailScreen(itemID: SampleData.ramenDone.id, preview: SampleData.ramenDone, previewEntry: SampleData.doneLog[0]) })
+        case "memory":
+            // The did-it part of a done item's page, which sits below the fold in "item.done".
+            return AnyView(ScrollView {
+                MemorySection(entry: SampleData.doneLog[0], kind: SBKind(.place))
+                    .padding(.horizontal, SBSpace.gutter)
+                    .padding(.top, 60)
+            }
+            .sbScreen(.kind(SBKind(.place))))
+        case "didit":
+            return AnyView(NavigationStack { DidItScreen(home: .sample(), palette: palette) })
+        case "didit.share":
+            return AnyView(DidItShareSheet(month: DidItMonth.months(SampleData.doneLog)[0], palette: palette))
         case "caughtup":
             return AnyView(SortDone(left: 0, dropped: 12))
         case "sortdone":
@@ -101,11 +115,26 @@ enum SnapshotGallery {
             return AnyView(NotificationsPrompt(palette: palette))
         case "widgetguide":
             return AnyView(WidgetGuide(palette: palette))
+        case "home.sorted":
+            return AnyView(NavigationStack { HomeScreen(home: .sampleSorted()) })
+        case "home.pick":
+            return AnyView(NavigationStack { HomeScreen(home: .samplePick()) })
+        case "home.weekend":
+            return AnyView(NavigationStack { HomeScreen(home: .sampleWeekend()) })
+        case "sortdone.tally":
+            return AnyView(SortDone(
+                left: 0,
+                dropped: 6,
+                sorted: TriageTally(kept: 4, done: 2, dropped: 6),
+                nextUp: NextUp(item: SampleData.gig, reason: .comingUp)
+            ))
         case "paywall":
             let items = (SampleData.comingUp + [SampleData.item(.place, "Ramen Ikkyu", daysAgo: 21)]).map { PaywallItem($0, now: SampleData.now) }
             return AnyView(PaywallView(purchases: PurchaseService(apiKey: nil, appUserID: nil), palette: palette, items: items, privacyPolicy: nil, onClose: {}, onPurchased: {}))
+        #if DEBUG
         case "lab":
             return AnyView(DesignLabView())
+        #endif
         default:
             if route.hasPrefix("store."), let screen = Int(route.dropFirst(6)).flatMap(StoreScreen.init(rawValue:)) {
                 return AnyView(StoreScreenView(screen: screen))
@@ -113,6 +142,7 @@ enum SnapshotGallery {
             if route.hasPrefix("reveal."), let card = RevealCard(rawValue: String(route.dropFirst(7))) {
                 return AnyView(RevealView(story: .sample, startAt: card, onFinish: {}))
             }
+            #if DEBUG
             guard route.hasPrefix("lab."), let page = DesignLabPage(rawValue: String(route.dropFirst(4))) else {
                 return nil
             }
@@ -121,6 +151,9 @@ enum SnapshotGallery {
                     .ignoresSafeArea()
                 page.view
             })
+            #else
+            return nil
+            #endif
         }
     }
 }

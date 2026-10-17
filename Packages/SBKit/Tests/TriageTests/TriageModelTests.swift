@@ -33,9 +33,11 @@ import Testing
         #expect(try database.item(id: first.id)?.state == .done)
         #expect(try database.item(id: second.id)?.state == .done)
         #expect(try database.item(id: other.id)?.state == .unreviewed)
-        // The group counts once.
+        // The group counts once in the score, and every screenshot in it in the tally.
         #expect(try database.score() == Score(done: 1, total: 1))
-        #expect(model.tally == TriageTally(done: 1))
+        #expect(model.tally == TriageTally(done: 2))
+        model.undo()
+        #expect(model.tally == TriageTally())
     }
 
     @Test func undoPutsItBack() throws {

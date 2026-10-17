@@ -39,6 +39,16 @@ enum NightlyRecap {
         let new = ((try? database.recapDeck(newSince: lastRecap, olderLimit: 0)) ?? []).map { notable($0.item) }
         let dated = ((try? database.comingUp(now: now, days: 3)) ?? []).map(notable)
         let week = (try? database.weekStats(now: now)) ?? (saved: 0, done: 0)
+        // Things to do, kept and not done, kept longest first.
+        let kept = ((try? database.stillWant()) ?? [:])
+            .filter { $0.key.isIntention }
+            .flatMap(\.value)
+            .map { item in
+                var entry = notable(item)
+                entry.keptAt = item.stateChangedAt ?? item.createdAt
+                return entry
+            }
+            .sorted { ($0.keptAt ?? now) < ($1.keptAt ?? now) }
         return NotificationContext(
             now: now,
             recapMinutes: recapMinutes(answers),
@@ -49,7 +59,8 @@ enum NightlyRecap {
             lastOpenedAt: AppOpens.last() ?? now,
             trialEndsAt: Entitlement.trialEndsAt(),
             doneCount: (try? database.score().done) ?? 0,
-            history: NotificationScheduler.loadHistory()
+            history: NotificationScheduler.loadHistory(),
+            keptItems: kept
         )
     }
 
