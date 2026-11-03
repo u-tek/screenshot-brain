@@ -1,0 +1,6 @@
+// The identity TestFlight builds use: .github/workflows/testflight.yml copies this file to
+// Local.xcconfig. Not secret: both values are in every signed copy of the app.
+
+// Membership details at developer.apple.com/account.
+SB_TEAM_ID =
+SB_BUNDLE_ID = com.utek.screenshotbrain

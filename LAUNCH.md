@@ -58,6 +58,8 @@ Everything between "it builds" and "it's on the App Store". Tick as you go.
 
 ## 3. TestFlight plan
 
+Builds reach TestFlight from the **TestFlight** workflow (Actions → TestFlight → Run workflow).
+
 1. **Internal (week 1):** the team, on as many old phones as we can find. Accuracy mode on.
 2. **External, small (week 2):** 25 people across both audiences (15–21 and 45+). Watch the
    funnel below; interview five.
