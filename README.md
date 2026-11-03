@@ -22,6 +22,8 @@ It builds and runs in the simulator as is. For a device build, copy `Config/Loca
 
 CI (`.github/workflows/ios.yml`) runs both on every push, on a macOS runner, plus the account server's tests on Linux.
 
+TestFlight builds come from `.github/workflows/testflight.yml`, run by hand from the Actions tab: it signs the app with an App Store Connect API key and uploads it. The key and the secrets it needs are described at the top of that file.
+
 Before the App Store, work through `LAUNCH.md`: keys, sign-offs on real devices, the TestFlight plan and the analytics to watch.
 
 ## Design
